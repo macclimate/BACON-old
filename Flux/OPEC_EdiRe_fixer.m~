@@ -1,0 +1,577 @@
+function [output_data] = OPEC_EdiRe_fixer(site,qtflag)
+close all
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% OPEC_10min_fixer.m
+%%% Perhaps the most important function for processing 10-min data.
+%%% This function:
+%%% 1. Loads 30-min cleaned data and does site-spec. manual fixes on data
+%%% 2. Compares with Met and 10-min OPEC Data to ensure no data shifts exist
+%%% 3. Calculates storage and performs Papale spike removal function
+%%% 4. Saves resulting 30-minute fixed and calculated data (eg. NEE)
+% usage: OPEC_EdiRe_fixer(site), where site is a string (e.g. 'TP74')
+%%% Created July 27, 2010 by JJB
+%%% Revision History:
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+if nargin == 0 || isempty(site)==1 || (~isempty(site) && ~ischar(site))
+    site = input('Enter Site Name (e.g. TP74, TP02, etc): ','s'); %Gets site name
+end
+if nargin < 2
+    qtflag = 0;
+end
+ls = addpath_loadstart('off');
+%%% Declare Paths:
+load_path = [ls 'Matlab/Data/Flux/OPEC/' site '/Cleaned/'];
+save_path_cleaned = [ls 'Matlab/Data/Flux/OPEC/' site '/Final_Cleaned/']; % For the cleaned-up data...
+save_path_calc    = [ls 'Matlab/Data/Flux/OPEC/' site '/Final_Calculated/']; % For new data created (rotated, storage)
+met_path = [ls 'Matlab/Data/Met/Final_Cleaned/' site '/']; % Data where the final_cleaned met data is stored...
+TP39met_path =  [ls 'Matlab/Data/Met/Final_Cleaned/TP39/']; % Data where the final_cleaned TP39 met data is stored...
+%%% Load the Master File:
+load([load_path site '_OPEC_EdiRe_cleaned.mat']);
+% calc.data = struct;
+
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Plot data before fixes (if desired)
+if qtflag==2
+else
+    resp = input('do you want to scroll through variables before fixing? <y/n> ', 's');
+    if strcmpi(resp,'y') == 1;   scrollflag = 1; else scrollflag = 0; end
+    
+    j = 7;
+    while j <= length(master.labels)
+        temp_var = master.data(:,j);
+        switch scrollflag
+            case 1
+                figure(1); clf;  plot(temp_var);
+                title([char(master.labels(j)) ', column no: ' num2str(j)]);
+                grid on;
+                %%% Gives the user a chance to go through variables:
+                response = input('Press enter to move forward, enter "1" to move backward, 9 to accept all: ', 's');
+                if isempty(response)==1;                    j = j+1;
+                elseif strcmp(response,'1')==1 && j > 1;    j = j-1;
+                elseif strcmp(response,'9')==1;             j = length(master.labels)+1;
+                else
+                end
+            case 0
+                j = j+1;
+        end
+    end
+    clear j response
+    figure(1);clf
+    text(0,0,'Make changes in program now (if necessary) -exit script','FontSize',18)
+end
+old_master = master.data;
+
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Clean #1
+%%% Enter manual site-specific fixes to 10-minute data:
+shift_override = [];
+switch site
+    case 'TP74'
+        master.data([31853:32033], 7:end) = master.data([31852:32032], 7:end); master.data(31852,7:end) = NaN;
+        %         calc_master.data([31853:32033], 7:end) = calc_master.data([31852:32032], 7:end); calc_master.data(31852,7:end) = NaN;
+        % Forward shift of 13 data points (don't know what happened??)
+        master.data([105779+11:106098+11], 7:end) = master.data([105779:106098], 7:end); master.data(105779:105779+10,7:end) = NaN;
+    case 'TP02'
+        % Remove some unwanted data:
+        master.data([37139 114082],find_right_col(master.labels,'u_mean_ms-1')) = NaN;
+        % Remove a patch of data that seems to have come from TP89:
+        master.data([64704:65832],7:end) = NaN;
+        % Forward shift of 9 data points (don't know what happened??)
+        sft = 9;
+        master.data([83152+sft:83583+sft], 7:end) = master.data([83152:83583], 7:end); master.data(83152:83152+sft-1,7:end) = NaN;
+        clear sft;
+        % Forward shift of 12 data points (don't know what happened??)
+        sft = 12;
+        master.data([86708+sft:87611+sft], 7:end) = master.data([86708:87611], 7:end); master.data(86708:86708+sft-1,7:end) = NaN;
+        clear sft;
+        % Forward shift of 343 data points (don't know what happened??)
+        sft = 343;
+        master.data([88376+sft:88965+sft], 7:end) = master.data([88376:88965], 7:end); master.data(88376:88376+sft-1,7:end) = NaN;
+        clear sft;
+        %%% Override the shift for a segment with minimal data points
+        shift_override = [113938 114081 11; 37090 37138 9;];
+    case 'TP89'
+        % Forward shift of 130 data points (don't know what happened??)
+        master.data([10111+130:10732+130], 7:end) = master.data([10111:10732], 7:end); master.data(10111:10111+129,7:end) = NaN;
+        % Remove some unwanted data:
+        master.data([9993:9995 20046:20094 31282:31321 33444:33458],find_right_col(master.labels,'u_mean_ms-1')) = NaN;
+        % Another shift:
+        sft = 35;
+        master.data([64363+sft:65132+sft], 7:end) = master.data([64363:65132], 7:end); master.data(64363:64363+sft-1,7:end) = NaN;
+        clear sft;
+end
+
+%%% Plot the resulting data with changes.  Compare to previous data:
+if qtflag==2
+else
+    j = 7;
+    while j <= length(master.labels)
+        
+        figure(1); clf;  plot(old_master(:,j),'r'); hold on; plot(master.data(:,j),'b');
+        title([char(master.labels(j)) ', column no: ' num2str(j)]);
+        legend('Original', 'Fixed (output)');
+        grid on;
+        %%% Gives the user a chance to go through
+        response = input('Press enter to move forward, enter "1" to move backward, 9 to accept all: ', 's');
+        if isempty(response)==1;                    j = j+1;
+        elseif strcmp(response,'1')==1 && j > 1;    j = j-1;
+        elseif strcmp(response,'9')==1;             j = length(master.labels)+1;
+        else
+        end
+        
+    end
+    clear j response
+end
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Alignment with Met data and 10-minute OPEC data:
+
+%%% Load the OPEC_10min data -- will use for comparison, and then we will
+%%% have to align both signals (EdiRe and 10min) with each other and with
+%%% the met data, as we need alignment with met data, but we also need each
+%%% signal to line up so EdiRe data can use the CO2_cpy data from the 10min
+
+OPEC_10min = load([save_path_cleaned site '_OPEC_30min_cleaned.mat']);
+OPEC_10min_calc = load([save_path_calc site '_OPEC_30min_calc.mat']);
+%%% Load successive years of met data, we want to keep the following data:
+%%% Ta, RH?, WS, WDir and PAR (for figuring out UTC or EST),
+min_yr = min(master.data(:,2));
+max_yr = max(master.data(:,2));
+met.data = [master.data(:,2) NaN.*ones(length(master.data),6)]; % extra column in case something else is desired
+for yr = min_yr:1:max_yr
+    try
+        met_tmp = load([met_path site '_met_cleaned_' num2str(yr) '.mat']);
+        try met.data(met.data(:,1)== yr,2) = met_tmp.master.data(:,find_right_col(met_tmp.master.labels,'AirTemp_AbvCnpy'));
+        catch; met.data(met.data(:,1)==yr,2) = NaN; disp(['Could not load Ta for year: ' num2str(yr)]); end
+        try met.data(met.data(:,1)== yr,3) = met_tmp.master.data(:,find_right_col(met_tmp.master.labels,'RelHum_AbvCnpy'));
+        catch; met.data(met.data(:,1)==yr,3) = NaN; disp(['Could not load RH for year: ' num2str(yr)]); end
+        try met.data(met.data(:,1)== yr,4) = met_tmp.master.data(:,find_right_col(met_tmp.master.labels,'WindSpd'));
+        catch; met.data(met.data(:,1)==yr,4) = NaN; disp(['Could not load WS for year: ' num2str(yr)]); end
+        try  met.data(met.data(:,1)== yr,5) = met_tmp.master.data(:,find_right_col(met_tmp.master.labels,'WindDir'));
+        catch; met.data(met.data(:,1)==yr,5) = NaN; disp(['Could not load WDir for year: ' num2str(yr)]); end
+        try  met.data(met.data(:,1)== yr,6) = met_tmp.master.data(:,find_right_col(met_tmp.master.labels,'DownPAR_AbvCnpy'));
+        catch; met.data(met.data(:,1)==yr,6) = NaN; disp(['Could not load PAR for year: ' num2str(yr)]); end
+    catch
+        disp(['Could not find data for year: ' num2str(yr) '.']);
+        met.data(met.data(:,1)== yr,2:6) = NaN;
+    end
+end
+
+%%%%%%%%%%%%%%%%%%% Wind Speed:
+OPEC_DAT = master.data(:,find_right_col(master.labels,'u_mean_ms-1'));
+MET_DAT = met.data(:,4);
+OPEC_10min_DAT = OPEC_10min.master.data(:,find_right_col(OPEC_10min.master.labels, 'wnd_spd(1)'));
+clear OPEC_10min;
+%%% Use OPEC_find_intervals to establish the starting and ending points for
+%%% each measurement period (most likely when times would have been
+%%% changed):
+[start_times] = OPEC_find_intervals(OPEC_DAT, 30, 300);
+
+%%% Compare the EdiRe and met-derived windspeed data
+num_lags = 16; % The maximum number of shifts to check correlation for is 16 half-hours (8 hours).
+% Plot the data before shifting
+% close(findobj('Tag','Pre-Shift'));
+% figure('Name','Data_Alignment: Pre-Shift','Tag','Pre-Shift');
+% figure(findobj('Tag','Pre-Shift'));clf;
+% subplot(211);
+% plot(MET_DAT,'b');hold on;
+% plot(OPEC_DAT,'r');
+% legend('Met WSpd', 'OPEC WSpd');
+% grid on;
+
+% Prepare blank files to put the shifted data into (will replace the
+% existing data files with this data when finished).
+[r_master c_master] = size(master.data);
+shifted_master = NaN.*ones(r_master, c_master);
+shifted_master(:,1:6) = master.data(:,1:6);
+% [r_calc c_calc] = size(calc_master.data);
+% shifted_calc   = NaN.*ones(r_calc, c_calc);
+% shifted_calc(:,1:6) = calc_master.data(:,1:6);
+
+
+%%% Run through each of the measurement periods and try and find the shift
+ccorr = []; lags = [];
+for j = 1:1:length(start_times)
+    clear *_tmp;
+    
+    MET_DAT_tmp  = MET_DAT(start_times(j,1):start_times(j,2),1);
+    OPEC_DAT_tmp = OPEC_DAT(start_times(j,1):start_times(j,2),1);
+    
+    %       %%% Continuous segment xcorr
+    try
+        [output(j).seg] = segment_xcorr(MET_DAT_tmp, OPEC_DAT_tmp, num_lags);
+        pts_to_shift_seg(j,1) = output(j).seg(output(j).seg(:,3) == max(output(j).seg(:,3)),4);
+    catch
+        pts_to_shift_seg(j,1) = NaN;
+    end
+    %%% Moving window x-correlation:
+    try
+        [output(j).mw] = mov_window_xcorr(MET_DAT_tmp, OPEC_DAT_tmp, num_lags);
+        pts_to_shift_mw(j,1) = mode(output(j).mw(:,2));
+    catch
+        pts_to_shift_mw(j,1) = NaN;
+    end
+    
+    try
+        %%% Traditional x-correlation for entire period
+        MET_DAT_tmp(isnan(MET_DAT_tmp),1) = 0;
+        OPEC_DAT_tmp(isnan(OPEC_DAT_tmp),1) = 0;
+        
+        ind_tmp = find(~isnan(MET_DAT_tmp.*OPEC_DAT_tmp));
+        [ccorr_tmp lags_tmp] = xcorr(MET_DAT_tmp(ind_tmp), OPEC_DAT_tmp(ind_tmp), num_lags);
+        lags = [lags lags_tmp'];
+        ccorr = [ccorr ccorr_tmp];
+        ccorr(:,j) = ccorr(:,j)./(max(ccorr(:,j)));
+        pts_to_shift(j,1) = lags(ccorr(:,j) == 1,j);
+        % % % % %     ccorr(1:num_lags*2+1,j) = ccorr_tmp(1:num_lags*2+1,1);
+        % % % % %         lags(1:num_lags*2+1,j) = lags_tmp(1:num_lags*2+1);
+    catch
+        disp(['Error on loop ' num2str(j) ', data starting at ' num2str(start_times(j,1)) ]);
+        pts_to_shift(j,1) = NaN;
+        lags = [lags(:,1:j-1) NaN.*ones(num_lags.*2+1,1)];
+        ccorr = [ccorr(:,1:j-1) NaN.*ones(num_lags.*2+1,1)];
+    end
+end
+
+
+%%% Override shifts if set in Clean #2:
+if ~isempty(shift_override)
+    for k = 1:1:size(shift_override,1)
+        try
+            indfirst = find(shift_override(k,1)==start_times(:,1));
+            indlast = find(shift_override(k,2)==start_times(:,2));
+            if indfirst > 0 && indlast > 0 && indfirst==indlast
+                pts_to_shift(indfirst,1) = shift_override(k,3);
+                disp(['Overridden shift value for : start time group ' num2str(indfirst)]);
+                
+            else
+                disp(['indexes for first and last shift overrides do not match. Override not completed for override: ' num2str(k)]);
+            end
+        catch
+            disp(['Problem with override. Override not completed for override: ' num2str(k)]);
+        end
+        clear indfirst indlast
+    end
+end
+
+
+%%% Apply shifts and ask the user if they are happy with the results:
+add_to_plot = [];
+for j = 1:1:length(start_times)
+    tmp_add = (start_times(j,1):20:start_times(j,2))';
+    add_to_plot = [add_to_plot ; tmp_add j.*ones(length(tmp_add),1)];
+    clear tmp_add;
+    if isnan(pts_to_shift(j,1)) == 1;
+        try
+            switch j
+                case 1
+                    pts_to_shift(1,1) = pts_to_shift(2,1);
+                case length(j)
+                    pts_to_shift(length(j),1) = pts_to_shift(length(j)-1,1);
+                otherwise
+                    pts_to_shift(j,1) = ceil(nanmean([pts_to_shift(j-1,1); pts_to_shift(j+1,1)]));
+            end
+            disp(['Shift for data section ' num2str(j) ' is estimated at ' num2str(pts_to_shift(j,1)) '.']);
+        catch
+            disp(['Could not estimate a lag time for start_time ' num2str(j) '. Set to zero.']);
+        end
+    end
+    
+    % Shift the OPEC data ahead by specified number of points if shift is +
+    if pts_to_shift(j,1) > 0
+        clear ind_shifted
+        ind_shifted = (start_times(j,1)+pts_to_shift(j,1):1:start_times(j,2)+pts_to_shift(j,1));
+        shifted_master(ind_shifted,7:c_master) = master.data(start_times(j,1):start_times(j,2),7:c_master);
+        %         shifted_calc(ind_shifted,7:c_calc) = calc_master.data(start_times(j,1):start_times(j,2),7:c_calc);
+        % Shift OPEC data backwards if it is a -'ve shift
+    elseif pts_to_shift(j,1) < 0
+        clear ind_shifted
+        ind_shifted = (start_times(j,1)+pts_to_shift(j,1):1:start_times(j,2)+pts_to_shift(j,1));
+        if ~isempty(find(ind_shifted<1, 1)) % fix case where we are shifting beyond the start date:
+            ind_shifted = (1:1:start_times(j,2)+pts_to_shift(j,1));
+            start_times(j,1) = length(find(ind_shifted<1)) + 1;
+        end
+        shifted_master(ind_shifted,7:c_master) = master.data(start_times(j,1):start_times(j,2),7:c_master);
+        %         shifted_calc(ind_shifted,7:c_calc) = calc_master.data(start_times(j,1):start_times(j,2),7:c_calc);
+        % If shift = 0, don't touch it.
+    elseif pts_to_shift(j,1) == 0
+        ind_shifted = (start_times(j,1):1:start_times(j,2));
+        shifted_master(ind_shifted,7:c_master) = master.data(start_times(j,1):start_times(j,2),7:c_master);
+        %         shifted_calc(ind_shifted,7:c_calc) = calc_master.data(start_times(j,1):start_times(j,2),7:c_calc);
+    end
+    
+end
+%%% Plot the unshifted and shifted timeseries, along with Met and
+%%% OPEC_10min data:
+close(findobj('Tag','Pre-Shift'));
+figure('Name','Data_Alignment: Pre-Shift','Tag','Pre-Shift');
+figure(findobj('Tag','Pre-Shift'));clf;
+plot(met.data(:,4),'b');hold on;
+plot(OPEC_10min_DAT(:,1),'Color',[1 0 0]);
+plot(master.data(:,find_right_col(master.labels,'u_mean_ms-1')),'Color',[0.8 0.8 0.8]);
+plot(shifted_master(:,find_right_col(master.labels,'u_mean_ms-1')),'g');
+legend('Met WSpd', '10min WSpd', 'Orig EdiRe WSpd',  'Corrected EdiRe WSpd');
+grid on;
+set(gca, 'XMinorGrid','on');
+for ii = 1:1:length(add_to_plot)
+    text(add_to_plot(ii,1),6,num2str(add_to_plot(ii,2)),'Color','k')
+end
+
+%%% Create output information for the user:
+output_data = [(1:1:length(start_times))' start_times pts_to_shift];
+disp(output_data);
+
+%%% Overwrite data with the shifted values:
+master.data = shifted_master;
+clear shifted_master;
+
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Storage Calculations:
+Fc_in = master.data(:,find_right_col(master.labels,'Fc_rot_freq_wpl_umolm-2s-1'));
+CO2_top = master.data(:,find_right_col(master.labels,'CO2_mean_umolmol-1')); % in umol/mol
+CO2_cpy = OPEC_10min_calc.master.data(:,find_right_col(OPEC_10min_calc.master.labels,'CO2_cpy')); % in umol/mol
+Ta = met.data(:,2);
+[NEE_raw dcdt Jtfill] = OPEC_10min_storage(site, master.data(:,2), Fc_in, CO2_top, CO2_cpy, Ta);
+
+
+%% Do Burba Correction for instrument self-heating:
+%%% Constants:
+ZeroK = 273.15;                         % zero deg. C in deg K.
+R     = 8.31451;                        % J/mol/K universal gas constant
+Rv    = 461.5;                          % J/kg/K gas constant for water vapour Stull(1995)
+Rd    = 287.05;                         % J/kg/K gas constant for dry air Stull(1995)
+Cp    = 1004.67;                        % J/kg/K specific heat for dry air at constant pressure Stull(1995)
+Cpv   = 1875;                          % J/kg/K specific heat for water vapour at constant pressure Stull(1995)
+Mc    = 44.01;                          % g/mol molecular weight co2 Stull(1995)
+Ma    = 28.96;                          % g/mol molecular weight for mean condition of air, Stull(1995)
+Mw    = 18.02;                          % g/mol molecular weight for water, Stull(1995)
+mu    = 1.6077;                         % ratio of Ma:Mw
+
+%%% Load necessary variables:
+APR = master.data(:,find_right_col(master.labels,'Press_mean_kPa')); % kPa
+Ts = master.data(:,find_right_col(master.labels,'Tv_mean_C'));  % in C
+LE_rot = master.data(:,find_right_col(master.labels,'LE_rot_freq_Wm-2'));  % in Wm-2
+Hs_rot = master.data(:,find_right_col(master.labels,'Hs_rot_freq_Wm-2'));  % in Wm-2
+Fc_rot = master.data(:,find_right_col(master.labels,'Fc_rot_freq_umolm-2s-1'));  % in umol/m2/s
+rho_a = master.data(:,find_right_col(master.labels,'rho_moist_gm-3'))./1000;  % in kg/m3
+rho_v =  master.data(:,find_right_col(master.labels,'H2O_mean_gm-3'))./1000;  % in kg/m3
+rho_c =  master.data(:,find_right_col(master.labels,'CO2_mean_mgm-3'))./1e6;  % in kg/m3
+rho_d = rho_a - rho_v - rho_c;         % in kg/m3
+Wind_Speed = master.data(:,find_right_col(master.labels,'u_mean_ms-1'));  
+% Convert Ts into Ta - Put rho_a into a molar density (mmol/m^3)
+[Ta_conv rho_a_conv] = Ts2Ta_using_density(Ts, APR, (rho_v.*1e6)./Mw);
+Ta(isnan(Ta),1) = Ta_conv(isnan(Ta),1);
+Ta_K = Ta + ZeroK;
+% Convert LE to kgm-2s-1
+wh2o = LE_rot./lambda(Ta); % from W/m2 to kgm-2s-1
+% Convert Fc to kgm-2s-1
+% wc = CO2_convert(Fc_rot,Ta,APR,1)./1e6; % in kgm-2s-1
+wc = CO2_convert(Fc_rot,Ta,APR,5)./1e6; % from umol/m2/s to kgm-2s-1
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Load the TP39 met data:
+TP39data = [master.data(:,2) NaN.*ones(length(master.data),6)]; % extra column in case something else is desired
+for yr = min_yr:1:max_yr
+    try
+        met_tmp = load([TP39met_path 'TP39_met_cleaned_' num2str(yr) '.mat']);
+        try TP39data(TP39data(:,1)== yr,2) = met_tmp.master.data(:,find_right_col(met_tmp.master.labels,'DownLongwaveRad_AbvCnpy'));
+        catch; TP39data(TP39data(:,1)==yr,2) = NaN; disp(['Could not load Ldown for year: ' num2str(yr)]); end
+        try TP39data(TP39data(:,1)== yr,3) = met_tmp.master.data(:,find_right_col(met_tmp.master.labels,'DownShortwaveRad'));
+        catch; TP39data(TP39data(:,1)==yr,3) = NaN; disp(['Could not load Qdown for year: ' num2str(yr)]); end
+    catch
+        disp(['Could not find TP39 met data for year: ' num2str(yr) '.']);
+        TP39data(TP39data(:,1)== yr,2:6) = NaN;
+    end
+end
+u = met.data(:,4); u(isnan(u),1) = Wind_Speed(isnan(u),1);
+L = TP39data(:,2);
+Q = TP39data(:,3); Q(Q<0) = 0;
+
+[Hs_corr] = OPEC_Burba_correction_afterWPL(Hs_rot, Ta_K-ZeroK, u, Q, L);
+
+%%% Re-apply the WPL corrections, using the new Hs value:
+%%% WPL correction for h2o flux (output in kg/m2/s):
+wh2o_wpl_B = (1 + ((mu.*rho_v)./rho_d)) .* ((wh2o) + ((Hs_corr.*rho_c)./(rho_a.*Cp.*Ta_K)));
+%%% WPL correction for co2 flux (output in kg/m2/s): 
+wc_wpl_B = (wc) + ((mu.*wh2o_wpl_B)./rho_d).*(rho_c./(1+mu.*(rho_v./rho_d))) + ( (Hs_corr.*rho_c)./(rho_a.*Cp.*Ta_K) );
+
+%%%%% Convert Fc back into umolm-2s-1, LE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Fc_rot_wpl_B = CO2_convert(wc_wpl_B.*1e6, Ta, APR, 4);
+Fc_rot_wpl_B = CO2_convert(wc_wpl_B.*1e6, Ta, APR, 2);
+
+% Add storage to get NEE:
+NEE_rot_wpl_B = Fc_rot_wpl_B + dcdt;
+% Convert LE:
+LE_rot_wpl_B = wh2o_wpl_B.*lambda(Ta);
+
+%%%%%%%%%%% SPIKE REMOVAL FOR NEW VARIABLES:
+% if qtflag ==1
+%     NEE_wpl_B_cleaned = NaN.*ones(size(NEE_raw));
+%     LE_wpl_B_cleaned = NaN.*ones(size(NEE_raw));
+%     disp('Spike removal skipped.  WIll not save final data.');
+% else
+%     %%% Papale Spike Removal:
+%     % 1. For NEE:
+%     [NEE_wpl_B_cleaned] = mcm_CPEC_outlier_removal(site, NEE_rot_wpl_B, 30, 'Fc');
+%     % 2. For LE:
+%     [LE_wpl_B_cleaned] = mcm_CPEC_outlier_removal(site, LE_rot_wpl_B, 30, 'LE');
+% end
+
+%%% Clean data by using flags to signal bad 10-min averages:
+% options for cleaning are:
+% col 67 (# CSAT warnings), col 68 (# irga warnings) *****
+% cols 69-76: flags - doesn't work so well
+% col 77: agc value - doesn't work so well
+% col 24: cov_Ux_Ux(1) - doesn't work so well
+
+% ind = find( master.data(:,67) > 10 | master.data(:,68) > 10 );
+% NEE_raw(ind,1) = NaN;
+% Fc_rot(ind,1) = NaN;
+% LE_rot(ind,1) = NaN;
+% Hs_rot(ind,1) = NaN;
+% Htc_rot(ind,1) = NaN;
+
+%%% Papale Spike Removal:
+if qtflag ==1
+    NEE_cleaned = NaN.*ones(size(NEE_raw));
+    NEE_wpl_B_cleaned = NaN.*ones(size(NEE_raw));
+    LE_wpl_B_cleaned = NaN.*ones(size(NEE_raw));
+    LE_cleaned = NaN.*ones(size(NEE_raw));
+    Hs_cleaned = NaN.*ones(size(NEE_raw));
+    Htc_cleaned = NaN.*ones(size(NEE_raw));
+    disp('Spike removal skipped.  WIll not save final data.');
+else
+    LE = master.data(:,find_right_col(master.labels,'LE_rot_freq_wpl_Wm-2'));
+    Hs = master.data(:,find_right_col(master.labels,'Hs_rot_freq_Wm-2'));
+    Htc = master.data(:,find_right_col(master.labels,'Ht_rot_freq_Wm-2'));
+    % 1. For Fc:
+    [NEE_cleaned] = mcm_CPEC_outlier_removal(site, NEE_raw, 30, 'Fc');
+    [NEE_wpl_B_cleaned] = mcm_CPEC_outlier_removal(site, NEE_rot_wpl_B, 30, 'Fc');
+    % 2. For LE:
+    [LE_cleaned] = mcm_CPEC_outlier_removal(site, LE, 30, 'LE',1); % The 1 lets the spike removal repeat once.
+    [LE_wpl_B_cleaned] = mcm_CPEC_outlier_removal(site, LE_rot_wpl_B, 30, 'LE');    
+    % 3. For Hs, Htc:
+    [Hs_cleaned] = mcm_CPEC_outlier_removal(site, Hs, 30, 'H');
+    [Htc_cleaned] = mcm_CPEC_outlier_removal(site, Htc, 30, 'H');
+end
+
+%% Last Bit: We may have gaps in the Burba-corrected data due to missing LW
+%%% or SW data.  We can adjust the rest by a regression with original NEE:
+%%% Tests at TP74 shows a slope of ~0.94 with R2 = 0.97, so it's pretty
+%%% valid.
+figure(99)
+ind = find(~isnan(NEE_cleaned.*NEE_wpl_B_cleaned));
+plot(NEE_cleaned(ind),NEE_wpl_B_cleaned(ind),'k.')
+p = polyfit(NEE_cleaned(ind),NEE_wpl_B_cleaned(ind),1);
+B_pred = polyval(p,NEE_cleaned);
+rsq = rsquared(NEE_wpl_B_cleaned(ind),B_pred(ind));
+hold on; plot(NEE_cleaned(ind),B_pred(ind),'r-','LineWidth',2)
+ylabel('Burba-cleaned');
+xlabel('Non-Burba-Cleaned');
+text(-10,-20,['y = ' num2str(p(1)) 'x + ' num2str(p(2)) ' - R2 = ' num2str(rsq)])
+NEE_wpl_B_cleaned(isnan(NEE_wpl_B_cleaned),1) = B_pred(isnan(NEE_wpl_B_cleaned),1);
+title('NEE');
+
+%%% No sense to even correct for LE - we can just use cleaned value:
+
+LE_wpl_B_cleaned(isnan(LE_wpl_B_cleaned),1) = LE_cleaned(isnan(LE_wpl_B_cleaned),1);
+
+%%% Plot the differences:
+figure('Tag','Burba','Name','Rot+WPL+Burba Results');
+figure(findobj('Tag','Burba'));clf;
+subplot(211)
+plot(NEE_cleaned,'r'); hold on; plot(NEE_wpl_B_cleaned,'b');
+legend('NEE_{no Burba}', 'NEE_{Burba}');
+subplot(212)
+plot(LE_cleaned,'r'); hold on; plot(LE_wpl_B_cleaned,'b');
+legend('LE_{no Burba}', 'LE_{Burba}');
+
+
+
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Put all of the calculated data into its own matrix, along with any
+%%% variables that should be passed on to the next step, where EdiRe Data
+%%% is combined with data created from 10min average files:
+w_mean = master.data(:,find_right_col(master.labels,'w_mean_ms-1'));
+w_std  = master.data(:,find_right_col(master.labels,'w_std'));
+H2O_top  = master.data(:,find_right_col(master.labels,'H2O_mean_mmolmol-1'));
+Pressure  = master.data(:,find_right_col(master.labels,'Press_mean_kPa'));
+Ts  = master.data(:,find_right_col(master.labels,'Tv_mean_C'));
+Wind_Speed  = master.data(:,find_right_col(master.labels,'u_mean_ms-1'));
+u_std  = master.data(:,find_right_col(master.labels,'u_std'));
+u_star  = master.data(:,find_right_col(master.labels,'ustar_ms-1'));
+
+
+calc_master.data = [master.data(:,1:6) w_mean w_std H2O_top Pressure... % cols 1-10
+    Ts Ta Wind_Speed u_std u_star Jtfill CO2_top CO2_cpy dcdt NEE_cleaned LE_cleaned... % cols 11-20
+    Hs_cleaned Htc_cleaned Fc_in ]; % cols 21-22
+calc_master.labels = {'TimeVec'; 'Year'; 'Month'; 'Day'; 'Hour'; 'Minute'; 'w_mean'; 'w_std'; 'H2O_top'; 'Pressure';...
+    'Ts'; 'Ta'; 'Wind_Speed'; 'u_std'; 'u_star';'Jtfill'; 'CO2_top'; 'CO2_cpy'; 'dcdt'; 'Fc'; ...
+    'NEE_cleaned'; 'LE_cleaned'; 'Hs_cleaned'; 'Htc_cleaned'; 'Fc_Burba';'NEE_Burba';'LE_Burba'};
+
+% Fc_rot_wpl_B = CO2_convert(wc_wpl_B.*1e6, Ta, APR, 2);
+% 
+% % Add storage to get NEE:
+% NEE_rot_wpl_B = Fc_rot_wpl_B + dcdt;
+% % Convert LE:
+% LE_rot_wpl_B = wh2o_wpl_B.*lambda(Ta);
+
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Save the data to the appropriate folder:
+%%% Overwrite the data in master and calc_master with the shifted data:
+
+if qtflag==1 || qtflag == 9
+else
+    save([save_path_cleaned  site '_OPEC_EdiRe_cleaned.mat'], 'master');
+    clear master
+    master = calc_master;
+    save([save_path_calc site '_OPEC_EdiRe_calc.mat'], 'master');
+    disp('Master and Calculated Data saved.');
+end
+
+
+
+
+
+
+
+
+
+end
+function [right_col] = find_right_col(label_list,label_in)
+
+%%% Convert character array to cell array if label_list is in that form:
+if ischar(label_list)==1
+    [r1 c1] = size(label_list);
+    for j = 1:1:r1
+        tmp = label_list(j,:);
+        tmp(tmp == ' ') = '';
+        label_list_new{j,1} = tmp;
+        clear tmp;
+    end
+    clear label_list;
+    label_list = label_list_new;
+    clear label_list_new;
+end
+
+%%%% Find the Right Row:
+[r c] = size(label_list);
+right_col = [];
+col_ctr = 1;
+
+while isempty(right_col)==1 && col_ctr <= c
+    %     for col_ctr = 3:1:c
+    %     try
+    right_col = find(strcmp(label_in,label_list(:,col_ctr))==1);
+    %     catch
+    %     right_col = find(strncmp(label_in,label_list(:,1),length(label_in))==1);
+    %     end
+    col_ctr = col_ctr+1;
+end
+end

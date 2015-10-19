@@ -1,0 +1,12 @@
+load('/1/fielddata/Matlab/Data/Master_Files/TPD/TPD_data_master.mat');
+
+master.data = master.data(master.data(:,1)>=2012 & master.data(:,1)<=2014,:);
+
+csvwrite('/1/fielddata/Matlab/Data/Distributed/TPD_data_master_vSept2014.csv',master.data);
+
+
+load('/1/fielddata/Matlab/Data/Master_Files/TP39/TP39_data_master.mat');
+
+master.data = master.data(master.data(:,1)>=2002 & master.data(:,1)<=2014,:);
+
+csvwrite('/1/fielddata/Matlab/Data/Distributed/TP39_data_master_vSept2014.csv',master.data);

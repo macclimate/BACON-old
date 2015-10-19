@@ -1,0 +1,161 @@
+function [header data] = jjb_rip_header(path, header_size, options)
+%%% The purpose of this function is to remove the header of a file,
+%%% returning separated header and data:
+%%% where the outputs:
+% header - is the header lines (in cell format)
+% data - is the data matrix (in numeric format), 
+%%% and the inputs are:
+% path - the full path to the file of interest
+% header_size - the number of lines that the header takes up (# of lines you want to put into the header before recording data)
+% options - sets delimiter (and other things that you probably won't have to worry about but you can see other things you can do in the function).
+%%% Created Dec 2010 by JJB
+
+if nargin == 2 || isempty(options)
+    options = struct;
+end
+process_tag ='';
+
+%%% Set delimiter:
+if isfield(options, 'Delimiter')==1
+    dlm = options.Delimiter;
+else
+    dlm = ','; % default is comma
+    disp('Using comma as delimiter (default).')
+    disp('Set <options.Delimiter> to change.');
+end
+
+%%% Treat multiple delimiters as a single delimiter 
+% default is off
+% set options.MultipleDelimsAsOne = 1 to turn on.
+
+if isfield(options,'MultipleDelimsAsOne') == 1
+else
+    options.MultipleDelimsAsOne = 0;
+    disp('Treating multiple delimiters as separate data points (default).')
+    disp('Set <options.multdelims = 1> to change.');
+end
+process_tag = ['''Delimiter'', ''' dlm ''' , ''MultipleDelimsAsOne'',' num2str(options.MultipleDelimsAsOne)];
+
+%%% Treat certain text/numbers as empty space 
+% default is off
+% set options.TreatAsEmpty = 'xxx' to turn on.
+if isfield(options,'TreatAsEmpty') == 1
+    process_tag = [process_tag ', ''TreatAsEmpty'', ' options.TreatAsEmpty];
+else
+    disp('Treating no values as empty (default).')
+    disp('Set <options.TreatAsEmpty = ''xxx''> to change.');
+end
+
+%%% Include any specific comment experessions
+% default is off
+% Set <options.CommentStyle = {''x'',''x''}> to change.
+if isfield(options,'CommentStyle') == 1
+    process_tag = [process_tag ', ''CommentStyle'', ' options.CommentStyle];
+    
+else
+    disp('No values used as comment characters (default).')
+    disp('Set <options.CommentStyle = {''x'',''x''}> to change.');
+end
+
+% header_size = 2;
+% fid = fopen('/1/fielddata/Matlab/Data/NACP/nacpFilledNEE_FC3_CATP4-2003.dat');
+fid = fopen(path,'r');
+
+% header = textscan(fid,format_string,50,'Delimiter',dlm,'EmptyValue', NaN);
+% fseek(fid,0,'bof');
+% eofstat = 0;
+
+% ctr = 1;
+% while eofstat == 0;
+%     tline = fgets(fid);
+%     coms = find(tline == dlm);
+% 
+%     len(ctr,1) = length(coms);
+%     eofstat = feof(fid);
+%     clear coms
+%     ctr = ctr + 1;
+% end
+    
+
+
+for i = 1:1:header_size
+    % Get the first line with the headers:
+    tline = fgets(fid);
+        s2 = regexp(tline, '\n');
+if ~isempty(s2)
+    tline(s2) = '';
+end
+    
+    cut = 1;
+    while cut == 1;
+    coms = find(tline == dlm);
+        if coms(end) == length(tline);
+    tline(end) = '';
+        cut = 1;
+        else
+            cut = 0;
+        end
+    end
+coms = [0 coms length(tline)+1];
+
+for j = 1:1:length(coms)-1
+    tmp = tline(coms(j)+1:coms(j+1)-1);
+    tmp(tmp == '"') = ''; %remove quotation marks.
+    tmp(isspace(tmp)==1) = '';% removes spaces
+    header{i,j} = tmp;
+    clear tmp;
+end
+clear coms s2 tline;
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% MAKE A FORMAT STRING for extracting the remaining data:
+if isfield(options,'format_string')==1
+    format_string = options.format_string;
+else
+    % Default is just to make them all numbers:
+    format_string = '%n';
+    for k = 1:1:size(header,2)
+        format_string = [format_string ' %n'];
+    end
+end
+% if n_flag == 1
+%     format_string = [format_string ' \n'];
+% end
+
+
+%%% Load the rest of the data in:
+eofstat = 0;
+row_ctr = 1;
+data = [];
+clear tmp_data
+while eofstat == 0;
+    tmp_data = eval(['textscan(fid,format_string,50,' process_tag ');']); %, 'CommentStyle', commentstyle);
+    rows_to_add = length(tmp_data{1,1});
+    
+    for k = 1:1:length(tmp_data)
+        % fixes the case where one column may be shorter than the rest
+        % (I don't know why this would happen, but it does).
+        if length(tmp_data{1,k}) < rows_to_add
+            tmp_switch = tmp_data{1,k};
+            tmp_switch = [tmp_switch ; NaN.*ones(rows_to_add - length(tmp_data{1,k}))];
+            tmp_data{1,k} = tmp_switch;
+            clear tmp_switch
+        end
+        data(row_ctr:row_ctr+rows_to_add-1,k) = tmp_data{1,k};
+    end
+    row_ctr = row_ctr + rows_to_add;
+    clear tmp_data rows_to_add;
+    eofstat = feof(fid);
+end
+
+%%% Replace unwanted numbers:
+if isfield(options,'nanvalues')==1
+    for jk = 1:1:size(data,2)   
+ind_rem = data(:,jk)==options.nanvalues;
+data(ind_rem==1,jk) = NaN;
+    clear ind_rem;
+    end
+end
+
+fclose(fid)

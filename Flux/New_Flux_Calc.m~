@@ -1,0 +1,441 @@
+%% This is a brand - new flux calculation script -- hot off the presses!
+% Here is how we're going to try to do it:
+% 1 Pool all years data together to parameterize the model
+% 2 Then, use the AB gapfilling TVP on all data to tell us about possible
+% differences in phenology.
+
+
+%%%%%%%%%%%%
+loadstart = addpath_loadstart;
+clrs = rand(20,3);
+ustar_th = 0.3;
+load([loadstart 'Matlab/Data/Data_Analysis/Uncert/TP39.mat'],'TP39');
+% load([loadstart 'Matlab/Data/Data_Analysis/Uncert/TP74.mat'],'TP74');
+% load([loadstart 'Matlab/Data/Data_Analysis/Uncert/TP89.mat'],'TP89');
+% load([loadstart 'Matlab/Data/Data_Analysis/Uncert/TP02.mat'],'TP02');
+
+%%%%%%%%%%
+% Put stuff into columns:
+[NEPraw] = jjb_struct2col(TP39, 'NEPraw'); [Ts5] = jjb_struct2col(TP39, 'Ts5');
+[VPD] = jjb_struct2col(TP39, 'VPD'); [Ta] = jjb_struct2col(TP39, 'Ta');
+[PAR] = jjb_struct2col(TP39, 'PAR'); [SMa] = jjb_struct2col(TP39, 'SMa');
+[ustar] = jjb_struct2col(TP39, 'ustar'); [SMb] = jjb_struct2col(TP39, 'SMb');
+year = jjb_struct2col(TP39, 'Year'); dt = jjb_struct2col(TP39, 'dt');
+NEEraw = -1.*NEPraw;
+
+%%%%%%%%%%
+test_Ts = (-10:2:26)';
+test_PAR = (0:200:2400)';
+clrs = [1 0 0; 0.5 0 0; 0 1 0; 0.8 0.5 0.7; 0 0 1; 0.2 0.1 0.1; ...
+    1 1 0; 0.4 0.5 0.1; 1 0 1; 0.9 0.9 0.4; 0 1 1; 0.4 0.8 0.1];
+yrlist = ['2003';'2004';'2005';'2006';'2007';'2008'];
+
+%%%%%%%%%%%%%%%%%
+% ctr_yr = 1;
+% for yr = 2003:1:2008
+
+ind_resp_gs = find(ustar >= ustar_th & ~isnan(Ts5) & ~isnan(NEEraw) & PAR < 15);
+ind_resp_nongs = find(ustar >= ustar_th & ~isnan(Ts5) & ~isnan(NEEraw) & Ts5 < 0);
+ind_resp = sort([ind_resp_gs; ind_resp_nongs]);
+clear ind_resp_gs ind_resp_nongs;
+Rraw(1:length(NEEraw),1) = NaN;
+Rraw(ind_resp) = NEEraw(ind_resp);
+model_R_Ts(1:length(NEEraw),1) = NaN;
+model_R_Ts_SM(1:length(NEEraw),1) = NaN;
+
+%%%%%%
+% Fit Logistic function to all years of data:
+[TP39out.r_coeff,TP39out.r_y,TP39out.r_r2,TP39out.r_sigma] = fitmain([5 .1 .1], 'fitlogi5', Ts5(ind_resp,1), NEEraw(ind_resp,1));
+% Estimate Respiration for all days, all years:
+TP39out.resp_Ts = TP39out.r_coeff(1)./(1+exp(TP39out.r_coeff(2)*(TP39out.r_coeff(3)-Ts5)));
+
+% Respiration for plotting:
+test_R = TP39out.r_coeff(1)./(1+exp(TP39out.r_coeff(2)*(TP39out.r_coeff(3)-test_Ts)));
+figure(1); clf;
+plot(Ts5(ind_resp),NEEraw(ind_resp),'k.'); hold on;
+plot(test_Ts, test_R,'r-', 'LineWidth',2);
+grid on;
+
+%%% Residual analysis:
+% subtraction:
+resid_Rsub = NEEraw(ind_resp) - TP39out.resp_Ts(ind_resp);
+figure(2); clf
+plot(SMa(ind_resp),resid_Rsub,'bx'); hold on;
+grid on;
+resid_bavg = blockavg(SMa(ind_resp), resid_Rsub, 0.025,30, -20);
+plot(resid_bavg(:,1),resid_bavg(:,2),'-ro')
+% division:
+resid_Rdiv = NEEraw(ind_resp) ./ TP39out.resp_Ts(ind_resp);
+figure(3); clf
+plot(SMa(ind_resp),resid_Rdiv,'bx'); hold on;
+grid on;
+resid_bavg2 = blockavg(SMa(ind_resp), resid_Rdiv, 0.01,30, -20);
+plot(resid_bavg2(:,1),resid_bavg2(:,2),'-ro')
+
+%%% Probably best to make a linear relation for low SM situations:
+SMf_x = [0.0492; 0.0635]; SMf_y = [0.7178; 1];
+
+[m] = polyfit(SMf_x, SMf_y,1);
+
+SM_svar(1:length(TP39out.resp_Ts),1) = 1;
+SM_svar(SMa < 0.0635,1) = SMa(SMa < 0.0635,1).*m(1) + m(2);
+figure(4); clf
+plot(SM_svar)
+
+TP39out.resp_Ts_SM = TP39out.resp_Ts .*SM_svar;
+figure(5);
+clf;
+plot(ind_resp,NEEraw(ind_resp),'g'); hold on;
+plot(TP39out.resp_Ts,'b');
+plot(TP39out.resp_Ts_SM,'r');
+
+%%% Time-varying parameter:
+model_R_Ts(ind_resp) = TP39out.resp_Ts(ind_resp);
+model_R_Ts_SM(ind_resp) = TP39out.resp_Ts_SM(ind_resp);
+
+  TP39out.rw_Ts = jjb_AB_gapfill(model_R_Ts, Rraw, (1:1:length(TP39out.resp_Ts))',100, 20, 'off', [], []);
+  TP39out.rw_Ts_SM = jjb_AB_gapfill(model_R_Ts_SM, Rraw, (1:1:length(TP39out.resp_Ts))',100, 20, 'off', [], []);
+figure(36); clf
+plot(TP39out.rw_Ts(:,2)); hold on;
+plot(TP39out.rw_Ts_SM(:,2),'r'); hold on;
+
+TP39out.resp_Ts_rw = TP39out.resp_Ts .* TP39out.rw_Ts(:,2); model_R_Ts_rw = model_R_Ts.*TP39out.rw_Ts(:,2);
+TP39out.resp_Ts_SM_rw = TP39out.resp_Ts_SM .* TP39out.rw_Ts_SM(:,2); model_R_Ts_SM_rw = model_R_Ts_SM.*TP39out.rw_Ts_SM(:,2);
+
+
+figure(37); clf
+plot(Rraw,'k');hold on;
+plot(TP39out.resp_Ts); 
+plot(TP39out.resp_Ts_SM,'r'); 
+plot(TP39out.resp_Ts_SM_rw,'g'); 
+
+
+% find best fit for respiration:
+[RMSE_Ts rRMSE_Ts MAE_Ts BE_Ts] = model_stats(model_R_Ts, Rraw,'on');
+[RMSE_Ts_SM rRMSE_Ts_SM MAE_Ts_SM BE_Ts_SM] = model_stats(model_R_Ts_SM, Rraw,'on');
+[RMSE_Ts_rw rRMSE_Ts_rw MAE_Ts_rw BE_Ts_rw] = model_stats(model_R_Ts_rw, Rraw,'on');
+[RMSE_Ts_SM_rw rRMSE_Ts_SM_rw MAE_Ts_SM_rw BE_Ts_SM_rw] = model_stats(model_R_Ts_SM_rw, Rraw,'on');
+
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%% GEP part:
+TP39out.GEPraw = TP39out.resp_Ts_SM_rw - NEEraw;
+
+
+figure(6); clf;
+plot(TP39out.GEPraw); hold on;
+
+ind_GEP = find(Ts5 > 4 & Ta > 0 & PAR > 20 & ~isnan(Ts5) & ~isnan(TP39out.GEPraw) & ustar > ustar_th);
+plot(ind_GEP,TP39out.GEPraw(ind_GEP),'r.')
+
+top_GEP = sort(TP39out.GEPraw(ind_GEP), 'descend');
+max_GEP = mean(top_GEP(1:100,1)); % about 31 umol/m2/s.
+
+%%%%%%% GEP - PAR Relationship:
+[TP39out.gep_par_coeff TP39out.gep_par_y TP39out.gep_par_r2 TP39out.gep_par_sigma] = hypmain1([0.01 10 0.1], 'fit_hyp1', PAR(ind_GEP), TP39out.GEPraw(ind_GEP));
+%%%%%%% Predict GEP for all days
+TP39out.GEP_PAR(1:length(TP39out.GEPraw),1) = NaN;
+% temp_GEP_PAR = TP39out.gep_par_coeff(1).*PAR.*TP39out.gep_par_coeff(2)./(TP39out.gep_par_coeff(1).*PAR + TP39out.gep_par_coeff(2));
+
+test_GEP_PAR = TP39out.gep_par_coeff(1).*test_PAR.*TP39out.gep_par_coeff(2)./(TP39out.gep_par_coeff(1).*test_PAR + TP39out.gep_par_coeff(2));
+
+figure(7); clf;
+plot(PAR(ind_GEP),TP39out.GEPraw(ind_GEP),'b.'); hold on;
+plot(test_PAR, test_GEP_PAR,'r-','LineWidth',2)
+top_PAR = sort(PAR,'descend');
+max_PAR = median(top_PAR(1:100)); % ends up being about 2100 umol/m2/s
+
+%%%% Scaling Variable for PAR:
+GEP_svar =  (TP39out.gep_par_coeff(1).*PAR.*TP39out.gep_par_coeff(2)./(TP39out.gep_par_coeff(1).*PAR + TP39out.gep_par_coeff(2))) ./ ...
+    (TP39out.gep_par_coeff(1).*max_PAR.*TP39out.gep_par_coeff(2)./(TP39out.gep_par_coeff(1).*max_PAR + TP39out.gep_par_coeff(2)));
+GEP_svar(GEP_svar > 1) = 1;
+GEP_svar(GEP_svar < 0) = 0;
+figure(8); clf
+plot(GEP_svar);
+
+TP39out.GEP_PAR =  max_GEP.* GEP_svar;
+
+figure(9); clf;
+plot(TP39out.GEP_PAR,'c-'); hold on;
+plot(TP39out.GEPraw,'b-');
+
+%%%%%% Residual analysis with Ts:
+% division:
+max_Ts = 18;
+ind_GEP_resid = find(Ts5 >= 0 & Ts5 <= max_Ts & Ta > 0 & PAR > 20 & ~isnan(Ts5) & ~isnan(TP39out.GEPraw) & ustar > ustar_th);
+resid_GEPdiv = TP39out.GEPraw(ind_GEP_resid) ./ TP39out.GEP_PAR(ind_GEP_resid);
+%%% PLot residual w.r.t. Ts:
+figure(10); clf
+plot(Ts5(ind_GEP_resid),resid_GEPdiv,'bx'); hold on;
+grid on;
+resid_bavg3 = blockavg(Ts5(ind_GEP_resid), resid_GEPdiv, 0.5,8, -6);
+plot(resid_bavg3(:,1),resid_bavg3(:,2),'-ro')
+
+%%% Fit hyperbolic curve to the Ts - GEP function
+[TP39out.gep_par_Ts_coeff TP39out.gep_par_Ts_y TP39out.gep_par_Ts_r2 TP39out.gep_par_Ts_sigma] = hypmain1([0.01 10 0.1], 'fit_hyp1', Ts5(ind_GEP_resid), resid_GEPdiv); 
+
+%%%%% Get Scaling Variable:
+GEP_Ts_svar = (TP39out.gep_par_Ts_coeff(1).*Ts5.*TP39out.gep_par_Ts_coeff(2)./(TP39out.gep_par_Ts_coeff(1).*Ts5 + TP39out.gep_par_Ts_coeff(2))) ./ ...
+    (TP39out.gep_par_Ts_coeff(1).*max_Ts.*TP39out.gep_par_Ts_coeff(2)./(TP39out.gep_par_Ts_coeff(1).*max_Ts + TP39out.gep_par_Ts_coeff(2)));
+GEP_Ts_svar(GEP_Ts_svar > 1) = 1;
+GEP_Ts_svar(GEP_Ts_svar < 0) = 0;
+
+
+figure(11)
+plot(GEP_Ts_svar)
+
+TP39out.GEP_PAR_Ts = TP39out.GEP_PAR.*GEP_Ts_svar;
+figure(9);
+plot(TP39out.GEP_PAR_Ts,'g-');
+plot(TP39out.GEPraw,'b-');
+
+%%%%%% Residual analysis with VPD:
+% division:
+max_VPD = 3;
+ind_GEP_resid2 = find(Ts5 >= 4 & VPD > 0 & VPD <= max_VPD & Ta > 0 & PAR > 20 & ~isnan(VPD) & ~isnan(TP39out.GEPraw) & ustar > ustar_th);
+resid_GEP_Tsdiv = TP39out.GEPraw(ind_GEP_resid2) ./ TP39out.GEP_PAR_Ts(ind_GEP_resid2);
+%%% PLot residual w.r.t. Ts:
+figure(12); clf
+plot(VPD(ind_GEP_resid2),resid_GEP_Tsdiv,'bx'); hold on;
+grid on;
+resid_bavg4 = blockavg(VPD(ind_GEP_resid2), resid_GEP_Tsdiv, 0.1,8, -6);
+
+top_VPD_resids = sort(resid_bavg4(resid_bavg4(:,4) > 20,2),'descend');
+max_VPD_resid = mean(top_VPD_resids(1:2));
+
+resid_bavg4(:,2) = resid_bavg4(:,2)./max_VPD_resid;
+top_VPD_resids = top_VPD_resids./max_VPD_resid;
+
+plot(resid_bavg4(:,1),resid_bavg4(:,2),'-ro')
+
+bot_VPD_resids = sort(resid_bavg4(resid_bavg4(:,4) > 20,2),'ascend');
+min_VPD_resid = mean(bot_VPD_resids(1:2));
+
+x1 = resid_bavg4(find(resid_bavg4(:,2) == top_VPD_resids(1,1)),1);
+x2 = resid_bavg4(find(resid_bavg4(:,2) == top_VPD_resids(2,1)),1);
+
+start_x = max([x1 x2]); clear x1 x2; 
+start_y = 1;
+
+x1 =  resid_bavg4(find(resid_bavg4(:,2) == bot_VPD_resids(1,1)),1);
+x2 =  resid_bavg4(find(resid_bavg4(:,2) == bot_VPD_resids(2,1)),1);
+
+end_x = min([x1 x2]); clear x1 x2;
+end_y = min_VPD_resid;
+
+[m_VPD] = polyfit([start_x end_x], [start_y end_y],1);
+
+VPD_svar(1:length(TP39out.GEP_PAR_Ts),1) = 1;
+VPD_svar(VPD > start_x,1) = VPD(VPD > start_x,1).*m_VPD(1) + m_VPD(2);
+VPD_svar(VPD_svar < min_VPD_resid,1) = min_VPD_resid;
+figure(13); clf
+plot(VPD_svar)
+
+TP39out.GEP_PAR_Ts_VPD = TP39out.GEP_PAR_Ts.*VPD_svar;
+figure(9);
+plot(TP39out.GEP_PAR_Ts_VPD,'r-');
+plot(TP39out.GEPraw,'b-');
+%%%%%%%%%%%%%%%%%%%%%%%% Residual analysis with SM:
+% division:
+test_SM = (0.045:0.005:0.10)';
+max_SM = 0.12;
+ind_GEP_resid3 = find(Ts5 >= 4 & SMa <= max_SM & Ta > 0 & PAR > 20 & ~isnan(SMa) & ~isnan(TP39out.GEPraw) & ustar > ustar_th);
+resid_GEP_SMdiv = TP39out.GEPraw(ind_GEP_resid3) ./ TP39out.GEP_PAR_Ts_VPD(ind_GEP_resid3);
+%%% PLot residual w.r.t. SM:
+figure(14); clf
+plot(SMa(ind_GEP_resid3),resid_GEP_SMdiv,'bx'); hold on;
+grid on;
+resid_bavg5 = blockavg(SMa(ind_GEP_resid3), resid_GEP_SMdiv, 0.005 ,2, -2);
+% plot(resid_bavg5(:,1),resid_bavg5(:,2),'-ro')
+axis([0.04 max_SM 0 1])
+
+top_SM_resids = sort(resid_bavg5(resid_bavg5(:,4) > 20,2),'descend');
+max_SM_resid = median(top_SM_resids(1:5));
+orig_max_SM_resid = max_SM_resid;
+
+resid_bavg5(:,2) = resid_bavg5(:,2)./max_SM_resid;
+top_SM_resids = top_SM_resids./max_SM_resid;
+max_SM_resid = 1;
+
+plot(resid_bavg5(:,1),resid_bavg5(:,2),'-ro')
+
+min_SM_resid = min(resid_bavg5(resid_bavg5(1:2,4) > 20,2));
+orig_min_SM_resid = min_SM_resid.*orig_max_SM_resid; 
+
+resid_bavg5(:,2) = resid_bavg5(:,2)- min_SM_resid;
+max_SM_resid = max_SM_resid - min_SM_resid;
+min_SM_resid = 0;
+
+x_shift = resid_bavg5(resid_bavg5(:,2) == 0,1);
+y_shift = 1 - max_SM_resid;
+resid_bavg5(:,1) = resid_bavg5(:,1)- x_shift;
+plot(resid_bavg5(:,1),resid_bavg5(:,2),'-kp')
+
+
+ind_start_bavg = find(resid_bavg5(:,2) == 0, 1,'first');
+ind_end_bavg = find(resid_bavg5(:,2) >= max_SM_resid, 1,'first');
+
+new_resid_bavg5(:,1) = resid_bavg5(ind_start_bavg:ind_end_bavg,1);
+new_resid_bavg5(:,2) = resid_bavg5(ind_start_bavg:ind_end_bavg,2);
+
+%%% Fit hyperbolic curve to the Ts - GEP function
+[TP39out.gep_par_Ts_SM_coeff TP39out.gep_par_Ts_SM_y TP39out.gep_par_Ts_SM_r2 TP39out.gep_par_Ts_SM_sigma] = hypmain1([59.6311486066115 0.349702462373007 -239.173757531293], 'fit_hyp1', new_resid_bavg5(:,1), new_resid_bavg5(:,2)); 
+
+%%% Fot plotting:
+test_SM_svar = (TP39out.gep_par_Ts_SM_coeff(1).*(test_SM-x_shift) .*TP39out.gep_par_Ts_SM_coeff(2)./(TP39out.gep_par_Ts_SM_coeff(1).*(test_SM-x_shift) + TP39out.gep_par_Ts_SM_coeff(2))) + y_shift;
+
+%%%%% Get Scaling Variable:
+GEP_SM_svar = (TP39out.gep_par_Ts_SM_coeff(1).*(SMa-x_shift) .*TP39out.gep_par_Ts_SM_coeff(2)./(TP39out.gep_par_Ts_SM_coeff(1).*(SMa-x_shift) + TP39out.gep_par_Ts_coeff(2))) + y_shift;
+GEP_SM_svar(GEP_SM_svar > 1) = 1;
+GEP_SM_svar(isnan(GEP_SM_svar)) = 1;
+GEP_SM_svar(GEP_SM_svar < y_shift) = y_shift;
+
+figure(15); clf
+plot(test_SM,test_SM_svar,'b-')
+
+figure(16); clf
+plot(GEP_SM_svar)
+
+TP39out.GEP_PAR_Ts_VPD_SM = TP39out.GEP_PAR_Ts_VPD.*GEP_SM_svar;
+figure(9);
+plot(TP39out.GEP_PAR_Ts_VPD_SM,'k-'); hold on;
+plot(TP39out.GEPraw,'b-');
+
+
+
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ind_GEP = find(Ts5 > 4 & Ta > 0 & PAR > 20 & ~isnan(Ts5) & ~isnan(TP39out.GEPraw) & ustar > ustar_th);
+GEPraw(1:length(TP39out.GEPraw),1) = NaN;
+GEPraw(ind_GEP,1) = TP39out.GEPraw(ind_GEP,1);
+
+model_GEP_PAR(1:length(TP39out.GEPraw),1) = NaN;
+model_GEP_PAR(ind_GEP,1) = TP39out.GEP_PAR(ind_GEP,1);
+
+model_GEP_PAR_Ts(1:length(TP39out.GEPraw),1) = NaN;
+model_GEP_PAR_Ts(ind_GEP,1) = TP39out.GEP_PAR_Ts(ind_GEP,1);
+
+model_GEP_PAR_Ts_VPD(1:length(TP39out.GEPraw),1) = NaN;
+model_GEP_PAR_Ts_VPD(ind_GEP,1) = TP39out.GEP_PAR_Ts_VPD(ind_GEP,1);
+
+model_GEP_PAR_Ts_VPD_SM(1:length(TP39out.GEPraw),1) = NaN;
+model_GEP_PAR_Ts_VPD_SM(ind_GEP,1) = TP39out.GEP_PAR_Ts_VPD_SM(ind_GEP,1);
+
+
+% find best fit for GEP:
+[RMSE_GEP_PAR rRMSE_GEP_PAR MAE_GEP_PAR BE_GEP_PAR] = model_stats(model_GEP_PAR, GEPraw,'on');
+[RMSE_GEP_PAR_Ts rRMSE_GEP_PAR_Ts MAE_GEP_PAR_Ts BE_GEP_PAR_Ts] = model_stats(model_GEP_PAR_Ts, GEPraw,'on');
+[RMSE_GEP_PAR_Ts_VPD rRMSE_GEP_PAR_Ts_VPD MAE_GEP_PAR_Ts_VPD BE_GEP_PAR_Ts_VPD] = model_stats(model_GEP_PAR_Ts_VPD, GEPraw,'on');
+[RMSE_GEP_PAR_Ts_VPD_SM rRMSE_GEP_PAR_Ts_VPD_SM MAE_GEP_PAR_Ts_VPD_SM BE_GEP_PAR_Ts_VPD_SM] = model_stats(model_GEP_PAR_Ts_VPD_SM, GEPraw,'on');
+
+%%% Apply the AB tvp correction to data:
+  TP39out.pw_GEP_PAR_Ts_SM = jjb_AB_gapfill(model_GEP_PAR_Ts_VPD_SM, GEPraw, (1:1:length(TP39out.resp_Ts))',100, 20, 'off', [], []);
+figurecount = length(findobj('Type','figure')); 
+figure(figurecount+1);clf;
+plot(TP39out.pw_GEP_PAR_Ts_SM(:,2),'b')
+
+TP39out.GEP_PAR_Ts_VPD_SM_pw = TP39out.GEP_PAR_Ts_VPD_SM .* TP39out.pw_GEP_PAR_Ts_SM(:,2);
+
+figure(length(findobj('Type','figure'))+1); clf
+plot(TP39out.GEPraw,'b');
+hold on;
+plot(TP39out.GEP_PAR_Ts_VPD_SM,'r')
+plot(TP39out.GEP_PAR_Ts_VPD_SM_pw,'g')
+
+model_GEP_PAR_Ts_VPD_SM_pw(1:length(TP39out.GEPraw),1) = NaN;
+model_GEP_PAR_Ts_VPD_SM_pw(ind_GEP,1) = TP39out.GEP_PAR_Ts_VPD_SM_pw(ind_GEP,1);
+[RMSE_GEP_PAR_Ts_VPD_SM_pw rRMSE_GEP_PAR_Ts_VPD_SM_pw MAE_GEP_PAR_Ts_VPD_SM_pw BE_GEP_PAR_Ts_VPD_SM_pw] = model_stats(model_GEP_PAR_Ts_VPD_SM_pw, GEPraw,'on');
+
+%%% Try the AB tvp correction on only the PAR - Filled model:
+  TP39out.pw_GEP_PAR = jjb_AB_gapfill(model_GEP_PAR, GEPraw, (1:1:length(TP39out.resp_Ts))',100, 20, 'off', [], []);
+
+TP39out.GEP_PAR_pw = TP39out.GEP_PAR .* TP39out.pw_GEP_PAR(:,2);
+
+model_GEP_PAR_pw(1:length(TP39out.GEPraw),1) = NaN;
+model_GEP_PAR_pw(ind_GEP,1) = TP39out.GEP_PAR_pw(ind_GEP,1);
+
+[RMSE_GEP_PAR_pw rRMSE_GEP_PAR_pw MAE_GEP_PAR_pw BE_GEP_PAR_pw] = model_stats(model_GEP_PAR_pw, GEPraw,'on');
+
+
+%%% Fill NEE with different models and compare:
+% 
+%
+% Fill R
+R_models(1:length(TP39out.GEPraw),1) = Rraw;
+ind_fillR = find(isnan(Rraw));
+R_models(ind_fillR,1) = TP39out.resp_Ts_SM_rw(ind_fillR,1);
+% Fill GEPs:
+GEPraw2 = R_models - NEEraw;
+
+
+for num_models = 1:1:6
+GEP_models(1:length(TP39out.GEPraw),num_models) = GEPraw2;
+end;
+
+ind_fillGEP = find(isnan(GEPraw2));
+%%% Clean up GEP Models:
+% TP39out.GEP_PAR()
+% TP39out.GEP_PAR_Ts
+% TP39out.GEP_PAR_Ts_VPD
+% TP39out.GEP_PAR_Ts_VPD_SM
+% TP39out.GEP_PAR_Ts_VPD_SM_pw
+% TP39out.GEP_PAR_pw
+
+GEP_models(ind_fillGEP,1) = TP39out.GEP_PAR_Ts(ind_fillGEP,1);
+GEP_models(ind_fillGEP,2) = TP39out.GEP_PAR_Ts_VPD(ind_fillGEP,1);
+GEP_models(ind_fillGEP,3) = TP39out.GEP_PAR_Ts_VPD_SM(ind_fillGEP,1);
+GEP_models(ind_fillGEP,4) = TP39out.GEP_PAR_Ts_VPD_SM_pw(ind_fillGEP,1);
+GEP_models(ind_fillGEP,5) = TP39out.GEP_PAR_pw(ind_fillGEP,1);
+GEP_models(ind_fillGEP,6) = TP39out.GEP_PAR(ind_fillGEP,1);
+
+for num_models = 1:1:6
+GEP_models(dt < 85 | dt > 335 | PAR < 20,num_models) = 0;
+end;
+
+NEE_models(1:length(TP39out.GEPraw),1:10) = NaN;
+ind_NEE = find(~isnan(NEEraw) & ustar > ustar_th);
+NEEclean(1:length(NEEraw),1) = NaN;
+NEEclean(ind_NEE,1) = NEEraw(ind_NEE,1);
+ind_fillNEE = find(isnan(NEEclean));
+for i = 1:1:6
+NEE_models(~isnan(NEEclean),i) = NEEclean(~isnan(NEEclean));
+end
+
+NEE_models(ind_fillNEE,1) = R_models(ind_fillNEE,1) - GEP_models(ind_fillNEE,1);
+NEE_models(ind_fillNEE,2) = R_models(ind_fillNEE,1) - GEP_models(ind_fillNEE,2);
+NEE_models(ind_fillNEE,3) = R_models(ind_fillNEE,1) - GEP_models(ind_fillNEE,3);
+NEE_models(ind_fillNEE,4) = R_models(ind_fillNEE,1) - GEP_models(ind_fillNEE,4);
+NEE_models(ind_fillNEE,5) = R_models(ind_fillNEE,1) - GEP_models(ind_fillNEE,5);
+NEE_models(ind_fillNEE,6) = R_models(ind_fillNEE,1) - GEP_models(ind_fillNEE,6);
+
+for yr_ctr = 2003:1:2008
+    for i = 1:1:6
+sums(yr_ctr-2002,i) = sum(NEE_models(year== yr_ctr,i)).*0.0216  ;
+GEP_sums(yr_ctr-2002,i) = sum(GEP_models(year== yr_ctr,i)).*0.0216  ;
+
+
+holes(yr_ctr-2002,i) = length(find(isnan(NEE_models(year == yr_ctr,i))));
+    end
+R_sums(yr_ctr-2002,1) = sum(R_models(year== yr_ctr,1)).*0.0216  ;    
+end
+
+% NEE_models(:,1) = TP39out.resp_Ts_SM_rw - TP39out.GEP_PAR_Ts;
+% % NEE_models(:,2) = TP39out.resp_Ts_SM_rw - TP39out.GEP_PAR_Ts_VPD;
+% % NEE_models(:,3) = TP39out.resp_Ts_SM_rw - TP39out.GEP_PAR_Ts_VPD_SM;
+% % NEE_models(:,4) = TP39out.resp_Ts_SM_rw - TP39out.GEP_PAR_Ts_VPD_SM;
+% % NEE_models(:,5) = TP39out.resp_Ts_SM_rw - TP39out.GEP_PAR_Ts_VPD_SM_pw;
+% % NEE_models(:,6) = TP39out.resp_Ts_SM_rw - TP39out.GEP_PAR_pw;
+% 
+% NEE_outputs(1:length(TP39out.GEPraw),1:10) = NaN;
+% NEE_outputs(~isnan(NEEraw),1:10) = NEEraw(~isnan(NEEraw));
+% 
+
+
+% export 2008 data for Dr. Arain:
+output_2008 = [NEE_models(year == 2008,4) R_models(year == 2008,1)  GEP_models(year == 2008,4) ...
+                Ta(year == 2008,1)  PAR(year == 2008,1)  Ts5(year == 2008,1)  VPD(year == 2008,1) ...
+                SMa(year == 2008,1)];
+
+save([loadstart 'Matlab/Data/Data_Analysis/Final_Fluxes/TP39_2008.dat'],'output_2008','-ASCII');
+
+% update TP39
+
+TP39(6).NEP = 

@@ -1,0 +1,31 @@
+%%% Test variables:
+sf09 = rand(365,1);
+sf10 = rand(365,1);
+
+Ta09 = rand(365,1);
+Ta10 = rand(365,1);
+PAR09 = rand(365,1);
+PAR10 = rand(365,1);
+SM09 = rand(365,1);
+SM10 = rand(365,1);
+
+%%% Parameters:
+window_size = 7; % This is one-sided length, which means it will check 7 days ahead and 7 days behind.
+diff_threshold = 0.15; % This specifies how close values have to be to each other.  Right now, they have to be within 15%.
+
+sf_list = [];
+for i = 1:1:length(Ta09)
+    check_top = min(length(Ta10),i+window_size);
+    check_bot = max(1,i-window_size);
+   
+%     ind = find(abs(Ta09(i,1)-Ta10(check_bot:check_top,1))< abs(Ta09(i,1)- 0.95.*Ta09(i,1)));
+%%%% To do more than one variable..  If you wanted to do more, you'd just
+%%%% repeat what you see below more times:
+    ind = find(abs(Ta09(i,1)-Ta10(check_bot:check_top,1))< abs(Ta09(i,1)- 1-0.85.*Ta09(i,1)) & ...
+          abs(PAR09(i,1)-PAR10(check_bot:check_top,1))< abs(PAR09(i,1)- 0.85.*PAR09(i,1))  &...
+           abs(SM09(i,1)-SM10(check_bot:check_top,1))< abs(SM09(i,1)- 0.85.*SM09(i,1)));
+    
+    
+sf_list = [sf_list; [sf09(i,1).*ones(length(ind),1) sf09(ind+check_bot-1,1)]];    
+end
+    

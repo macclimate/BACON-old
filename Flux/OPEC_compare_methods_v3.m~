@@ -1,0 +1,363 @@
+% Flux calculation method comparison
+% Really, all we need to load is main met data, and then ustar, NEE from
+% the other data sources:
+
+
+clear all; close all;
+% site = 'TP74';
+% site = 'TP89';
+site = 'TP02';
+
+%% Load the three sources of data:
+ls = addpath_loadstart;
+
+%%%%%%%%%%%%%%%%%%% Load main (original) flux and met data:
+load([ls '1/fielddata/Matlab/Data/Master_Files/' site '/' site '.mat']);
+met = eval(site);
+eval(['clear ' site]);
+
+%%% Also, make it into a 2002--2010 dataset (like the rest):        
+Ta(1:(157776),1) = NaN;     APR(1:(157776),1) = NaN;    WS(1:(157776),1) = NaN;     WDir(1:(157776),1) = NaN;
+Year(1:(157776),1) = NaN;   dt(1:(157776),1) = NaN;     Hour(1:(157776),1) = NaN;   Minute(1:(157776),1) = NaN;
+VPD(1:(157776),1) = NaN;    Ts5(1:(157776),1) = NaN;    PAR(1:(157776),1) = NaN;    SMa(1:(157776),1) = NaN;
+SMb(1:(157776),1) = NaN;    NEEraw(1:(157776),1) = NaN; ustar(1:(157776),1) = NaN;  Fc(1:(157776),1) = NaN;
+CO2_top(1:(157776),1) = NaN;CO2_cpy(1:(157776),1) = NaN;Jt(1:(157776),1) = NaN;     Rn(1:(157776),1) = NaN;
+G(1:(157776),1) = NaN;      SM30a(1:(157776),1) = NaN;  SM30b(1:(157776),1) = NaN;  SM30_avg(1:(157776),1) = NaN;
+Hraw(1:(157776),1) = NaN;   LEraw(1:(157776),1) = NaN;   Hfilled(1:(157776),1) = NaN;   LEfilled(1:(157776),1) = NaN;   
+
+%%% Put met data into a vector and then put it into hhourly data for all
+%%% years
+Ta_sub = jjb_struct2col(met, 'Ta');     Ta(17521:17520+length(Ta_sub),1) = Ta_sub;
+APR_sub = jjb_struct2col(met, 'APR');   APR(17521:17520+length(APR_sub),1) = APR_sub;
+WS_sub = jjb_struct2col(met, 'WS');     WS(17521:17520+length(WS_sub),1) = WS_sub;
+WDir_sub = jjb_struct2col(met, 'W_Dir'); WDir(17521:17520+length(WDir_sub),1) = WDir_sub;
+Year30_sub = jjb_struct2col(met, 'Year');Year(17521:17520+length(Year30_sub),1) = Year30_sub;
+dt_sub = jjb_struct2col(met, 'dt');     dt(17521:17520+length(dt_sub),1) = dt_sub;
+Hour_sub = jjb_struct2col(met, 'Hour'); Hour(17521:17520+length(Hour_sub),1) = Hour_sub;
+Minute_sub = jjb_struct2col(met, 'Minute'); Minute(17521:17520+length(Minute_sub),1) = Minute_sub;
+% VPD_sub = jjb_struct2col(met, 'VPD');   VPD(17521:17520+length(VPD_sub),1) = VPD_sub;
+Ts5_sub = jjb_struct2col(met, 'Ts5');   Ts5(17521:17520+length(Ts5_sub),1) = Ts5_sub;
+PAR_sub = jjb_struct2col(met, 'PAR');   PAR(17521:17520+length(PAR_sub),1) = PAR_sub;
+SMa_sub = jjb_struct2col(met, 'SM_a');   SMa(17521:17520+length(SMa_sub),1) = SMa_sub;
+SMb_sub = jjb_struct2col(met, 'SM_b');   SMb(17521:17520+length(SMb_sub),1) = SMb_sub;
+NEEraw_sub = jjb_struct2col(met, 'NEE');   NEEraw(17521:17520+length(NEEraw_sub),1) = NEEraw_sub;
+ustar_sub = jjb_struct2col(met, 'Ustar');   ustar(17521:17520+length(ustar_sub),1) = ustar_sub;
+% Fc_sub = jjb_struct2col(met, 'Fc');   Fc(17521:17520+length(Fc_sub),1) = Fc_sub;
+% CO2_top_sub = jjb_struct2col(met, 'CO2_top');   CO2_top(17521:17520+length(CO2_top_sub),1) = CO2_top_sub;
+% CO2_cpy_sub = jjb_struct2col(met, 'CO2_cpy');   CO2_cpy(17521:17520+length(CO2_cpy_sub),1) = CO2_cpy_sub;
+% Jt_sub = jjb_struct2col(met, 'Jt');   Jt(17521:17520+length(Jt_sub),1) = Jt_sub;
+% Rn_sub = jjb_struct2col(met, 'Rn');   Rn(17521:17520+length(Rn_sub),1) = Rn_sub;
+% G_sub = jjb_struct2col(met, 'G');   G(17521:17520+length(G_sub),1) = G_sub;
+% SM30a_sub = jjb_struct2col(met, 'SM30a');   SM30a(17521:17520+length(SM30a_sub),1) = SM30a_sub;
+% SM30b_sub = jjb_struct2col(met, 'SM30b');   SM30b(17521:17520+length(SM30b_sub),1) = SM30b_sub;
+% SM30_avg_sub = jjb_struct2col(met, 'SM30_avg');   SM30_avg(17521:17520+length(SM30_avg_sub),1) = SM30_avg_sub;
+H_sub = jjb_struct2col(met, 'H');   Hraw(17521:17520+length(H_sub),1) = H_sub;
+LE_sub = jjb_struct2col(met, 'LE');   LEraw(17521:17520+length(LE_sub),1) = LE_sub;
+% Hfilled_sub = jjb_struct2col(met, 'H');   Hfilled(17521:17520+length(Hfilled_sub),1) = Hfilled_sub;
+% LEfilled_sub = jjb_struct2col(met, 'LE');   LEfilled(17521:17520+length(LEfilled_sub),1) = LEfilled_sub;
+
+
+%%%% Sub in numbers for 2002:
+Year(1:17520,1) = 2002; 
+dt(1:17520,1) = dt(Year==2003,1); 
+Hour(1:17520,1) = Hour(Year==2003,1); 
+Minute(1:17520,1) = Minute(Year==2003,1);
+
+NEEraw(Year==2008) = NaN;
+NEEraw(83155:83587,1) = NaN;
+Hraw(Year==2008) = NaN;
+LEraw(Year==2008) = NaN;
+ustar(Year==2008) = NaN;
+% start_2008 = find(Year==2008,1,'first');
+% if isempty(start_2008); start_2008 = 105169; end
+% Year(start_2008:length(Year),1) = [Year(start_2008+10:length(Year),1); NaN.*ones(10,1)];
+% Ta(start_2008:length(Ta),1) = [Ta(start_2008+10:length(Ta),1); NaN.*ones(10,1)];
+% APR(start_2008:length(APR),1) = [APR(start_2008+10:length(APR),1); NaN.*ones(10,1)];
+% WS(start_2008:length(WS),1) = [WS(start_2008+10:length(WS),1); NaN.*ones(10,1)];
+% WDir(start_2008:length(WDir),1) = [WDir(start_2008+10:length(WDir),1); NaN.*ones(10,1)];
+% dt(start_2008:length(dt),1) = [dt(start_2008+10:length(dt),1); NaN.*ones(10,1)];
+% Hour(start_2008:length(Hour),1) = [Hour(start_2008+10:length(Hour),1); NaN.*ones(10,1)];
+% Minute(start_2008:length(Minute),1) = [Minute(start_2008+10:length(Minute),1); NaN.*ones(10,1)];
+% % VPD(start_2008:length(VPD),1) = [VPD(start_2008+10:length(VPD),1); NaN.*ones(10,1)];
+% Ts5(start_2008:length(Ts5),1) = [Ts5(start_2008+10:length(Ts5),1); NaN.*ones(10,1)];
+% PAR(start_2008:length(PAR),1) = [PAR(start_2008+10:length(PAR),1); NaN.*ones(10,1)];
+% SMa(start_2008:length(SMa),1) = [SMa(start_2008+10:length(SMa),1); NaN.*ones(10,1)];
+% SMb(start_2008:length(SMb),1) = [SMb(start_2008+10:length(SMb),1); NaN.*ones(10,1)];
+% NEEraw(start_2008:length(NEEraw),1) = [NEEraw(start_2008+10:length(NEEraw),1); NaN.*ones(10,1)];
+% ustar(start_2008:length(ustar),1) = [ustar(start_2008+10:length(ustar),1); NaN.*ones(10,1)];
+% % Fc(start_2008:length(Fc),1) = [Fc(start_2008+10:length(Fc),1); NaN.*ones(10,1)];
+% % CO2_top(start_2008:length(CO2_top),1) = [CO2_top(start_2008+10:length(CO2_top),1); NaN.*ones(10,1)];
+% % CO2_cpy(start_2008:length(CO2_cpy),1) = [CO2_cpy(start_2008+10:length(CO2_cpy),1); NaN.*ones(10,1)];
+% % Jt(start_2008:length(Jt),1) = [Jt(start_2008+10:length(Jt),1); NaN.*ones(10,1)];
+% % Rn(start_2008:length(Rn),1) = [Rn(start_2008+10:length(Rn),1); NaN.*ones(10,1)];
+% % G(start_2008:length(G),1) = [G(start_2008+10:length(G),1); NaN.*ones(10,1)];
+% % SM30a(start_2008:length(SM30a),1) = [SM30a(start_2008+10:length(SM30a),1); NaN.*ones(10,1)];
+% % SM30b(start_2008:length(SM30b),1) = [SM30b(start_2008+10:length(SM30b),1); NaN.*ones(10,1)];
+% % SM30_avg(start_2008:length(SM30_avg),1) = [SM30_avg(start_2008+10:length(SM30_avg),1); NaN.*ones(10,1)];
+% Hraw(start_2008:length(Hraw),1) = [Hraw(start_2008+10:length(Hraw),1); NaN.*ones(10,1)];
+% LEraw(start_2008:length(LEraw),1) = [LEraw(start_2008+10:length(LEraw),1); NaN.*ones(10,1)];
+% Hfilled(start_2008:length(Hfilled),1) = [Hfilled(start_2008+10:length(Hfilled),1); NaN.*ones(10,1)];
+% LEfilled(start_2008:length(LEfilled),1) = [LEfilled(start_2008+10:length(LEfilled),1); NaN.*ones(10,1)];
+
+clear *_sub;
+
+%%%%%%%%%%%%%%%%%%% Load reprocessed data (from 10-min files)
+load([ls 'Matlab/Data/Flux/OPEC/'  site '_OPEC_flux.mat']);                             % Will load as 'OPEC_flux'
+%%%%%%%%%%%%%%%%%%% Load processed EdiRe data (from Hfreq)
+load([ls 'Matlab/Data/Flux/OPEC/EdiRe/' site '/Processed/'  site '_EdiRe_flux.mat']);   % Will load as 'EdiRe_flux'
+
+%% Spike detection on original data?  
+% - Original data was not spike-detected in the same manner as the others
+
+NEEraw_spike = OPEC_outlier_removal(site, NEEraw, 30,'Fc');
+NEEraw = NEEraw_spike; 
+clear NEEraw_spike;
+
+%%%%%%%%%%%%%%%%%%%% Plotting, inspecting differences:
+figure('Name','Comparing Fluxes');clf
+plot(NEEraw,'b'); hold on;
+plot(OPEC_flux.NEEraw_rot,'r');
+plot(EdiRe_flux.NEE_rot_freq_WPL,'g');
+% plot(PAR/100,'k.-')
+legend('NEEraw','OPEC','EdiRe')
+ylabel('NEE, \mumol m^-^2 s^-^1')
+
+
+%% It is evident that the Original flux data is shifted relative to the met
+% data and the other flux data.  So, we need to fix this. 
+% Ustar will also have to be shifted appropriately
+test_flux = EdiRe_flux.NEE_rot_freq_WPL;
+test_flux(isnan(test_flux),1) = OPEC_flux.NEEraw_rot(isnan(test_flux),1);
+
+
+% test_flux = OPEC_flux.NEEraw_rot;
+% test_flux(isnan(test_flux),1) = EdiRe_flux.NEE_rot_freq_WPL(isnan(test_flux),1);
+
+figure('Name','Look for lags');clf
+subplot(3,1,1)
+plot(test_flux,'g.-');hold on;
+plot(NEEraw,'b.-');
+legend('EdiRe+OPEC', 'Orig')
+subplot(3,1,2)
+plot(Year)
+subplot(3,1,3);
+plot(dt)
+%%% So far (with the EdiRe_clean_all and OPEC_clean_all scripts), we have
+%%% assured that flux data from both of these sources are alligned with
+%%% each other (as we've lined them both up with the met data. Now, we have
+%%% to see if there are any shifts in the original flux data (from Natalia)
+%%% relative to the met data, so that we can combine all 3 sources of flux
+%%% data together into one master file.
+
+%%%% This part establishes the lags in the original flux data:
+
+num_lags = 10;
+[start_times2] = find_OPEC_intervals(NEEraw, 30);
+
+for j = 1:1:length(start_times2)
+    try
+      
+    NEEraw_in = NEEraw(start_times2(j,1):start_times2(j,2),1);
+    test_flux_in = test_flux(start_times2(j,1):start_times2(j,2),1);
+
+        [c_temp2, lags_temp2] = xcorr(NEEraw_in(~isnan(NEEraw_in.*test_flux_in),1),test_flux_in(~isnan(NEEraw_in.*test_flux_in),1),num_lags);
+        c2(1:num_lags*2+1,j) = c_temp2(1:num_lags*2+1,1);
+        lags2(1:num_lags*2+1,j) = lags_temp2(1:num_lags*2+1);
+        c2(:,j) = c2(:,j)./(max(c2(:,j)));
+        clear c_temp2 lags_temp2;
+
+        shift2(j,1) = -1*lags2(find(c2(:,j) == 1),j);
+    catch
+        c2(:,j) = NaN;
+        lags2(:,j) = NaN;
+        shift2(j,1) = 0;
+        disp(['problem finding shift for window' num2str(j)]);
+    end
+clear test_flux_in NEEraw_in
+%     clear Ta_met_in Ta_Edi_in
+end
+
+switch site
+    case 'TP02'
+        shift2(1,1) = 0;
+    case 'TP89'
+        shift2(find(start_times2(:,1)==19193),1) = 0;
+        shift(find(start_times2(:,1)==64401),1) = 1;
+end
+
+
+%% This part applie shifts to orig flux data to make it conform to Met data:
+%%% A negative shift here means that flux data needs to be shifted forward.
+% [rows cols] = size(EdiRe_all);
+% tmp = EdiRe_all;
+
+for j = 1:1:length(start_times2)
+    ind_orig = (start_times2(j,1):1:start_times2(j,2))';
+    ind_new = ind_orig;
+    if shift2(j,1) > 0 %%% case where OPEC data should be shifted ahead
+        for i = 1:1:abs(shift2(j,1))
+            ind_new = [ ind_new ; ind_new(end)+1];
+        end
+
+        NEEraw(ind_new, 1) = [NaN.*ones(abs(shift2(j,1)),1); NEEraw(ind_orig, 1)];
+        Fc(ind_new, 1) = [NaN.*ones(abs(shift2(j,1)),1); Fc(ind_orig, 1)];
+        CO2_cpy(ind_new, 1) = [NaN.*ones(abs(shift2(j,1)),1); CO2_cpy(ind_orig, 1)];        
+        CO2_top(ind_new, 1) = [NaN.*ones(abs(shift2(j,1)),1); CO2_top(ind_orig, 1)];        
+        Hraw(ind_new, 1) = [NaN.*ones(abs(shift2(j,1)),1); Hraw(ind_orig, 1)];        
+        LEraw(ind_new, 1) = [NaN.*ones(abs(shift2(j,1)),1); LEraw(ind_orig, 1)];        
+%         Hfilled(ind_new, 1) = [NaN.*ones(abs(shift2(j,1)),1); Hfilled(ind_orig, 1)];        
+%         LEfilled(ind_new, 1) = [NaN.*ones(abs(shift2(j,1)),1); LEfilled(ind_orig, 1)];        
+        
+        
+    elseif shift2(j,1) < 0 %% case where OPEC data should be shifted back
+        
+        for i = 1:1:abs(shift2(j,1))
+            ind_new = [ind_new(1)-1 ; ind_new];
+        end
+
+        NEEraw(ind_new, 1) = [NEEraw(ind_orig, 1) ; NaN.*ones(abs(shift2(j,1)),1)];
+        Fc(ind_new, 1) = [Fc(ind_orig, 1) ; NaN.*ones(abs(shift2(j,1)),1)];
+        CO2_cpy(ind_new, 1) = [CO2_cpy(ind_orig, 1) ; NaN.*ones(abs(shift2(j,1)),1)];
+        CO2_top(ind_new, 1) = [CO2_top(ind_orig, 1) ; NaN.*ones(abs(shift2(j,1)),1)];
+        Hraw(ind_new, 1) = [Hraw(ind_orig, 1) ; NaN.*ones(abs(shift2(j,1)),1)];
+        LEraw(ind_new, 1) = [LEraw(ind_orig, 1) ; NaN.*ones(abs(shift2(j,1)),1)];
+%         Hfilled(ind_new, 1) = [Hfilled(ind_orig, 1) ; NaN.*ones(abs(shift2(j,1)),1)];
+%         LEfilled(ind_new, 1) = [LEfilled(ind_orig, 1) ; NaN.*ones(abs(shift2(j,1)),1)];
+        
+    end
+
+    clear ind_orig ind_new
+end
+subplot(3,1,1)
+plot(NEEraw,'r.-');
+legend('test-data','pre-shift NEE', 'post-shift NEE');
+
+%% Save the original data after it's been shifted:
+resp = input('Save original data? <1> to save, anything else to not save: ');
+if resp == 1;
+    flux_out = struct;
+    flux_out.Year = Year; flux_out.dt = dt; flux_out.Ta = Ta; flux_out.APR = APR; flux_out.WS = WS; 
+    flux_out.WDir = WDir; flux_out.Hour = Hour; flux_out.Minute = Minute; %flux_out.VPD = VPD; 
+    flux_out.Ts5 = Ts5;
+    flux_out.PAR = PAR; flux_out.SMa = SMa; flux_out.SMb = SMb; flux_out.NEEraw = NEEraw; flux_out.ustar = ustar;  
+%     flux_out.Fc = Fc; flux_out.CO2_top = CO2_top; flux_out.CO2_cpy = CO2_cpy; flux_out.Jt = Jt; flux_out.G = G; flux_out.Rn = Rn;
+%     flux_out.SM30a = SM30a; flux_out.SM30b = SM30b; flux_out.SM30_avg = SM30_avg; 
+    flux_out.LEraw = LEraw; flux_out.Hraw = Hraw;
+%     flux_out.Hfilled = Hfilled; flux_out.LEfilled = LEfilled; 
+    
+save(['/home/brodeujj/Matlab/Data/Flux/OPEC/' site '_orig_flux.mat'],'flux_out');
+disp(['Data has been saved to: /home/brodeujj/Matlab/Data/Flux/OPEC/' site '_orig_flux.mat']);
+end
+%% Run comparisons period-by-period
+
+figure(8);clf
+subplot(2,1,1)
+plot(NEEraw,'b'); hold on;
+plot(OPEC_flux.NEEraw_rot,'r');
+plot(EdiRe_flux.NEE_rot_freq_WPL,'g');
+% plot(PAR/100,'k.-')
+legend('NEEraw','OPEC','EdiRe')
+ylabel('NEE, \mumol m^-^2 s^-^1')
+
+% Compare specific periods:
+d = (1:1:length(NEEraw))'; % just a counter for indexing
+
+diff_Orig_OPEC =   OPEC_flux.NEEraw_rot - NEEraw;
+diff_Orig_EdiRe =   EdiRe_flux.NEE_rot_freq_WPL - NEEraw;
+diff_Orig_test = test_flux - NEEraw;
+cumdiff_Orig(1).OPECall = nancumsum(diff_Orig_OPEC).*0.0216;
+cumdiff_Orig(1).EdiReall = nancumsum(diff_Orig_EdiRe).*0.0216;
+cumdiff_Orig(1).testall = nancumsum(diff_Orig_test).*0.0216;
+ind_Orig_OPEC_all = find(~isnan(diff_Orig_OPEC(1:105169,1)));
+annualized_OPEC_diff_all = (cumdiff_Orig(1).OPECall(105169,1)./length(ind_Orig_OPEC_all)).*17520;
+ind_Orig_EdiRe_all = find(~isnan(diff_Orig_EdiRe(1:105169,1)));
+annualized_EdiRe_diff_all = (cumdiff_Orig(1).EdiReall(105169,1)./length(ind_Orig_EdiRe_all)).*17520;
+ind_Orig_test_all = find(~isnan(diff_Orig_test(1:105169,1)));
+annualized_test_diff_all = (cumdiff_Orig(1).testall(105169,1)./length(ind_Orig_test_all)).*17520;
+
+figure(8);
+subplot(2,1,2)
+plot(cumdiff_Orig(1).OPECall,'r'); hold on;
+plot(cumdiff_Orig(1).EdiReall,'g'); hold on;
+plot([105169 105169],[-100 100],'k--');
+title('Processed NEE - Original NEE')
+legend('Orig - 10-min','Orig - HF')
+ylabel('<- more sink; more source -> gC m^-^2');
+%%% Do a histogram of differences - is it consistent?
+bins = [-30:5:-10 -8:0.5:8 10:5:30];
+figure('Name','histograms')
+subplot(2,1,1);
+hist(diff_Orig_OPEC(ind_Orig_OPEC_all),bins);
+subplot(2,1,2);
+hist(diff_Orig_EdiRe(ind_Orig_EdiRe_all),bins);
+
+[start_times] = find_OPEC_intervals(NEEraw, 30);
+start_times(end,2) = 105169;
+
+figure('Name','Cumulative differences by period'); clf
+for j = 1:1:length(start_times)
+    try
+    ind_Orig_OPEC = find(d >= start_times(j,1) & d <= start_times(j,2) & ~isnan(diff_Orig_OPEC));
+    catch
+        ind_Orig_OPEC = [];
+    end
+    try
+    cumdiff_Orig(j).OPEC = nancumsum(diff_Orig_OPEC(start_times(j,1):start_times(j,2),1)).*0.0216;
+    catch
+      cumdiff_Orig(j).OPEC = NaN;
+    end
+    
+        try
+    cumdiff_Orig(j).OPEC_yr = (cumdiff_Orig(j).OPEC(end)./length(ind_Orig_OPEC)).*17520;
+        catch
+      cumdiff_Orig(j).OPEC_yr = NaN;
+    end
+
+    
+    if ~isempty(ind_Orig_OPEC); 
+        subplot(2,1,1)
+    plot(start_times(j,1):start_times(j,2),cumdiff_Orig(j).OPEC,'r-'); hold on;
+    annualized_OPEC_diff(j,1) = cumdiff_Orig(j).OPEC_yr;
+            subplot(2,1,2)
+    plot(mean(ind_Orig_OPEC),annualized_OPEC_diff(j,1),'r.','MarkerSize',12);hold on;
+    end
+%
+     try
+    ind_Orig_EdiRe = find(d >= start_times(j,1) & d <= start_times(j,2) & ~isnan(diff_Orig_EdiRe));
+    catch
+        ind_Orig_EdiRe = [];
+    end
+    try
+    cumdiff_Orig(j).EdiRe = nancumsum(diff_Orig_EdiRe(start_times(j,1):start_times(j,2),1)).*0.0216;
+    catch
+      cumdiff_Orig(j).EdiRe = NaN;
+    end
+    
+        try
+    cumdiff_Orig(j).EdiRe_yr = (cumdiff_Orig(j).EdiRe(end)./length(ind_Orig_EdiRe)).*17520;
+        catch
+      cumdiff_Orig(j).EdiRe_yr = NaN;
+    end
+%     %
+%     ind_Orig_EdiRe = find(d >= start_times(j,1) & d <= start_times(j,2) & ~isnan(diff_Orig_EdiRe));
+%     cumdiff_Orig(j).EdiRe = nancumsum(diff_Orig_EdiRe(start_times(j,1):start_times(j,2),1)).*0.0216;
+%     cumdiff_Orig(j).EdiRe_yr = (cumdiff_Orig(j).EdiRe(end)./length(ind_Orig_EdiRe)).*17520;
+%     
+    if ~isempty(ind_Orig_EdiRe); 
+                subplot(2,1,1)
+        plot(start_times(j,1):start_times(j,2),cumdiff_Orig(j).EdiRe,'g-'); hold on;
+    annualized_EdiRe_diff(j,1) = cumdiff_Orig(j).EdiRe_yr;
+            subplot(2,1,2)
+    plot(mean(start_times(j,1):start_times(j,2)),annualized_EdiRe_diff(j,1),'g.','MarkerSize',12); hold on;
+    end
+
+end
+
+subplot(2,1,1);
+legend('Orig - 10-min','Orig - HF',1)
+ylabel('<- more sink; more source ->');
+subplot(2,1,2);
+title('sum total for bias for each window');
+ylabel('<- more sink; more source -> gC m^-^2');
+legend('Orig - 10-min','Orig - HF',1)
+

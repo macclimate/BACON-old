@@ -1,0 +1,121 @@
+function [array_out] = OPEC_outlier_removal(site, array_in, min_int, var_type)
+if nargin < 4;
+    min_int = input('Enter time interval for measurements (i.e. 10 or 30): ');
+    var_type = input('Enter variable to clean (Fc, H, LE): ' ,s);
+end
+
+
+
+%%%%%%%%% PARAMETERS
+switch var_type
+    case 'Fc'
+        switch site
+            case 'TP39'
+            case 'TP74'
+                top_cut = 25; bot_cut = -45; z = 5; win_size = 30; sdev_mult = 3;
+            case 'TP89'
+                top_cut = 25; bot_cut = -55; z = 5; win_size = 30; sdev_mult = 3;
+            case 'TP02'
+                top_cut = 15; bot_cut = -30; z = 5; win_size = 30; sdev_mult = 3;
+
+        end
+
+    case 'H'
+        switch site
+            case 'TP39'
+            case 'TP74'
+                top_cut = 25; bot_cut = -45; z = 5; win_size = 30; sdev_mult = 3;
+            case 'TP89'
+                top_cut = 25; bot_cut = -55; z = 5; win_size = 30; sdev_mult = 3;
+            case 'TP02'
+                top_cut = 500; bot_cut = -100; z = 10; win_size = 30; sdev_mult = 5;
+        end
+
+    case 'LE'
+        switch site
+            case 'TP39'
+            case 'TP74'
+                top_cut = 25; bot_cut = -45; z = 5; win_size = 30; sdev_mult = 3;
+            case 'TP89'
+                top_cut = 25; bot_cut = -55; z = 5; win_size = 30; sdev_mult = 3;
+            case 'TP02'
+                top_cut = 650; bot_cut = -100; z = 5; win_size = 30; sdev_mult = 3;
+        end
+
+
+end
+
+array_in(array_in > top_cut | array_in < bot_cut) = NaN;
+orig_data = array_in;
+
+%%% Take spikes out for a first time:
+switch var_type
+    case 'Fc'
+[junk array_in] = junk_OPEC_testspike(array_in, z);
+[junk array_in] = junk_OPEC_testspike(array_in, z);
+[junk array_in] = junk_OPEC_testspike(array_in, z); 
+    case 'H'
+        
+    case 'LE'
+end
+        
+%%%% Use the ensemble method:
+[array_clean1 upthresh1 downthresh1] = junk_OPEC_ensembleclean(array_in, sdev_mult, win_size, min_int);
+[array_clean2 upthresh2 downthresh2] = junk_OPEC_ensembleclean(array_clean1, sdev_mult, win_size, min_int);
+
+%%%% Back to spike removal:
+switch var_type
+    case 'Fc'
+[junk array_out] = junk_OPEC_testspike(array_clean2, z); %cov2 = length(find(~isnan(array_out2)==1))./length(array_clean1);
+end
+% 
+% [array_out3] = junk_OPEC_testspike(array_out2, z); %cov3 = length(find(~isnan(array_out3)==1))./length(array_out2);
+% [array_out4] = junk_OPEC_testspike(array_out3, z); %cov4 = length(find(~isnan(array_out4)==1))./length(array_out2);
+% [array_out5] = junk_OPEC_testspike(array_out4, z); %cov5 = length(find(~isnan(array_out5)==1))./length(array_out2);
+% [array_out6] = junk_OPEC_testspike(array_out5, z); %cov6 = length(find(~isnan(array_out6)==1))./length(array_out2);
+% 
+% %%%% Use the ensemble method:
+% [array_clean3 upthresh3 downthresh3] = junk_OPEC_ensembleclean(array_out6, sdev_mult, win_size, min_int);
+% 
+% %%%% And spikes again 
+% [array_out7] = junk_OPEC_testspike(array_clean3, z); %cov7 = length(find(~isnan(array_out7)==1))./length(array_out2);
+% [array_out8] = junk_OPEC_testspike(array_out7, z); %cov8 = length(find(~isnan(array_out8)==1))./length(array_out2);
+% [array_out9] = junk_OPEC_testspike(array_out8, z); %cov9 = length(find(~isnan(array_out9)==1))./length(array_out2);
+% [array_out10] = junk_OPEC_testspike(array_out9, z); %cov10 = length(find(~isnan(array_out10)==1))./length(array_out2);
+% 
+% %%%% Use the ensemble method:
+% [array_out upthresh4 downthresh4] = junk_OPEC_ensembleclean(array_out10, sdev_mult, win_size, min_int);
+
+%%%%%% Plot some things to test:
+switch var_type
+    case 'Fc'
+figure('Name', ['Spike Removal for ' var_type ' for site ' site]); clf
+plot(orig_data,'.-','Color',[0.8 0.8 0.8]); hold on;
+plot(array_in,'r.-');
+plot(array_clean2,'b.-');
+plot(array_out,'g.-');
+legend('orig', 'first spike rem.', 'ens clean', 'final')
+
+    case 'H' | 'LE'
+figure('Name', ['Spike Removal for ' var_type ' for site ' site]); clf
+plot(orig_data,'.-','Color',[0.8 0.8 0.8]); hold on;
+plot(array_clean1,'b.-');
+plot(array_out,'g.-');
+legend('orig', 'first spike rem.', 'ens clean', 'final')
+
+% 
+% figure(102);clf;
+% plot(upthresh1,'r--');hold on;
+% plot(downthresh1,'r--');hold on;
+% plot(upthresh2,'b--');hold on;
+% plot(downthresh2,'b--');hold on;
+% legend('thresh3', 'thresh4')
+% 
+% figure(103);clf;
+% plot(array_out,'b.-'); hold on;
+% plot(upthresh2,'g--');
+% plot(downthresh2,'g--');
+% title('final data with thresholds')
+
+
+

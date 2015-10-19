@@ -1,0 +1,23 @@
+function [Ci] = jjb_gap_cluster_index2(data_in)
+
+[starts len] = jjb_gapfinder(data_in);
+
+Ci = NaN.*ones(size(data_in,2),1);
+% Ci_exp = NaN.*ones(size(data_in,2),1);
+% Ci_adj = NaN.*ones(size(data_in,2),1);
+
+for i = 1:1:size(len,2)
+    ind = find(~isnan(len(:,i)));
+    num_clusters = length(ind);
+    
+    Ci(i,1) = prod(log(len(ind,i))./log(size(data_in,1))) ./ ((sum(len(ind,i)) ./ size(data_in,1) ).^num_clusters);    
+%     Ci(i,1) = 1 - ( (num_clusters - 1) ./ (size(data_in,1)./2 - 1) );
+%     
+%     %%% Proportion of data that is good data:
+%     p_nan = length(find(isnan(data_in(:,i))))./ size(data_in,1);
+%     %%% Expected value of Ci (if gaps are random):
+%     Ci_exp(i,1) = 2.*p_nan.^2 - 2.*p_nan  + 1;
+%     %%% Adjusted Ci value:
+%     Ci_adj(i,1) = Ci(i,1)./Ci_exp(i,1);
+        
+end

@@ -1,0 +1,45 @@
+function [] = mcm_plot_fluxes(site, year)
+
+if ischar(year)
+else
+    year = num2str(year);
+end
+%% Paths
+load_path = [loadstart 'SiteData/' site '/MET-DATA/annual/'];
+%%% Get names of variables
+vars = mcm_get_varnames;
+
+%%% Make x-ticks:
+% [junk1 junk2 junk3 junk4] = jjb_makedate(str2double(year),30);
+% [Mon Day] = make_Mon_Day(str2double(year), 1440);
+% YY = year(3:4);
+% 
+% for i = 1:1:length(Mon)
+%     datastr(i,:) = [YY create_label(Mon(i,1),2) create_label(Day(i,1),2) ];
+% end
+[datastr] = mcm_make_datastr(year, 1440);
+ctr = 1;
+for k = 1:48:length(junk1);
+    x_tick(ctr,1) = k;
+    x_tick_label(ctr,:) = datastr(ctr,:);
+    ctr = ctr+1;
+end
+
+
+for j = 1:1:length(vars)
+    %%% Load variable:
+    tmp_var = load([load_path site '_' yr_str '.' vars(j).name]);
+%     tmp_var_backup = load([])
+    figure('Name',vars(j).name); clf;
+    plot(tmp_var,'b.-');
+    hold on;
+    plot(tmp_hhour_data,'b.-');
+    legend('hhour-lab','hhour-field');
+set(gca,'XTick',x_tick);
+set(gca,'XTickLabel',x_tick_label);
+    
+    clear tmp_hhour_data tmp_hhour_field_data;
+
+
+end
+

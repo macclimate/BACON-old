@@ -1,0 +1,161 @@
+function [varargout] = model_stats(data_model, data_meas, option_flag, stdev_in)
+
+
+%%%% REVISION HISTORY:
+%%% December 16, 2010.  JJB:
+%%% Added another input argument -- stdev
+%%% If the user supplies this value, then the program will calculate the
+%%% weighted sum of squares statistics:
+
+plot_flag = []; error_flag = [];
+% if nargin == 2 || isempty(option_flag) == 1
+%     plot_flag = [];
+% end
+
+if nargin == 2 || nargin == 3 || isempty(stdev_in)
+    stdev_flag = 0;
+else
+    stdev_flag = 1;
+end
+
+if option_flag == 1
+    plot_flag = 1;
+elseif option_flag == 9;
+    error_flag = 1;
+end
+
+labels = {'AE';'NAE';'FB';'BE';'FV';'VR';'KS_h';'KS_p';'KS'; ...
+    'RMSE';'rRMSE';'NRMSE';'IoA';'AIoA';'MAE';'NMAE';'MAE_max';'MAE_med';'MAE_upper';...
+    'SR';'Ei';'alpha';'beta';'ESS';'R2'; 'WESS'; 'WrRMSE'};
+
+
+%% Make this function back-compatible with older uses of this function:
+% If only one output argument, output as a structure:
+if nargout == 1;
+    output_flag = 'struct';
+    % If more than one
+elseif nargout > 1 && nargout <=6
+    output_flag = 'old';
+elseif nargout > 6
+    disp('Not recommended to enter so many output arguments.');
+    disp('One output argument will get you a structure.');
+    disp('No guarantee you''re getting the proper stats.');
+    disp('This is what order your stats are coming in:');
+    for k = 1:1:nargout
+        disp(['variable ' num2str(k) ': ' labels{k,1}]);
+    end
+    output_flag = 'old';
+end
+
+%%% Select only data that is NaN-free for both observations and predictions.
+%%% If they are blank, then set error flag to 1, and we'll make all stats
+%%% NaN:
+pred = data_model(~isnan(data_model.*data_meas)==1,1);
+obs = data_meas(~isnan(data_model.*data_meas)==1,1);
+
+if stdev_flag ==1;
+    stdev = stdev_in(~isnan(data_model.*data_meas)==1,1);
+end
+
+if isempty(pred)==1 || isempty(obs)==1
+    error_flag = 1;
+end
+
+%% %%%%%%%%%%%%% Calculate Stats: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+if isempty(error_flag)==1
+    try
+        %% 1. Bias indicators:
+        % Average Error (AKA Bias Error, BE):
+        stats.AE = mean(pred) - mean(obs);
+        % Normalized Average Error:
+        stats.NAE = stats.AE./mean(obs);
+        % Fractional Mean Bias:
+        stats.FB = stats.AE ./ (0.5.*(mean(pred) + mean(obs)));
+        % Relative Mean Bias:
+        stats.BE = stats.AE ./ std(obs);
+        
+        %% 2. Variance indicators:
+        % Fractional Variance:
+        stats.FV = (var(pred) - var(obs)) ./ (0.5.*(var(pred)+ var(obs)));
+        % Variance Ratio:
+        stats.VR = var(pred)./var(obs);
+        % Kolmogorov-Smirnov:
+        try
+        [stats.KS_h,stats.KS_p,stats.KS] = kstest2(pred, obs, 0.05, 'unequal');
+        catch
+           stats.KS_h= NaN; stats.KS_p= NaN; stats.KS= NaN; 
+        end
+        %% Deviation indicators - Individual Basis:
+        % Root Mean Square Error:
+        stats.RMSE = sqrt((sum((pred - obs).^2))./(length(pred)-2));
+        % Relative RMSE:
+        stats.rRMSE = sqrt((sum((pred - obs).^2))./(sum(obs.^2)));
+        % Normalized RMSE:
+        stats.NRMSE = stats.RMSE./mean(obs);
+        % Index of Agreement:
+        stats.IoA = 1 - (sum((pred-obs).^2) ./ sum((abs(pred)+abs(obs)).^2) );
+        % Alternative Index of Agreement:
+        stats.AIoA = 1 - (sum(abs(pred-obs)) ./ sum(abs(pred)+abs(obs)) );
+        % Mean Absolute Error:
+        stats.MAE     = (sum(abs(pred - obs)))./(length(pred));
+        % Normalized Mean Absolute Error:
+        stats.NMAE    = stats.MAE./mean(obs);
+        % Maximal Absolute Error:
+        stats.MAE_max = max(abs(pred-obs));
+        % Median Absolute Error:
+        stats.MAE_med = median(abs(pred-obs));
+        % Upper Quartile Absolute Error:
+        try
+        stats.MAE_upper = quantile(abs(pred-obs), 0.75);
+        catch
+         stats.MAE_upper = NaN;
+        end
+        %% Deviation indicators - Deviation vs benchmark situation:
+        % Scatter Ratio:
+        stats.SR = sum((obs - mean(obs)).^2)./sum((pred - mean(obs)).^2);
+        % Model Efficiency:
+        stats.Ei = (sum((obs - mean(obs)).^2) - (sum((pred - obs).^2))) ./ sum((obs - mean(obs)).^2);
+        
+        %% Linear Regression Metrics:
+        p = polyfit(pred,obs,1);
+        stats.alpha = p(2); % intercept
+        stats.beta = p(1);  % slope
+        pred_lin = polyval(p,pred);
+        stats.ESS = sum((obs - pred_lin).^2); % Error sum of squares
+        MSS = sum( (obs - mean(obs)).^2);   % Sums of squared due to the mean
+        stats.R2 = 1 - (stats.ESS./MSS);
+        stats.adj_R2 = 1 - (1 - stats.R2)
+        if stdev_flag == 1
+        %% Weighted Sum of Squares Statistics:
+        % Weighted Error Sum of Squares:
+        stats.WESS = sum(((obs - pred).^2)./ (stdev.^2));
+        % Weighted relative Root Mean Square Error:
+        stats.WrRMSE = sqrt((sum(((obs - pred).^2)./ (stdev.^2)))./(sum(obs.^2)));      
+        else
+        stats.WESS = NaN;
+        stats.WrRMSE = NaN;      
+        end            
+    catch
+        error_flag = 1;
+    end
+end
+
+%%%%%%%%% If error flag is set, then we just make all stats as NaN:
+if error_flag == 1
+    stats = struct;
+    for k = 1:1:length(labels)
+        eval(['stats.' labels{k,1} '=NaN;']);
+    end
+end
+
+%% %%%%%%%%%%%%% OUTPUT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+switch output_flag
+    case 'old'
+        for i = 1:1:nargout
+            eval(['varargout{i} = stats.' labels{i,1} ';']);
+        end
+    case 'struct'
+        varargout = {stats};
+end
+
+

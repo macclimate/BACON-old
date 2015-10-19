@@ -1,0 +1,99 @@
+function [] = junk_compile_CCP()
+
+% junk_compile 2003--2007 data
+% This script will compile data (flux+met) from the sites
+% from years 2003--2007.  The data will be shifted, and a list of variables
+% labels will also be saved.
+
+ls = addpath_loadstart;
+site_labels = ['TP39'; 'TP74';'TP89'; 'TP02'];
+[num_sites ~] = size(site_labels);
+
+CCP_path = [ls 'Matlab/Data/CCP/'];
+met_path = [ls 'Matlab/Data/Met/Final_Cleaned/'];
+
+
+for i = 1:1:num_sites
+    site = site_labels(i,:);
+    
+    %%% Load Headers
+    CCP_header = jjb_hdr_read([CCP_path 'Template/' site '_CCP_List.csv'],',',2);
+    CCP_met_header = jjb_hdr_read([CCP_path 'Docs/' site '_CCP_conversion_template.csv'],',',5);
+    
+    %%% Load newer metfile so we can get the labels
+    met_2008 = load([ls 'Matlab/Data/Met/Final_Cleaned/' site '/' site '_met_cleaned_2008.mat']);
+    [junk c] = size(met_2008.master.data);
+    
+    
+    
+    
+    %%% Load CCP data:
+    CCP_data = load([CCP_path '/Final_dat/' site '_final_' year '.dat']);
+    
+    % Convert labels to a cell array
+    
+    for k = 1:1:c
+        tmp = met_2008.master.labels(k,:);
+        tmp(tmp==' ') = ''; % Remove spaces
+        labels(k,1) = cellstr(tmp);
+        clear tmp;
+    end
+    
+    % Step 1: Load all of the data for a given site:
+    
+    % Go Through each variable in the CCP file and put it in the right spot:
+    
+    
+    
+    
+    
+    for year = 2003:1:2007
+        
+        clear met_clean len_yr;
+        
+        if isleapyear(year) == 1;    len_yr = 17568;
+        else    len_yr = 17520;    end
+        
+        met_clean = NaN.*ones(len_yr,c);
+        
+        for j = 1:1:length(CCP_met_header);
+            % Met data for Final_Cleaned:
+            if strcmp(CCP_met_header{j,4},'met')==1 && strcmp(CCP_met_header{j,5},'Final_Cleaned')==1
+                disp(['score at ' num2str(j)]);
+                % Find where it should go in master file:
+                right_col = find(strcmp(CCP_met_header{j,3},labels)==1);
+                %keep track of what variables have been copied
+                met_clean_list(length(met_clean_list)+1,1) = right_col;
+                met_clean(:,right_col) = CCP_data(:,j);
+                
+            elseif strcmp(CCP_met_header{j,4},'met')==1 && strcmp(CCP_met_header{j,5},'Calculated4')==1
+                
+                
+                
+            elseif strcmp(CCP_met_header{j,4},'flux')==1 && strcmp(CCP_met_header{j,5},'Final_Cleaned')==1
+                
+            elseif strcmp(CCP_met_header{j,4},'flux')==1 && strcmp(CCP_met_header{j,5},'Final_Calculated')==1
+                
+            end
+            
+        end
+        
+        
+        % Save the files:
+        
+        
+    end
+    
+    
+    
+    
+    
+    
+    
+    
+end
+
+end
+
+function [] = get_right_row()
+

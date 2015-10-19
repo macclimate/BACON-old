@@ -1,0 +1,8 @@
+function[rsq] = rsquared(obs_y, pred_y)
+
+mean_obs = mean(obs_y);
+top = sum((pred_y - mean_obs).^2);
+bot = sum((obs_y - mean_obs).^2);
+rsq = top./bot;
+
+%% [] contain the output informaiton and  the () contain the input data

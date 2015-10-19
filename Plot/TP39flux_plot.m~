@@ -1,0 +1,997 @@
+%% Met1flux_plot
+close all
+clear all
+%% Load Met Variables:
+if ispc == 1
+path = 'C:\HOME\MATLAB\Data\Data_Analysis\M1_allyears\';
+fig_path = 'C:\HOME\MATLAB\Figs\TP39_figs/';
+data_loc = 'C:/HOME/MATLAB/Data/';
+else
+    path = '/home/jayb/MATLAB/Data/Data_Analysis/M1_allyears/';
+    data_loc = '/home/jayb/MATLAB/Data/';
+%     path = '/home/jayb/MATLAB/work/TP/';
+end
+
+all_vars = load([path 'M1_all_yrs_data.dat']);
+
+T_air1 = all_vars(:,1);
+PAR1 = all_vars(:,2);
+Ts1_2 = all_vars(:,3);
+SM1 = all_vars(:,4);
+NEE_raw = all_vars(:,5); %NEE1(NEE1 > 35 | NEE1 < -35) = NaN;
+ustar1 = all_vars(:,6);
+dt1 = all_vars(:,7);
+year1 = all_vars(:,8);
+WS1 = all_vars(:,9);
+Wdir1 = all_vars(:,10);
+VPD1 = all_vars(:,11);
+Ts1_5 = all_vars(:,12);
+VPDmd1 = all_vars(:,13); 
+PPThh1 = all_vars(:,14); % Value for daily precip at middle of day
+PPT481 = all_vars(:,15); % Daily precip averaged over 48hhours each day
+SM50a1 = all_vars(:,16);
+SM50b1 = all_vars(:,17);
+SM100a1 = all_vars(:,18);
+SM100b1 = all_vars(:,19);
+SM10a1 = all_vars(:,16);
+SM10b1 = all_vars(:,17);
+SM20a1 = all_vars(:,18);
+SM20b1 = all_vars(:,19);
+SM5a1 = all_vars(:,20);
+SM5b1 = all_vars(:,21);
+clear all_vars;
+%% Load Flux Variables:
+
+flux_vars = open([path 'M1_model4_output.mat']);
+
+NEE1 = flux_vars.M1_output(:).NEE;
+GEP1 = flux_vars.M1_output(:).GEP;
+Resp1 = flux_vars.M1_output(:).R;
+GEP_PAR = flux_vars.M1_output(:).GEP_PAR;
+est_R = flux_vars.M1_output(:).est_R;
+
+clear flux_vars;
+
+NEP(1).all = -1*NEE1(year1==2003).*0.0216; NEP(2).all = -1*NEE1(year1==2004).*0.0216; NEP(3).all = -1*NEE1(year1==2005).*0.0216; 
+NEP(4).all = -1*NEE1(year1==2006).*0.0216; NEP(5).all = -1*NEE1(year1==2007).*0.0216; 
+
+NEPraw(1).all = -1*NEE_raw(year1==2003).*0.0216; NEPraw(2).all = -1*NEE_raw(year1==2004).*0.0216; NEPraw(3).all = -1*NEE_raw(year1==2005).*0.0216; 
+NEPraw(4).all = -1*NEE_raw(year1==2006).*0.0216; NEPraw(5).all = -1*NEE_raw(year1==2007).*0.0216; 
+
+
+GEP(1).all = GEP1(year1==2003).*0.0216; GEP(2).all = GEP1(year1==2004).*0.0216; GEP(3).all = GEP1(year1==2005).*0.0216; 
+GEP(4).all = GEP1(year1==2006).*0.0216; GEP(5).all = GEP1(year1==2007).*0.0216; 
+
+Resp(1).all = Resp1(year1==2003).*0.0216; Resp(2).all = Resp1(year1==2004).*0.0216; Resp(3).all = Resp1(year1==2005).*0.0216; 
+Resp(4).all = Resp1(year1==2006).*0.0216; Resp(5).all = Resp1(year1==2007).*0.0216; 
+
+dt(1).all = dt1(year1==2003); dt(2).all = dt1(year1==2004); dt(3).all = dt1(year1==2005);
+dt(4).all = dt1(year1==2006); dt(5).all = dt1(year1==2007);
+
+PAR(1).all = PAR1(year1==2003); PAR(2).all = PAR1(year1==2004); PAR(3).all = PAR1(year1==2005);
+PAR(4).all = PAR1(year1==2006); PAR(5).all = PAR1(year1==2007);
+
+T_air(1).all = T_air1(year1==2003); T_air(2).all = T_air1(year1==2004); T_air(3).all = T_air1(year1==2005);
+T_air(4).all = T_air1(year1==2006); T_air(5).all = T_air1(year1==2007);
+
+Ts(1).all = Ts1_5(year1==2003); Ts(2).all = Ts1_5(year1==2004); Ts(3).all = Ts1_5(year1==2005);
+Ts(4).all = Ts1_5(year1==2006); Ts(5).all = Ts1_5(year1==2007);
+
+SM(1).all = SM1(year1==2003); SM(2).all = SM1(year1==2004); SM(3).all = SM1(year1==2005);
+SM(4).all = SM1(year1==2006); SM(5).all = SM1(year1==2007);
+
+VPD(1).all = VPD1(year1==2003); VPD(2).all = VPD1(year1==2004); VPD(3).all = VPD1(year1==2005);
+VPD(4).all = VPD1(year1==2006); VPD(5).all = VPD1(year1==2007);
+
+VPDmd(1).all = VPDmd1(year1==2003); VPDmd(2).all = VPDmd1(year1==2004); VPDmd(3).all = VPDmd1(year1==2005);
+VPDmd(4).all = VPDmd1(year1==2006); VPDmd(5).all = VPDmd1(year1==2007);
+
+ustar(1).all = ustar1(year1==2003); ustar(2).all = ustar1(year1==2004); ustar(3).all = ustar1(year1==2005);
+ustar(4).all = ustar1(year1==2006); ustar(5).all = ustar1(year1==2007);
+
+PPThh(1).all = PPThh1(year1==2003); PPThh(2).all = PPThh1(year1==2004); PPThh(3).all = PPThh1(year1==2005);
+PPThh(4).all = PPThh1(year1==2006); PPThh(5).all = PPThh1(year1==2007);
+
+PPT48(1).all = PPT481(year1==2003); PPT48(2).all = PPT481(year1==2004); PPT48(3).all = PPT481(year1==2005);
+PPT48(4).all = PPT481(year1==2006); PPT48(5).all = PPT481(year1==2007);
+
+%% Sort Soil Moistures:
+
+SM10a(1).all = SM10a1(year1==2003); SM10a(2).all = SM10a1(year1==2004); SM10a(3).all = SM10a1(year1==2005);
+SM10a(4).all = SM10a1(year1==2006); SM10a(5).all = SM10a1(year1==2007);
+
+SM10b(1).all = SM10b1(year1==2003); SM10b(2).all = SM10b1(year1==2004); SM10b(3).all = SM10b1(year1==2005);
+SM10b(4).all = SM10b1(year1==2006); SM10b(5).all = SM10b1(year1==2007);
+
+SM20a(1).all = SM20a1(year1==2003); SM20a(2).all = SM20a1(year1==2004); SM20a(3).all = SM20a1(year1==2005);
+SM20a(4).all = SM20a1(year1==2006); SM20a(5).all = SM20a1(year1==2007);
+
+SM20b(1).all = SM20b1(year1==2003); SM20b(2).all = SM20b1(year1==2004); SM20b(3).all = SM20b1(year1==2005);
+SM20b(4).all = SM20b1(year1==2006); SM20b(5).all = SM20b1(year1==2007);
+
+SM50a(1).all = SM50a1(year1==2003); SM50a(2).all = SM50a1(year1==2004); SM50a(3).all = SM50a1(year1==2005);
+SM50a(4).all = SM50a1(year1==2006); SM50a(5).all = SM50a1(year1==2007);
+
+SM50b(1).all = SM50b1(year1==2003); SM50b(2).all = SM50b1(year1==2004); SM50b(3).all = SM50b1(year1==2005);
+SM50b(4).all = SM50b1(year1==2006); SM50b(5).all = SM50b1(year1==2007);
+
+SM5a(1).all = SM5a1(year1==2003); SM5a(2).all = SM5a1(year1==2004); SM5a(3).all = SM5a1(year1==2005);
+SM5a(4).all = SM5a1(year1==2006); SM5a(5).all = SM5a1(year1==2007);
+
+SM5b(1).all = SM5b1(year1==2003); SM5b(2).all = SM5b1(year1==2004); SM5b(3).all = SM5b1(year1==2005);
+SM5b(4).all = SM5b1(year1==2006); SM5b(5).all = SM5b1(year1==2007);
+
+
+%% Load Results from Flux Calculation
+
+Results = load([path 'M1_model4_flux_results.dat']);
+fignum = 1;
+%% Cumulative Plots for each
+colorlist = ['b';'r';'g';'m';'c'];
+yrlist = ['2003';'2004';'2005';'2006';'2007'];
+
+
+% NEP
+figure(fignum)
+clf
+for jj = 1:1:5
+hNEP(jj) = plot(dt(jj).all,nancumsum(NEP(jj).all),colorlist(jj));
+hold on
+end
+axis([1 366 -200 250])
+legend(hNEP,yrlist,2)
+xlabel('day of year')
+ylabel('NEP (g CO_{2} m^{-2} y^{-1})')
+title('Cumulative')
+fignum= fignum+1;
+
+
+% GEP
+figure(fignum)
+clf
+
+for jj = 1:1:5
+hGEP(jj) = plot(dt(jj).all,nancumsum(GEP(jj).all),colorlist(jj));
+hold on
+end
+axis([1 366 -5 1600])
+legend(hGEP,yrlist,2)
+xlabel('day of year')
+ylabel('GEP (g CO_{2} m^{-2} y^{-1})')
+title('Cumulative')
+fignum= fignum+1;
+
+% Resp
+figure(fignum)
+clf
+
+for jj = 1:1:5
+hResp(jj) = plot(dt(jj).all,nancumsum(Resp(jj).all),colorlist(jj));
+hold on
+end
+axis([1 366 -5 1600])
+legend(hResp,yrlist,2)
+xlabel('day of year')
+ylabel('Resp (g CO_{2} m^{-2} y^{-1})')
+title('Cumulative')
+fignum= fignum+1;
+%% Monthly Means
+for kk = 2003:1:2007
+
+[NEP_monsum(1:12,kk-2002) NEP_monmean(1:12,kk-2002)] = jjb_month_stats(kk,NEP(kk-2002).all);
+[GEP_monsum(1:12,kk-2002) GEP_monmean(1:12,kk-2002)] = jjb_month_stats(kk,GEP(kk-2002).all);
+[Resp_monsum(1:12,kk-2002) Resp_monmean(1:12,kk-2002)] = jjb_month_stats(kk,Resp(kk-2002).all);
+
+end
+
+figure(fignum)
+clf
+subplot(3,1,1)
+bar(NEP_monsum)
+legend(yrlist)
+title('NEP')
+
+subplot(3,1,2)
+bar(GEP_monsum)
+ylabel('g C m^{-2} mo^{-1}')
+title('GEP')
+
+subplot(3,1,3)
+bar(Resp_monsum)
+title('Resp')
+fignum= fignum+1;
+
+%% 10-day mean.
+
+for i = 1:1:5
+    
+[NEP(i).sum,NEP(i).mean,NEP(i).Tstamp,] = integzBC1((dt(i).all),NEP(i).all,1:length(dt(i).all)/48,10);
+[GEP(i).sum,GEP(i).mean,GEP(i).Tstamp,] = integzBC1((dt(i).all),GEP(i).all,1:length(dt(i).all)/48,10);
+[Resp(i).sum,Resp(i).mean,Resp(i).Tstamp,] = integzBC1((dt(i).all),Resp(i).all,1:length(dt(i).all)/48,10);
+
+end
+
+figure(fignum)
+clf
+for jj = 1:1:5
+
+subplot(3,1,1)
+plot(NEP(jj).Tstamp, NEP(jj).sum, colorlist(jj))
+hold on;
+title('10-day sums - NEP')
+
+subplot(3,1,2)
+plot(GEP(jj).Tstamp, GEP(jj).sum, colorlist(jj))
+hold on;
+title('GEP')
+
+
+subplot(3,1,3)
+plot(Resp(jj).Tstamp, Resp(jj).sum, colorlist(jj))
+hold on;
+title('Resp')
+
+end
+
+subplot(3,1,2)
+ylabel('(g CO_{2} m^{-2} 10days^{-1})')
+legend(yrlist)
+fignum= fignum+1;
+%% response curves for Resp and GEP
+
+figure(fignum)
+clf
+for jj = 1:1:5
+    figure(fignum)
+    plot(GEP_PAR(jj).PAR_test, GEP_PAR(jj).pred, colorlist(jj))
+    hold on;
+    figure(fignum+1)
+    plot(est_R(jj).Tstest,est_R(jj).regbavg,colorlist(jj))
+    hold on;
+    
+end
+
+figure(fignum)
+xlabel('PAR'); ylabel('GEP (/mu mol C m^{-2} s^{-1}')
+legend(yrlist,4)
+figure(fignum+1)
+xlabel('Ts'); ylabel('R (/mu mol C m^{-2} s^{-1}')
+legend(yrlist,4)
+fignum= fignum+2;
+
+%% Meteorological variables:
+% Make cumulative sum, monthly mean, and 10-day mean graphs for met
+% variables:
+
+for kk = 2003:1:2007
+    i = kk-2002;
+    
+    %%% Monthly Means
+[PAR_monsum(1:12,kk-2002) PAR_monmean(1:12,kk-2002)] = jjb_month_stats(kk,PAR(kk-2002).all);
+[PPT_monsum(1:12,kk-2002) PPT_monmean(1:12,kk-2002)] = jjb_month_stats(kk,PPThh(kk-2002).all);
+[T_air_monsum(1:12,kk-2002) T_air_monmean(1:12,kk-2002)] = jjb_month_stats(kk,T_air(kk-2002).all);
+[Ts_monsum(1:12,kk-2002) Ts_monmean(1:12,kk-2002)] = jjb_month_stats(kk,Ts(kk-2002).all);
+[SM_monsum(1:12,kk-2002) SM_monmean(1:12,kk-2002)] = jjb_month_stats(kk,SM(kk-2002).all);
+[VPD_monsum(1:12,kk-2002) VPD_monmean(1:12,kk-2002)] = jjb_month_stats(kk,VPDmd(kk-2002).all);
+
+%%% 10-day averages:
+[PAR(i).sum,PAR(i).mean,PAR(i).Tstamp,] = integzBC1((dt(i).all),PAR(i).all,1:length(dt(i).all)/48,10);
+[PPT(i).sum,PPT(i).mean,PPT(i).Tstamp,] = integzBC1((dt(i).all),PPThh(i).all(1:length(dt(i).all)),1:length(dt(i).all)/48,10);
+[T_air(i).sum,T_air(i).mean,T_air(i).Tstamp,] = integzBC1((dt(i).all),T_air(i).all,1:length(dt(i).all)/48,10);
+[Ts(i).sum,Ts(i).mean,Ts(i).Tstamp,] = integzBC1((dt(i).all),Ts(i).all,1:length(dt(i).all)/48,10);
+[SM(i).sum,SM(i).mean,SM(i).Tstamp,] = integzBC1((dt(i).all),SM(i).all,1:length(dt(i).all)/48,10);
+[VPD(i).sum,VPD(i).mean,VPD(i).Tstamp,] = integzBC1((dt(i).all),VPDmd(i).all,1:length(dt(i).all)/48,10);
+
+%%% Cumulative Sums:
+PAR(i).cumsum = nancumsum(PAR(i).all);
+PPT(i).cumsum = nancumsum(PPT48(i).all);
+T_air(i).cumsum = nancumsum(T_air(i).all);
+Ts(i).cumsum = nancumsum(Ts(i).all);
+SM(i).cumsum = nancumsum(SM(i).all);
+VPDmd(i).cumsum = nancumsum(VPDmd(i).all);
+end
+   
+%%% Plot PAR
+figure(fignum)
+clf
+for jj = 1:1:5
+    figure(fignum)
+    subplot(3,1,1) % cumulative sum
+    title('Cumulative PAR')
+    plot(dt(jj).all, PAR(jj).cumsum, colorlist(jj))
+    hold on
+    
+    subplot(3,1,2) % 10-day mean
+    hold on
+    plot(PAR(jj).Tstamp,PAR(jj).mean, colorlist(jj))
+    title('10-day Mean PAR')
+    
+    subplot(3,1,3) % monthly mean
+    hold on
+    plot((1:1:12)',PAR_monmean(:,jj), colorlist(jj))
+    title('Monthly Mean PAR')
+    axis([1 12 0 850])
+end
+figure(fignum)
+    subplot(3,1,2) % 10-day mean
+    legend(yrlist)
+fignum= fignum+1;
+
+%%% Plot PPT
+figure(fignum)
+clf
+for jj = 1:1:5
+    figure(fignum)
+    subplot(3,1,1) % cumulative sum
+    title('Cumulative PPT')
+    plot(dt(jj).all, PPT(jj).cumsum(1:length(dt(jj).all)), colorlist(jj))
+    hold on;
+    
+    subplot(3,1,2) % 10-day mean
+    plot(PPT(jj).Tstamp,PPT(jj).sum, colorlist(jj))
+    hold on;
+    title('10-day Sum PPT')
+end
+figure(fignum)
+ subplot(3,1,2) % 10-day mean
+    legend(yrlist)
+
+subplot(3,1,3) % monthly mean
+bar(PPT_monsum)
+legend(yrlist)
+title('Monthly Sum PPT')
+fignum= fignum+1;
+
+%%% Plot T_air
+figure(fignum)
+clf
+for jj = 1:1:5
+    figure(fignum)
+    subplot(3,1,1) % cumulative sum
+    title('Cumulative T_{air}')
+    plot(dt(jj).all, T_air(jj).cumsum, colorlist(jj))
+    hold on;
+    
+    subplot(3,1,2) % 10-day mean
+    plot(T_air(jj).Tstamp,T_air(jj).mean, colorlist(jj))
+    hold on;
+    title('10-day Mean T_{air}')
+end
+figure(fignum)
+ subplot(3,1,2) % 10-day mean
+    legend(yrlist)
+subplot(3,1,3) % monthly mean
+bar(T_air_monmean)
+legend(yrlist)
+title('Monthly Mean T_{air}')
+fignum= fignum+1;
+
+%%% Plot Ts
+figure(fignum)
+clf
+for jj = 1:1:5
+    figure(fignum)
+    subplot(3,1,1) % cumulative sum
+    title('Cumulative Ts')
+    plot(dt(jj).all, Ts(jj).cumsum, colorlist(jj))
+    hold on
+    
+    subplot(3,1,2) % 10-day mean
+    hold on
+    plot(Ts(jj).Tstamp,Ts(jj).mean, colorlist(jj))
+    title('10-day Mean Ts')
+end
+figure(fignum)
+    subplot(3,1,2) % 10-day mean
+    legend(yrlist)
+
+subplot(3,1,3) % monthly mean
+bar(Ts_monmean)
+legend(yrlist)
+title('Monthly Mean Ts')
+fignum= fignum+1;
+
+%%% Plot SM
+figure(fignum)
+clf
+for jj = 1:1:5
+    figure(fignum)
+    subplot(3,1,1) % cumulative sum
+    title('Cumulative SM')
+    plot(dt(jj).all, SM(jj).cumsum, colorlist(jj))
+    hold on
+    
+    subplot(3,1,2) % 10-day mean
+    hold on
+    plot(SM(jj).Tstamp,SM(jj).mean, colorlist(jj))
+    title('10-day Mean SM')
+end
+figure(fignum)
+    subplot(3,1,2) % 10-day mean
+    legend(yrlist)
+
+subplot(3,1,3) % monthly mean
+bar(SM_monmean)
+legend(yrlist)
+title('Monthly Mean SM')
+fignum= fignum+1;
+
+%%% Plot midday VPD
+figure(fignum)
+clf
+for jj = 1:1:5
+    figure(fignum)
+    subplot(3,1,1) % cumulative sum
+    title('Cumulative VPDmd')
+    plot(dt(jj).all, VPDmd(jj).cumsum, colorlist(jj))
+    hold on
+    
+    subplot(3,1,2) % 10-day mean
+    hold on
+    plot(VPD(jj).Tstamp,VPD(jj).mean, colorlist(jj))
+    title('10-day Mean VPD')
+end
+figure(fignum)
+    subplot(3,1,2) % 10-day mean
+    legend(yrlist)
+
+subplot(3,1,3) % monthly mean
+bar(VPD_monmean)
+legend(yrlist)
+title('Monthly Mean VPD')
+fignum= fignum+1;
+
+%% Plot Cumulative Curves for Each Season by year:
+%%% NEE
+figure(fignum); clf
+% figure(99); clf
+for kk = 2003:1:2007
+    i = kk-2002;
+    % winter
+subplot(2,2,1); ind_win = find(dt(i).all >= 335 | dt(i).all < 91);
+plot(nancumsum(NEP(i).all(ind_win)),colorlist(i)); hold on; title('WINTER');
+ylabel('Cumulative g C m^{-2}')
+subplot(2,2,2); ind_spr = find(dt(i).all >= 91 & dt(i).all < 152);
+plot(nancumsum(NEP(i).all(ind_spr)),colorlist(i)); hold on; title('SPRING');
+subplot(2,2,3); ind_sum = find(dt(i).all >= 152 & dt(i).all < 274);
+plot(nancumsum(NEP(i).all(ind_sum)),colorlist(i)); hold on; title('SUMMER');
+subplot(2,2,4); ind_aut = find(dt(i).all >= 274 & dt(i).all < 335);
+plot(nancumsum(NEP(i).all(ind_aut)),colorlist(i)); hold on; title('AUTUMN');    
+end
+legend(yrlist,3)
+title('Cumulative NEP by Season For Each Year')
+fignum = fignum+1;
+
+%%% GEP
+figure(fignum); clf
+% figure(99); clf
+for kk = 2003:1:2007
+    i = kk-2002;
+    % winter
+subplot(2,2,1); ind_win = find(dt(i).all >= 335 | dt(i).all < 91);
+plot(nancumsum(GEP(i).all(ind_win)),colorlist(i)); hold on; title('WINTER');
+ylabel('Cumulative g C m^{-2}')
+subplot(2,2,2); ind_spr = find(dt(i).all >= 91 & dt(i).all < 152);
+plot(nancumsum(GEP(i).all(ind_spr)),colorlist(i)); hold on; title('SPRING');
+subplot(2,2,3); ind_sum = find(dt(i).all >= 152 & dt(i).all < 274);
+plot(nancumsum(GEP(i).all(ind_sum)),colorlist(i)); hold on; title('SUMMER');
+subplot(2,2,4); ind_aut = find(dt(i).all >= 274 & dt(i).all < 335);
+plot(nancumsum(GEP(i).all(ind_aut)),colorlist(i)); hold on; title('AUTUMN');    
+end
+legend(yrlist,3)
+title('Cumulative GEP by Season For Each Year')
+fignum = fignum+1;
+
+%%% Resp
+figure(fignum); clf
+% figure(99); clf
+for kk = 2003:1:2007
+    i = kk-2002;
+    % winter
+subplot(2,2,1); ind_win = find(dt(i).all >= 335 | dt(i).all < 91);
+plot(nancumsum(Resp(i).all(ind_win)),colorlist(i)); hold on; title('WINTER');
+ylabel('Cumulative g C m^{-2}')
+subplot(2,2,2); ind_spr = find(dt(i).all >= 91 & dt(i).all < 152);
+plot(nancumsum(Resp(i).all(ind_spr)),colorlist(i)); hold on; title('SPRING');
+subplot(2,2,3); ind_sum = find(dt(i).all >= 152 & dt(i).all < 274);
+plot(nancumsum(Resp(i).all(ind_sum)),colorlist(i)); hold on; title('SUMMER');
+subplot(2,2,4); ind_aut = find(dt(i).all >= 274 & dt(i).all < 335);
+plot(nancumsum(Resp(i).all(ind_aut)),colorlist(i)); hold on; title('AUTUMN');    
+end
+legend(yrlist,3)
+title('Cumulative Resp by Season For Each Year')
+fignum = fignum+1;
+
+%%% Ta
+figure(fignum); clf
+% figure(99); clf
+for kk = 2003:1:2007
+    i = kk-2002;
+    % winter
+subplot(2,2,1); ind_win = find(dt(i).all >= 335 | dt(i).all < 91);
+plot(nancumsum(T_air(i).all(ind_win)),colorlist(i)); hold on; title('WINTER');
+ylabel('Cumulative T_{air} ^{o}C')
+subplot(2,2,2); ind_spr = find(dt(i).all >= 91 & dt(i).all < 152);
+plot(nancumsum(T_air(i).all(ind_spr)),colorlist(i)); hold on; title('SPRING');
+subplot(2,2,3); ind_sum = find(dt(i).all >= 152 & dt(i).all < 274);
+plot(nancumsum(T_air(i).all(ind_sum)),colorlist(i)); hold on; title('SUMMER');
+subplot(2,2,4); ind_aut = find(dt(i).all >= 274 & dt(i).all < 335);
+plot(nancumsum(T_air(i).all(ind_aut)),colorlist(i)); hold on; title('AUTUMN');    
+end
+legend(yrlist,3)
+title('Cumulative T_{air} by Season For Each Year')
+fignum = fignum+1;
+
+%%% Ts
+figure(fignum); clf
+% figure(99); clf
+for kk = 2003:1:2007
+    i = kk-2002;
+    % winter
+subplot(2,2,1); ind_win = find(dt(i).all >= 335 | dt(i).all < 91);
+plot(nancumsum(Ts(i).all(ind_win)),colorlist(i)); hold on; title('WINTER');
+ylabel('Cumulative T_{s} ^{o}C')
+subplot(2,2,2); ind_spr = find(dt(i).all >= 91 & dt(i).all < 152);
+plot(nancumsum(Ts(i).all(ind_spr)),colorlist(i)); hold on; title('SPRING');
+subplot(2,2,3); ind_sum = find(dt(i).all >= 152 & dt(i).all < 274);
+plot(nancumsum(Ts(i).all(ind_sum)),colorlist(i)); hold on; title('SUMMER');
+subplot(2,2,4); ind_aut = find(dt(i).all >= 274 & dt(i).all < 335);
+plot(nancumsum(Ts(i).all(ind_aut)),colorlist(i)); hold on; title('AUTUMN');    
+end
+legend(yrlist,3)
+title('Cumulative T_{s} by Season For Each Year')
+fignum = fignum+1;
+
+%%% SM
+figure(fignum); clf
+% figure(99); clf
+for kk = 2003:1:2007
+    i = kk-2002;
+    % winter
+subplot(2,2,1); ind_win = find(dt(i).all >= 335 | dt(i).all < 91);
+plot(nancumsum(SM(i).all(ind_win)),colorlist(i)); hold on; title('WINTER');
+ylabel('Cumulative SM')
+subplot(2,2,2); ind_spr = find(dt(i).all >= 91 & dt(i).all < 152);
+plot(nancumsum(SM(i).all(ind_spr)),colorlist(i)); hold on; title('SPRING');
+subplot(2,2,3); ind_sum = find(dt(i).all >= 152 & dt(i).all < 274);
+plot(nancumsum(SM(i).all(ind_sum)),colorlist(i)); hold on; title('SUMMER');
+subplot(2,2,4); ind_aut = find(dt(i).all >= 274 & dt(i).all < 335);
+plot(nancumsum(SM(i).all(ind_aut)),colorlist(i)); hold on; title('AUTUMN');    
+end
+legend(yrlist,3)
+title('Cumulative SM by Season For Each Year')
+fignum = fignum+1;
+
+%%% PAR
+figure(fignum); clf
+% figure(99); clf
+for kk = 2003:1:2007
+    i = kk-2002;
+    % winter
+subplot(2,2,1); ind_win = find(dt(i).all >= 335 | dt(i).all < 91);
+plot(nancumsum(PAR(i).all(ind_win)),colorlist(i)); hold on; title('WINTER');
+ylabel('Cumulative PAR ')
+subplot(2,2,2); ind_spr = find(dt(i).all >= 91 & dt(i).all < 152);
+plot(nancumsum(PAR(i).all(ind_spr)),colorlist(i)); hold on; title('SPRING');
+subplot(2,2,3); ind_sum = find(dt(i).all >= 152 & dt(i).all < 274);
+plot(nancumsum(PAR(i).all(ind_sum)),colorlist(i)); hold on; title('SUMMER');
+subplot(2,2,4); ind_aut = find(dt(i).all >= 274 & dt(i).all < 335);
+plot(nancumsum(PAR(i).all(ind_aut)),colorlist(i)); hold on; title('AUTUMN');  
+end
+legend(yrlist,3)
+title('Cumulative PAR by Season For Each Year')
+fignum = fignum+1;
+
+%%% PPT
+figure(fignum); clf
+% figure(99); clf
+for kk = 2003:1:2007
+    i = kk-2002;
+    % winter
+subplot(2,2,1); ind_win = find(dt(i).all >= 335 | dt(i).all < 91);
+plot(nancumsum(PPT48(i).all(ind_win)),colorlist(i)); hold on; title('WINTER');
+ylabel('Cumulative PPT ')
+subplot(2,2,2); ind_spr = find(dt(i).all >= 91 & dt(i).all < 152);
+plot(nancumsum(PPT48(i).all(ind_spr)),colorlist(i)); hold on; title('SPRING');
+subplot(2,2,3); ind_sum = find(dt(i).all >= 152 & dt(i).all < 274);
+plot(nancumsum(PPT48(i).all(ind_sum)),colorlist(i)); hold on; title('SUMMER');
+subplot(2,2,4); ind_aut = find(dt(i).all >= 274 & dt(i).all < 335);
+plot(nancumsum(PPT48(i).all(ind_aut)),colorlist(i)); hold on; title('AUTUMN');  
+end
+legend(yrlist,3)
+title('Cumulative PPT by Season For Each Year')
+fignum = fignum+1;
+
+%%% VPD
+figure(fignum); clf
+% figure(99); clf
+for kk = 2003:1:2007
+    i = kk-2002;
+    % winter
+subplot(2,2,1); ind_win = find(dt(i).all >= 335 | dt(i).all < 91);
+plot(nancumsum(VPDmd(i).all(ind_win)),colorlist(i)); hold on; title('WINTER');
+ylabel('Cumulative PPT ')
+subplot(2,2,2); ind_spr = find(dt(i).all >= 91 & dt(i).all < 152);
+plot(nancumsum(VPDmd(i).all(ind_spr)),colorlist(i)); hold on; title('SPRING');
+subplot(2,2,3); ind_sum = find(dt(i).all >= 152 & dt(i).all < 274);
+plot(nancumsum(VPDmd(i).all(ind_sum)),colorlist(i)); hold on; title('SUMMER');  
+subplot(2,2,4); ind_aut = find(dt(i).all >= 274 & dt(i).all < 335);
+plot(nancumsum(VPDmd(i).all(ind_aut)),colorlist(i)); hold on  ; title('AUTUMN');  
+end
+legend(yrlist,3)
+title('Cumulative VPD by Season For Each Year')
+fignum = fignum+1;
+
+%% Bin averaged relationships between some met variables and NEP
+for jj = 0:1:5
+    figure(fignum+jj)
+    clf
+end
+
+for kk = 2003:1:2007
+    i = kk-2002;
+
+ind_good(i).day = find(Ts(i).all > -8 & T_air(i).all > -5 & PAR(i).all > 10 & ~isnan(Ts(i).all) ...
+    & ~isnan(T_air(i).all) & ~isnan(NEPraw(i).all) & ~isnan(SM(i).all) & dt(i).all > 70 & dt(i).all < 345);
+
+ind_good(i).night = find(Ts(i).all > -8 & T_air(i).all > -5 & PAR(i).all < 10 & ~isnan(Ts(i).all) ...
+    & ~isnan(T_air(i).all) & ~isnan(NEPraw(i).all) & ~isnan(SM(i).all) & dt(i).all > 70 & dt(i).all < 345);
+
+ind_good(i).VPDmd = find(Ts(i).all > -8 & T_air(i).all > -5 & PAR(i).all > 20 & ~isnan(Ts(i).all) & ~isnan(VPDmd(i).all) ...
+    & ~isnan(T_air(i).all) & ~isnan(NEP(i).all) & ~isnan(SM(i).all) & dt(i).all > 70 & dt(i).all < 345);
+
+
+% figure(fignum); subplot(3,2,i); plot(Ts(i).all(ind_good(i).NEP), NEPraw(i).all(ind_good(i).NEP), 'Color',colorlist); title('Ts vs. NEP'); hold on;
+% figure(fignum+1); subplot(3,2,i); plot(T_air(i).all(ind_good(i).NEP), NEPraw(i).all(ind_good(i).NEP), 'Color',colorlist); title('T_air vs. NEP'); hold on;
+% figure(fignum+2); subplot(3,2,i); plot(ustar(i).all(ind_good(i).NEP), NEPraw(i).all(ind_good(i).NEP), 'Color',colorlist); title('u_{*} vs. NEP'); hold on;
+% figure(fignum+3); subplot(3,2,i); plot(PAR(i).all(ind_good(i).NEP), NEPraw(i).all(ind_good(i).NEP), 'Color',colorlist); title('PAR vs. NEP'); hold on;
+% figure(fignum+4); subplot(3,2,i); plot(SM(i).all(ind_good(i).NEP), NEPraw(i).all(ind_good(i).NEP), 'Color',colorlist); title('SM vs. NEP'); hold on;
+% figure(fignum+5); subplot(3,2,i); plot(VPDmd(i).all(ind_good(i).VPDmd), NEP(i).all(ind_good(i).VPDmd), 'Color',colorlist); title('Midday VPD vs. NEP'); hold on;
+
+% Block average data to see average trends --_ DAYTIME
+b_avg_Ts = blockavg(Ts(i).all(ind_good(i).day), NEPraw(i).all(ind_good(i).day),      0.50, 80, -30);
+b_avg_T_air = blockavg(T_air(i).all(ind_good(i).day), NEPraw(i).all(ind_good(i).day),0.50, 80, -30);
+b_avg_PAR = blockavg(PAR(i).all(ind_good(i).day), NEPraw(i).all(ind_good(i).day),    100, 80, -30); axis([0 2 -.1 .3])
+b_avg_ustar = blockavg(ustar(i).all(ind_good(i).day), NEPraw(i).all(ind_good(i).day),  0.05, 80, -30);
+b_avg_VPD = blockavg(VPDmd(i).all(ind_good(i).VPDmd), NEP(i).all(ind_good(i).VPDmd),    0.1, 5, -0.5);
+b_avg_SM = blockavg(SM(i).all(ind_good(i).day), NEPraw(i).all(ind_good(i).day),      0.0025, 80, -30);
+% % Block average data to see average trends --_ NIGHTTIME
+b_avg_Tsn = blockavg(Ts(i).all(ind_good(i).night), NEPraw(i).all(ind_good(i).night),      0.50, 80, -30);
+b_avg_T_airn = blockavg(T_air(i).all(ind_good(i).night), NEPraw(i).all(ind_good(i).night),0.50, 80, -30);
+b_avg_PARn = blockavg(PAR(i).all(ind_good(i).night), NEPraw(i).all(ind_good(i).night),    100, 80, -30); axis([0 2 -.3 0])
+b_avg_ustarn = blockavg(ustar(i).all(ind_good(i).night), NEPraw(i).all(ind_good(i).night),  0.05, 80, -30);
+b_avg_VPDn = blockavg(VPDmd(i).all(ind_good(i).VPDmd), NEP(i).all(ind_good(i).VPDmd),    0.1, 5, -0.5);
+b_avg_SMn = blockavg(SM(i).all(ind_good(i).night), NEPraw(i).all(ind_good(i).night),      0.0025, 80, -30);
+
+%%% Plot daytime trends:
+figure(fignum); subplot(2,1,1); plot(b_avg_Ts(:,1), b_avg_Ts(:,2),'.-',  'Color',colorlist(i)); hold on; title('Ts vs. NEP - Day');
+figure(fignum+1); subplot(2,1,1); plot(b_avg_T_air(:,1), b_avg_T_air(:,2),'.-','Color',colorlist(i)); hold on; title('T_{air} vs. NEP - Day');
+figure(fignum+2); subplot(2,1,1); plot(b_avg_ustar(:,1), b_avg_ustar(:,2), '.-','Color',colorlist(i)); hold on; title('u_* vs. NEP - Day');
+figure(fignum+3); subplot(2,1,1); plot(b_avg_PAR(:,1), b_avg_PAR(:,2), '.-','Color',colorlist(i)); hold on; title('PAR vs. NEP - Day');
+figure(fignum+4); subplot(2,1,1); plot(b_avg_SM(:,1), b_avg_SM(:,2), '.-','Color',colorlist(i)); hold on; title('SM vs. NEP - Day');
+figure(fignum+5); subplot(2,1,1); plot(b_avg_VPD(:,1), b_avg_VPD(:,2), '.-','Color',colorlist(i)); hold on; title('Midday VPD vs. NEP - Day');
+
+figure(fignum); subplot(2,1,2); plot(b_avg_Tsn(:,1), b_avg_Tsn(:,2), '.-', 'Color',colorlist(i)); hold on; title('Ts vs. NEP - Night');
+figure(fignum+1); subplot(2,1,2); plot(b_avg_T_airn(:,1), b_avg_T_airn(:,2),'.-','Color',colorlist(i)); hold on; title('T_{air} vs. NEP - Night');
+figure(fignum+2); subplot(2,1,2); plot(b_avg_ustarn(:,1), b_avg_ustarn(:,2), '.-','Color',colorlist(i)); hold on; title('u_* vs. NEP - Night');
+figure(fignum+4); subplot(2,1,2); plot(b_avg_SMn(:,1), b_avg_SMn(:,2), '.-','Color',colorlist(i)); hold on; title('SM vs. NEP - Night');
+
+clear b_avg_*
+
+end
+figure(fignum); legend(yrlist); xlabel('Ts');ylabel('NEP (g m^{-2}s^{-1})')
+figure(fignum+1); legend(yrlist);xlabel('T_{air}');ylabel('NEP (g m^{-2}s^{-1})')
+figure(fignum+2); legend(yrlist);xlabel('u_*');ylabel('NEP (g m^{-2}s^{-1})')
+figure(fignum+3); legend(yrlist);xlabel('PAR');ylabel('NEP (g m^{-2}s^{-1})')
+figure(fignum+4); legend(yrlist);xlabel('SM');ylabel('NEP (g m^{-2}s^{-1})')
+figure(fignum+5); legend(yrlist);xlabel('VPD');ylabel('NEP (g m^{-2}s^{-1})')
+
+
+
+
+% 
+%    counter = 1;
+% for jj = 1:1:5
+%  
+%     NEP1(counter:length(ind_good(jj).NEP)+counter-1,1) = NEP(jj).all(ind_good(jj).NEP);
+%     NEPraw1(counter:length(ind_good(jj).NEP)+counter-1,1) = NEPraw(jj).all(ind_good(jj).NEP);
+%     Ts1(counter:length(ind_good(jj).NEP)+counter-1,1) = Ts(jj).all(ind_good(jj).NEP);
+%     T_air1(counter:length(ind_good(jj).NEP)+counter-1,1) = T_air(jj).all(ind_good(jj).NEP);
+%     PAR1(counter:length(ind_good(jj).NEP)+counter-1,1) = PAR(jj).all(ind_good(jj).NEP);
+%     ustar1(counter:length(ind_good(jj).NEP)+counter-1,1) = ustar(jj).all(ind_good(jj).NEP);
+%     SM1(counter:length(ind_good(jj).NEP)+counter-1,1) = SM(jj).all(ind_good(jj).NEP);
+%     VPD1(counter:length(ind_good(jj).VPDmd)+counter-1,1) = VPDmd(jj).all(ind_good(jj).VPDmd);
+%     NEP_VPD(counter:length(ind_good(jj).VPDmd)+counter-1,1) = NEP(jj).all(ind_good(jj).VPDmd);
+%     
+%     counter = counter +length(ind_good(jj).NEP);
+% end
+% 
+% 
+% figure(fignum); subplot(3,2,6); plot(Ts1, NEPraw1, 'b.'); title('Ts vs. NEP -- All Years'); hold on;
+% figure(fignum+1); subplot(3,2,6); plot(T_air1, NEPraw1, 'b.'); title('T_air vs. NEP -- All Years'); hold on;
+% figure(fignum+2); subplot(3,2,6); plot(ustar1, NEPraw1, 'b.'); title('u_{*} vs. NEP -- All Years'); hold on;
+% figure(fignum+3); subplot(3,2,6); plot(PAR1, NEPraw1, 'b.'); title('PAR vs. NEP -- All Years'); hold on;
+% figure(fignum+4); subplot(3,2,6); plot(SM1, NEPraw1, 'b.'); title('SM vs. NEP -- All Years'); hold on;
+% figure(fignum+5); subplot(3,2,6); plot(VPD1, NEP_VPD, 'b.'); title('Midday VPD vs. NEP -- All Years'); hold on;
+% 
+% % Block average data to see average trends
+% b_avg_Ts1 = blockavg(Ts1, NEPraw1, 0.50, 80, -30);
+% b_avg_T_air1 = blockavg(T_air1, NEPraw1 ,0.50, 80, -30);
+% b_avg_PAR1 = blockavg(PAR1, NEPraw1,    100, 80, -30);
+% b_avg_ustar1 = blockavg(ustar1, NEPraw1,  0.05, 80, -30);
+% b_avg_VPD1 = blockavg(VPD1, NEP_VPD,    0.1, 5, -0.5);
+% b_avg_SM1 = blockavg(SM1, NEPraw1,      0.0025, 80, -30);
+% 
+% figure(fignum); subplot(3,2,6); plot(b_avg_Ts1(:,1), b_avg_Ts1(:,2), 'ro');
+% figure(fignum+1); subplot(3,2,6); plot(b_avg_T_air1(:,1), b_avg_T_air1(:,2), 'ro');
+% figure(fignum+2); subplot(3,2,6); plot(b_avg_ustar1(:,1), b_avg_ustar1(:,2), 'ro');
+% figure(fignum+3); subplot(3,2,6); plot(b_avg_PAR1(:,1), b_avg_PAR1(:,2), 'ro');
+% figure(fignum+4); subplot(3,2,6); plot(b_avg_SM1(:,1), b_avg_SM1(:,2), 'ro');
+% figure(fignum+5); subplot(3,2,6); plot(b_avg_VPD1(:,1), b_avg_VPD1(:,2), 'ro');
+
+fignum= fignum+6;
+%% Plot raw NEE to find dates of growing season start for each year:
+% Criteria: I don't know.
+figure(fignum); clf;
+for jj = 1:1:5
+figure(fignum); subplot(3,2,jj);
+plot(dt(jj).all,NEPraw(jj).all,'b-'); hold on;
+plot(dt(jj).all,Ts(jj).all./100,'g-');
+end
+
+figure(fignum)
+legend ('NEP-raw','Ts')
+ylabel('NEP - (g C m^{-2} s^{-1}, T_{s}/100');
+
+
+fignum= fignum+1;
+% Start of growing season as min of cumulative NEP
+for jj = 1:1:5
+doy_start_ind(jj,1) = find(nancumsum(NEP(jj).all) == min(nancumsum(NEP(jj).all)));
+doy_start(jj,1) = dt(jj).all(doy_start_ind(jj,1))+1;
+end
+
+% Visually Inspected start of growing season
+doy_start_vis = [87 89 96 88 85]';
+annual_NEP = Results(:,2);
+
+figure(fignum); clf;
+for jj = 1:1:5
+plot(doy_start(jj,1), annual_NEP(jj,1)*-1, 'p', 'MarkerSize',16, 'Color',colorlist(jj)); hold on;
+plot(doy_start_vis(jj,1), annual_NEP(jj,1)*-1, '.', 'MarkerSize',16, 'Color',colorlist(jj)); hold on;
+end
+figure(fignum)
+ylabel('Annual NEP')
+xlabel('Growing Season Start (DOY)')
+legend('2003', '2003vis','2004', '2004vis','2005', '2005vis','2006', '2006vis','2007', '2007vis')
+title('Visual inspection vs. first day of +ve NEP for growing season start')
+axis([80 110 0 200]);
+fignum= fignum+1;
+%% Load Natalia's data and compare to Results:
+
+nat = dlmread([data_loc 'Flux/CPEC/Met1/Natalia/NEP2003_2005.csv'],',');
+
+NEP(1).PAR = nat(1:17520,1); NEP(2).PAR = nat(17521:35088,1); NEP(3).PAR = [nat(35089:42336,1); NaN.*ones(10272,1)];
+NEP(1).HYP = nat(1:17520,2); NEP(2).HYP = nat(17521:35088,2); NEP(3).HYP = [nat(35089:42336,2); NaN.*ones(10272,1)];
+NEP(1).LUT = nat(1:17520,3); NEP(2).LUT = nat(17521:35088,3); NEP(3).LUT = [nat(35089:42336,3); NaN.*ones(10272,1)];
+NEP(1).MDV = nat(1:17520,4); NEP(2).MDV = nat(17521:35088,4); NEP(3).MDV = [nat(35089:42336,4); NaN.*ones(10272,1)];
+
+clear nat
+%%%% Calculate NEPs Calculated for each year using each method
+
+for jj = 2003:1:2005
+    ctr = jj-2002;
+   NEP_sums(ctr,1) = jj;
+   NEP_sums(ctr,2) = -1*Results(ctr,2);
+   NEP_sums(ctr,3) = nansum(NEP(ctr).PAR).*0.0216;
+   NEP_sums(ctr,4) = nansum(NEP(ctr).HYP)*0.0216;
+   NEP_sums(ctr,5) = nansum(NEP(ctr).LUT)*0.0216;
+   NEP_sums(ctr,6) = nansum(NEP(ctr).MDV)*0.0216; 
+end
+%%%% Comparing NEPs for each year:
+figure(fignum)
+clf;
+   plot(NEP_sums(:,1),NEP_sums(:,2),'r.-'); 
+   hold on;
+   plot(NEP_sums(:,1),NEP_sums(:,3),'b.-');
+   plot(NEP_sums(:,1),NEP_sums(:,4),'g.-');
+   plot(NEP_sums(:,1),NEP_sums(:,5),'m.-');
+   plot(NEP_sums(:,1),NEP_sums(:,6),'c.-');
+   xlabel('year')
+   ylabel('NEP (g C m^{-2} yr^{-1}')
+   title('Comparing Model Outputs of NEP')
+legend('New','Nat-PAR','Nat-HYP','Nat-LUT','Nat-MDV');
+fignum = fignum +1;
+
+%%% Compare time series for each year
+figure(fignum)
+clf;
+for jj = 2003:1:2005
+    ctr = jj-2002;
+   figure(fignum)
+   subplot(3,1,ctr)
+   plot(dt(ctr).all,NEP(ctr).all,'r.-'); hold on;
+   plot(dt(ctr).all,NEP(ctr).PAR.*0.0216,'b.-')
+   plot(dt(ctr).all,NEP(ctr).HYP.*0.0216,'g.-')
+   plot(dt(ctr).all,NEP(ctr).LUT.*0.0216,'m.-')
+   plot(dt(ctr).all,NEP(ctr).MDV.*0.0216,'c.-')
+   title(num2str(jj))
+   ylabel('NEP (g C m^{-2} yr^{-1}')
+   xlabel('DOY')
+end
+figure(fignum)
+subplot(3,1,2)
+legend('New','Nat-PAR','Nat-HYP','Nat-LUT','Nat-MDV');
+fignum=fignum+1;
+%%% Cumulative Sums:
+figure(fignum)
+clf
+for jj = 2003:1:2005
+    ctr = jj-2002;
+    subplot(3,1,ctr);
+plot(dt(ctr).all,nancumsum(NEP(ctr).all),'r'); hold on;
+plot(dt(ctr).all,nancumsum(NEP(ctr).PAR.*0.0216),'b');
+plot(dt(ctr).all,nancumsum(NEP(ctr).HYP.*0.0216),'g');
+plot(dt(ctr).all,nancumsum(NEP(ctr).LUT.*0.0216),'m');
+plot(dt(ctr).all,nancumsum(NEP(ctr).MDV.*0.0216),'c');
+ylabel('Cumulative NEP (g C m^{-2} yr^{-1}')
+xlabel('DOY')
+title(num2str(jj))
+end
+axis([1 366 -200 250])
+subplot(3,1,2)
+legend('New','Nat-PAR','Nat-HYP','Nat-LUT','Nat-MDV');
+fignum=fignum+1;
+
+for jj = 2003:1:2005
+    ctr = jj-2002;
+%%%% Monthly Means
+[NEP_monsum2(ctr).NEW NEP_monmean2(ctr).NEW] = jjb_month_stats(jj,NEP(ctr).all);
+[NEP_monsum2(ctr).PAR NEP_monmean2(ctr).PAR] = jjb_month_stats(jj,NEP(ctr).PAR.*0.0216);
+[NEP_monsum2(ctr).HYP NEP_monmean2(ctr).HYP] = jjb_month_stats(jj,NEP(ctr).HYP.*0.0216);
+[NEP_monsum2(ctr).LUT NEP_monmean2(ctr).LUT] = jjb_month_stats(jj,NEP(ctr).LUT.*0.0216);
+[NEP_monsum2(ctr).MDV NEP_monmean2(ctr).MDV] = jjb_month_stats(jj,NEP(ctr).MDV.*0.0216);
+
+figure(fignum)
+subplot(3,1,ctr)
+bar([NEP_monsum2(ctr).NEW NEP_monsum2(ctr).PAR NEP_monsum2(ctr).HYP NEP_monsum2(ctr).LUT NEP_monsum2(ctr).MDV]);
+legend(yrlist)
+legend('New','Nat-PAR','Nat-HYP','Nat-LUT','Nat-MDV');
+title(['Monthly sum NEP for ' num2str(jj)]);
+%%% 10-day averages:
+[NEP_10dsum(ctr).NEW ,NEP_10dmean(ctr).NEW, NEP_Tstamp(ctr).NEW] = integzBC1((dt(ctr).all),NEP(ctr).all,1:length(dt(ctr).all)/48,10);
+[NEP_10dsum(ctr).PAR ,NEP_10dmean(ctr).PAR, NEP_Tstamp(ctr).PAR] = integzBC1((dt(ctr).all),NEP(ctr).PAR.*0.0216,1:length(dt(ctr).all)/48,10);
+[NEP_10dsum(ctr).HYP ,NEP_10dmean(ctr).HYP, NEP_Tstamp(ctr).HYP] = integzBC1((dt(ctr).all),NEP(ctr).HYP.*0.0216,1:length(dt(ctr).all)/48,10);
+[NEP_10dsum(ctr).LUT ,NEP_10dmean(ctr).LUT, NEP_Tstamp(ctr).LUT] = integzBC1((dt(ctr).all),NEP(ctr).LUT.*0.0216,1:length(dt(ctr).all)/48,10);
+[NEP_10dsum(ctr).MDV ,NEP_10dmean(ctr).MDV, NEP_Tstamp(ctr).MDV] = integzBC1((dt(ctr).all),NEP(ctr).MDV.*0.0216,1:length(dt(ctr).all)/48,10);
+
+figure(fignum+1)
+subplot(3,1,ctr)
+plot(NEP_Tstamp(ctr).NEW, NEP_10dmean(ctr).NEW, 'r.-'); hold on;
+plot(NEP_Tstamp(ctr).PAR, NEP_10dmean(ctr).PAR, 'b.-');
+plot(NEP_Tstamp(ctr).HYP, NEP_10dmean(ctr).HYP, 'g.-');
+plot(NEP_Tstamp(ctr).LUT, NEP_10dmean(ctr).LUT, 'm.-');
+plot(NEP_Tstamp(ctr).MDV, NEP_10dmean(ctr).MDV, 'c.-');
+
+legend('New','Nat-PAR','Nat-HYP','Nat-LUT','Nat-MDV');
+    title(['10-day Mean NEP for ' num2str(jj)])
+    
+end
+fignum = fignum+2;
+%% Look for Hydrological Redistribution
+for jj = 1:1:5
+    SM_PPT(jj).all(1:length(SM(jj).all)) = NaN;
+    SM_PPT(jj).all(PPT48(jj).all > 0) = SM(jj).all(PPT48(jj).all > 0);
+end
+
+
+for jj = 1:1:5
+    %% Plot 10cm (Pits a and b)
+figure(fignum)
+subplot(2,1,1)
+plot(dt(jj).all,SM10a(jj).all,'-','Color',colorlist(jj)); hold on; title (' SM @ 10cm -- Pit A');
+subplot(2,1,2)
+plot(dt(jj).all,SM10b(jj).all,'-','Color',colorlist(jj)); hold on; title (' SM @ 10cm -- Pit B');
+axis([0 366 0 0.3])
+grid on;
+    %% 20cm
+figure(fignum+1)
+subplot(2,1,1)
+plot(dt(jj).all,SM20a(jj).all,'-','Color',colorlist(jj)); hold on; title (' SM @ 20cm -- Pit A');
+subplot(2,1,2)
+plot(dt(jj).all,SM20b(jj).all,'-','Color',colorlist(jj)); hold on; title (' SM @ 20cm -- Pit B');
+axis([0 366 0 0.3])
+grid on;
+    %% 50cm
+figure(fignum+2)
+subplot(2,1,1)
+plot(dt(jj).all,SM50a(jj).all,'-','Color',colorlist(jj)); hold on; title (' SM @ 50cm -- Pit A');
+subplot(2,1,2)
+plot(dt(jj).all,SM50b(jj).all,'-','Color',colorlist(jj)); hold on; title (' SM @ 50cm -- Pit B');
+axis([0 366 0 0.3])
+grid on;
+    %% 5CM
+figure(fignum+3)
+subplot(2,1,1)
+plot(dt(jj).all,SM5a(jj).all,'-','Color',colorlist(jj)); hold on; title (' SM @ 5cm -- Pit A');
+subplot(2,1,2)
+plot(dt(jj).all,SM5b(jj).all,'-','Color',colorlist(jj)); hold on; title (' SM @ 5cm -- Pit B');
+axis([0 366 0 0.3]) 
+grid on;
+    %% Top 20cm
+figure(fignum+4)
+plot(dt(jj).all,SM(jj).all,'-','Color',colorlist(jj)); hold on; title (' SM - top 20cm Avg -- All rainy days removed');
+plot(dt(jj).all,SM_PPT(jj).all,'Color',[1 1 1])
+axis([0 366 0 0.3]) 
+grid on;
+end
+figure(fignum)
+legend(yrlist)
+
+figure(fignum+1)
+legend(yrlist)
+
+figure(fignum+2)
+legend(yrlist)
+
+figure(fignum+3)
+legend(yrlist)
+
+figure(fignum+4)
+legend(yrlist)
+fignum = fignum + 5;
+
+%% Calculate some sort of heat units starting from both:
+%%% a) start of the year
+%%% b) start of growing season, and
+
+for jj = 1:1:5
+    T_air_5p(jj).all = T_air(jj).all;
+    T_air_5p(jj).all(T_air_5p(jj).all < 5) = NaN;
+    CHU(jj).all = nancumsum(T_air_5p(jj).all);
+    figure(fignum)
+    plot(dt(jj).all,CHU(jj).all,'-','Color',colorlist(jj)); hold on
+    
+    
+T_air_5pgs(jj).all = T_air(jj).all;
+T_air_5pgs(jj).all(dt(jj).all < doy_start_vis(jj)) = NaN;
+T_air_5pgs(jj).all(T_air_5pgs(jj).all < 5) = NaN;
+
+CHUgs(jj).all = nancumsum(T_air_5pgs(jj).all(dt(jj).all > doy_start_vis(jj)));
+    figure(fignum+1)
+%     ind_gt_st = find(dt(jj).all == doy_start_v
+%     plot(dt(jj).all(dt(jj).all > doy_start_vis(jj),1),CHUgs(jj).all(dt(jj).all > doy_start_vis(jj),1),'-','Color',colorlist(jj)); hold on
+ plot(((1:1:length(CHUgs(jj).all))/48),CHUgs(jj).all,'-','Color',colorlist(jj)); hold on
+end
+
+figure(fignum)
+ylabel('cumulative heat units')
+title('Cumulative Heat units (+ 5) from start of year');
+xlabel('DOY')
+legend(yrlist)
+
+figure(fignum+1)
+ylabel('cumulative heat units')
+title('CHUs from start of growing season')
+xlabel('Days after growing season start')
+legend(yrlist)
+
+% for hh = 1:1:fignum+1
+%     figure(hh)
+%     print('-dmeta',[fig_path 'fig' num2str(hh)])
+%     print('-depsc',[fig_path 'fig' num2str(hh)])
+% end
+
+
+figure(99); clf
+clear ind_winter_nan;
+for jj = 1:1:5
+    plot(dt(jj).all(ustar(jj).all > 0.25), NEP(jj).all(ustar(jj).all > 0.25),'.', 'Color', colorlist(jj)); hold on;
+plot(dt(jj).all(ustar(jj).all > 0.25), Ts(jj).all(ustar(jj).all > 0.25),'-', 'Color', colorlist(jj));
+    ind_winter_nan(jj) = length(find(NEP(jj).all(ustar(jj).all > 0.25 & dt(jj).all < 120)));
+
+end
+figure(99)
+legend(yrlist)
+    
+

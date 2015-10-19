@@ -1,0 +1,139 @@
+function [stats sums] = mcm_Gapfill_recalc_sums(site, year)
+% %%%%%%%%%%%%% REMOVE THIS %%%%%%%%%%%%%
+% % if nargin == 0 || isempty(site)
+%     site = 'TP39';
+% % end
+%  year = 2003:2010;
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+if nargin == 1 || isempty(year)
+    year = input('Enter Years to process, as integer (e.g. 2008) or sequence (e.g. 2003:2008): ');
+end
+year_start = min(year);
+year_end = max(year);
+
+%% Declare Paths and Load the data:
+%%% Paths:
+ls = addpath_loadstart;
+load_path = [ls 'Matlab/Data/Master_Files/' site '/'];
+save_path = [ls 'Matlab/Data/Flux/Gapfilling/' site '/'];
+footprint_path = [ls 'Matlab/Data/Flux/Footprint/'];
+fig_path = [ls 'Matlab/Figs/Gapfilling/'];
+
+%%% Load gapfilling file and make appropriate adjustments:
+load([load_path site '_gapfill_data_in.mat']);
+data = trim_data_files(data,year_start, year_end,1);
+data.site = site; close all
+% orig.data = data; % save the original data:
+NEE_orig = data.NEE;
+
+%% &&&&&&&&&&&& REMOVE THIS ONCE ALL 2010 DATA IS INCLUDED: &&&&&&&&&&&&&&
+
+if year_start <= 2010 && year_end >= 2010
+    nan_data = find(isnan(data.Ta(data.Year == 2010,1)));
+    if length(nan_data) > 100
+        to_fill = {'Ta';'RH';'PAR';'WS';'Ts2';'Ts5';'SM_a_filled'; 'VPD'; 'GDD'; 'recnum'};
+        for k = 1:1:length(to_fill)
+            eval([ 'ind = find(isnan(data.' to_fill{k,1} ') & data.Year == 2010);']);
+            ind_fill = ind-yr_length(2009);
+            eval(['data.' to_fill{k,1} '(ind,1) = data.' to_fill{k,1} '(ind_fill,1);']);
+            clear ind ind_fill;
+        end
+    end
+end
+
+
+%% &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+
+%%%%%%%%%%%%%% Tags: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+fp_tags = {'FP_on';'FP_off'};
+% model_tags = {'SiteSpec'; 'FCRN';'ANN_JJB1';'HOWLAND';'LRC_JJB1';...
+%     'LRC_Lasslop';'LRC_NR';'MDS_JJB1';'MDS_Reichstein'};
+model_tags = {'SiteSpec'; 'FCRN';'ANN_JJB1';'HOWLAND';'MDS_JJB1'};
+sum_labels = {'Year';'NEE_filled';'NEE_pred'; 'GEP_filled';'GEP_pred';'RE_filled';'RE_pred'};
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%% Other Settings:
+switch site
+    case 'TP39'
+        %    ustar_th_const = (0.2:0.05:0.45)';
+        ustar_th_const = (0.25:0.05:0.40)'; %0.35% Just for testing purposes
+    case 'TP74'
+        %    ustar_th_const = (0.15:0.05:0.40)';
+        ustar_th_const = (0.15:0.05:0.30)'; % Just for testing purposes
+    case 'TP02'
+        %    ustar_th_const = (0.1:0.05:0.35)';
+        ustar_th_const = (0.10:0.05:0.25)'; % Just for testing purposes
+    case 'TP89'
+        ustar_th_const = (0.25:0.05:0.40)'; % Just for testing purposes
+        
+end
+
+
+%% Load Footprint file:
+load([footprint_path site '_footprint_flag.mat'])
+tmp_fp_flag = footprint_flag.Schuepp70;
+% Flag file for Schuepp 70% footprint:
+fp_flag(:,1) = tmp_fp_flag(tmp_fp_flag(:,1) >= data.year_start & tmp_fp_flag(:,1) <= data.year_end,2);
+% Flag file for No footprint:
+fp_flag(:,2) = ones(length(fp_flag(:,1)),1); % The
+
+sums = struct;
+stats = struct;
+stats_ctr = 1;
+for fp_ctr = 1:1:length(fp_tags) %%%%%%%%%%%%% CHANGE THIS BACK!!!!! %%%%%
+    data.NEE = NEE_orig.*fp_flag(:,fp_ctr); % Remove bad data:
+    %%% Cycle through Ustar thesholds:
+    for uth_ctr = 1:1:length(ustar_th_const)+2
+        clear data.Ustar_th;
+        if uth_ctr == length(ustar_th_const)+1
+            data.Ustar_th = mcm_Ustar_th_Reich(data,0);
+            ustar_tag = 'ustar_Reich';
+        elseif uth_ctr == length(ustar_th_const)+2
+            data.Ustar_th = mcm_Ustar_th_JJB(data,0);
+            ustar_tag = 'ustar_JJB';
+        else
+            data.Ustar_th = ustar_th_const(uth_ctr,1).*ones(length(data.Year),1);
+            ustar_tag = ['ustar_' num2str(ustar_th_const(uth_ctr,1))];
+        end
+        %         disp(['Working on: ' fp_tags{fp_ctr,1} ', ' ustar_tag]);
+        %%% Estimate random error:
+        [data.NEE_std f_fit f_std] = NEE_random_error_estimator_v6(data,[],[],0);
+        close all 
+        %%% Cycle through each gap-filling method.  Save results and
+        %%% figures:
+        for model_ctr = 1:1:length(model_tags)
+            save_tag = ['(' model_tags{model_ctr,1} ')_(' fp_tags{fp_ctr,1} ')_(' ustar_tag ')'];
+            disp(save_tag);
+            %%% Load the results file:
+            load([save_path 'NEE_GEP_RE/' save_tag '_results.mat']);
+            try
+            stats(stats_ctr).all.stats = model_stats(results.master.NEE_pred, results.master.NEE_clean,[],data.NEE_std);
+
+            yr_ctr = 1;
+            for yr = year_start:1:year_end
+                stats(stats_ctr).annual(yr_ctr).year = yr;
+                ind = find(results.master.Year == yr);
+                stats(stats_ctr).annual(yr_ctr).stats = ...
+                    model_stats(results.master.NEE_pred(ind), results.master.NEE_clean(ind),[],data.NEE_std(ind));
+                yr_ctr = yr_ctr + 1;
+                clear ind;
+            end
+            catch
+            disp(['Error with ' save_tag]);
+            stats(stats_ctr).all.stats = struct;
+            stats(stats_ctr).annual = struct;
+            end
+                
+            %%% Do sums:
+            sums(stats_ctr).sums = results.master.sums;
+            sums(stats_ctr).labels = sum_labels;
+            stats_ctr = stats_ctr + 1;
+        end     
+    end  
+end
+
+disp('done');
+
+% Save the Stats and Sums File:
+save([save_path 'NEE_GEP_RE/recalc_stats.mat'],'stats');
+save([save_path 'NEE_GEP_RE/recalc_ssums.mat'],'sums');

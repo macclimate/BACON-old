@@ -1,0 +1,154 @@
+%% Gapfilling for Altaf:
+clear all
+close all
+
+ls = addpath_loadstart;
+load_path = [ls 'Matlab/Data/Data_Analysis/SM_analysis/'];
+
+load([load_path 'TP39_SM_sythesis_results.mat']);
+TP39.param.Ustar_th = 0.325; 
+load([load_path 'TP74_SM_sythesis_results.mat']);
+TP74.param.Ustar_th = 0.25; 
+load([load_path 'TP02_SM_sythesis_results.mat']);
+TP02.param.Ustar_th = 0.15; 
+
+% We want 'single', 'off' results for gap-filling
+
+
+%% Fill NEE @ TP39
+TP39_NEEraw = TP39.data.NEE;
+TP39_NEEraw(TP39.data.PAR < 20 & TP39.data.Ustar < TP39.param.Ustar_th) = NaN;
+TP39_GEPraw = TP39.model.GEPraw;
+TP39_Rraw = TP39.model.Rraw;
+
+TP39_GEPmodel = TP39.model.GEP_SM_model_single; TP39_GEPmodel(isnan(TP39_GEPmodel)) = TP39.model.GEP_noSM_model_single_off(isnan(TP39_GEPmodel));
+TP39_Rmodel = TP39.model.R_Ts_SM_model_single; TP39_Rmodel(isnan(TP39_Rmodel)) = TP39.model.R_Ts_model_single_off(isnan(TP39_Rmodel));
+rw_AB = jjb_AB_gapfill(TP39_Rmodel, TP39_Rraw, [],200, 10, 'off', [], [], 'rw');
+pw_AB = jjb_AB_gapfill(TP39_GEPmodel, TP39_GEPraw, [],200, 10, 'off', [], [], 'rw');
+TP39_Rmodel = TP39_Rmodel.*rw_AB(:,2);
+TP39_GEPmodel = TP39_GEPmodel.*pw_AB(:,2);
+%%% Make GEP 0 at night
+TP39_GEPraw(TP39.data.PAR < 20 | TP39.data.Ts5 < 0) = 0;
+TP39_GEPmodel(TP39.data.PAR < 20 | TP39.data.Ts5 < 0) = 0;
+
+TP39_NEEmodel = TP39_Rmodel - TP39_GEPmodel;
+TP39_NEEmodel(1:8,1) = TP39_NEEmodel(9,1); % fill first 8 with the 9th pt (lost these due to shift to UTC)
+figure(1);clf;
+plot(TP39_NEEmodel,'b'); hold on;
+plot(TP39_NEEraw,'r')
+
+TP39_Rfilled = TP39_Rmodel;
+TP39_GEPraw(isnan(TP39_GEPraw)) = TP39_GEPmodel(isnan(TP39_GEPraw));
+TP39_GEPfilled = TP39_GEPraw;
+TP39_NEEfilled = TP39_NEEraw;
+TP39_NEEfilled(isnan(TP39_NEEfilled)) = TP39_NEEmodel(isnan(TP39_NEEfilled));
+figure(2);clf;
+plot(TP39_NEEfilled,'b');hold on;
+plot(TP39_NEEraw,'r');
+
+%%% Fill LE:
+figure(3);clf;
+plot(TP39.data.LE_filled);
+
+%% Fill NEE @ TP02:
+TP02_NEEraw = TP02.data.NEE;
+TP02_NEEraw(TP02.data.PAR < 20 & TP02.data.Ustar < TP02.param.Ustar_th) = NaN;
+TP02_GEPraw = TP02.model.GEPraw;
+TP02_Rraw = TP02.model.Rraw;
+
+TP02_GEPmodel = TP02.model.GEP_SM_model_single; TP02_GEPmodel(isnan(TP02_GEPmodel)) = TP02.model.GEP_noSM_model_single_off(isnan(TP02_GEPmodel));
+TP02_Rmodel = TP02.model.R_Ts_SM_model_single; TP02_Rmodel(isnan(TP02_Rmodel)) = TP02.model.R_Ts_model_single_off(isnan(TP02_Rmodel));
+rw_AB = jjb_AB_gapfill(TP02_Rmodel, TP02_Rraw, [],200, 10, 'off', [], [], 'rw');
+pw_AB = jjb_AB_gapfill(TP02_GEPmodel, TP02_GEPraw, [],200, 10, 'off', [], [], 'rw');
+TP02_Rmodel = TP02_Rmodel.*rw_AB(:,2);
+TP02_GEPmodel = TP02_GEPmodel.*pw_AB(:,2);
+%%% Make GEP 0 at night
+TP02_GEPraw(TP02.data.PAR < 20 | TP02.data.Ts5 < 0) = 0;
+TP02_GEPmodel(TP02.data.PAR < 20 | TP02.data.Ts5 < 0) = 0;
+
+TP02_NEEmodel = TP02_Rmodel - TP02_GEPmodel;
+TP02_NEEmodel(1:8,1) = TP02_NEEmodel(9,1); % fill first 8 with the 9th pt (lost these due to shift to UTC)
+figure(1);clf;
+plot(TP02_NEEmodel,'b'); hold on;
+plot(TP02_NEEraw,'r')
+
+TP02_Rfilled = TP02_Rmodel;
+TP02_GEPraw(isnan(TP02_GEPraw)) = TP02_GEPmodel(isnan(TP02_GEPraw));
+TP02_GEPfilled = TP02_GEPraw;
+TP02_NEEfilled = TP02_NEEraw;
+TP02_NEEfilled(isnan(TP02_NEEfilled)) = TP02_NEEmodel(isnan(TP02_NEEfilled));
+figure(2);clf;
+plot(TP02_NEEfilled,'b');hold on;
+plot(TP02_NEEraw,'r');
+
+%%% Fill LE:
+figure(3);clf;
+[TP02_Hfilled TP02_LEfilled] = mcm_CPEC_Gapfill_simple_LE_H(TP02.data, 0.15);
+
+%% Fill NEE @ TP74:
+TP74_NEEraw = TP74.data.NEE;
+TP74_NEEraw(TP74.data.PAR < 20 & TP74.data.Ustar < TP74.param.Ustar_th) = NaN;
+TP74_GEPraw = TP74.model.GEPraw;
+TP74_Rraw = TP74.model.Rraw;
+figure(1);clf;
+plot(TP74_NEEraw); hold on;
+plot(TP74_GEPraw,'r');
+plot(TP74_Rraw,'g');
+% plot(TP74_GEPmodel,'m');
+% plot(TP74_Rmodel,'k')
+
+TP74_GEPmodel = TP74.model.GEP_SM_model_single; TP74_GEPmodel(isnan(TP74_GEPmodel)) = TP74.model.GEP_noSM_model_single_off(isnan(TP74_GEPmodel));
+TP74_Rmodel = TP74.model.R_Ts_SM_model_single; TP74_Rmodel(isnan(TP74_Rmodel)) = TP74.model.R_Ts_model_single_off(isnan(TP74_Rmodel));
+rw_AB = jjb_AB_gapfill(TP74_Rmodel, TP74_Rraw, [],200, 10, 'off', [], [], 'rw');
+pw_AB = jjb_AB_gapfill(TP74_GEPmodel, TP74_GEPraw, [],200, 10, 'off', [], [], 'rw');
+TP74_Rmodel = TP74_Rmodel.*rw_AB(:,2);
+TP74_GEPmodel = TP74_GEPmodel.*pw_AB(:,2);
+%%% Make GEP 0 at night
+TP74_GEPraw(TP74.data.PAR < 20 | TP74.data.Ts5 < 0) = 0;
+TP74_GEPmodel(TP74.data.PAR < 20 | TP74.data.Ts5 < 0) = 0;
+
+TP74_NEEmodel = TP74_Rmodel - TP74_GEPmodel;
+TP74_NEEmodel(1:8,1) = TP74_NEEmodel(9,1); % fill first 8 with the 9th pt (lost these due to shift to UTC)
+figure(1);clf;
+plot(TP74_NEEmodel,'b'); hold on;
+plot(TP74_NEEraw,'r')
+axis([1 length(TP74_NEEraw) -40 40])
+TP74_Rfilled = TP74_Rmodel;
+TP74_GEPraw(isnan(TP74_GEPraw)) = TP74_GEPmodel(isnan(TP74_GEPraw));
+TP74_GEPfilled = TP74_GEPraw;
+TP74_NEEfilled = TP74_NEEraw;
+TP74_NEEfilled(isnan(TP74_NEEfilled)) = TP74_NEEmodel(isnan(TP74_NEEfilled));
+figure(2);clf;
+plot(TP74_NEEfilled,'b');hold on;
+plot(TP74_NEEraw,'r');
+axis([1 length(TP74_NEEraw) -40 40])
+%%% Fill LE:
+% figure(3);clf;
+% plot(TP74.data.LE_filled)
+% [TP74_Hfilled TP74_LEfilled] = mcm_CPEC_Gapfill_simple_LE_H(TP74.data, 0.15);
+
+%%% Export these to Altaf
+for year = 2008:1:2009
+ind = find(TP39.data.Year == year);
+    TP39_out = [TP39.data.Year(ind) TP39.data.Month(ind) TP39.data.Day(ind) ...
+        TP39.data.Hour(ind) TP39.data.Minute(ind) ...
+        TP39_NEEraw(ind) TP39_NEEfilled(ind) TP39.data.LE_filled(ind) ...
+        TP39.data.PPT(ind) TP39.data.PAR(ind) TP39.data.Ta(ind)];
+    TP74_out = [TP74.data.Year(ind) TP74.data.Month(ind) TP74.data.Day(ind) ...
+        TP74.data.Hour(ind) TP74.data.Minute(ind) ...
+        TP74_NEEraw(ind) TP74_NEEfilled(ind) TP74.data.LE_filled(ind) ...
+        TP74.data.PPT(ind) TP74.data.PAR(ind) TP74.data.Ta(ind)];
+    TP02_out = [TP02.data.Year(ind) TP02.data.Month(ind) TP02.data.Day(ind) ...
+        TP02.data.Hour(ind) TP02.data.Minute(ind) ...
+        TP02_NEEraw(ind) TP02_NEEfilled(ind) TP02.data.LE_filled(ind) ...
+        TP02.data.PPT(ind) TP02.data.PAR(ind) TP02.data.Ta(ind)];
+    
+save(['/home/brodeujj/Matlab/Data/Distributed/TP39_' num2str(year) '_AA_pres_data.dat'],'TP39_out','-ASCII');
+save(['/home/brodeujj/Matlab/Data/Distributed/TP74_' num2str(year) '_AA_pres_data.dat'],'TP74_out','-ASCII');
+save(['/home/brodeujj/Matlab/Data/Distributed/TP02_' num2str(year) '_AA_pres_data.dat'],'TP02_out','-ASCII');
+
+
+clear ind *_out
+end
+
+    

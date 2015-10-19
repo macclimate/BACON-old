@@ -1,0 +1,26 @@
+loadstart = addpath_loadstart;
+year = '2008';
+site = 'TP39';
+TP39_2008 = struct;
+load_path_HH = [loadstart 'Matlab/Data/Flux/CPEC/' site '/HH_fluxes/'];
+load_path_met = [loadstart 'Matlab/Data/Met/Cleaned3/'];
+hdr_path = [loadstart 'Matlab/Data/Met/Raw1/Docs/'];
+%% Load HHourly Files:
+TP39_2008.WD = load([load_path_HH 'WindDir' year(3:4) '.dat']);
+TP39_2008.Uz = load([load_path_HH 'Uz' year(3:4) '.dat']);
+TP39_2008.Uy = load([load_path_HH 'Uy' year(3:4) '.dat']);
+TP39_2008.Ux = load([load_path_HH 'Ux' year(3:4) '.dat']);
+TP39_2008.ustar = load([load_path_HH 'ustr' year(3:4) '.dat']);
+TP39_2008.LE = load([load_path_HH 'LE' year(3:4) '.dat']);
+TP39_2008.Htc1 = load([load_path_HH 'Htc1' year(3:4) '.dat']);
+TP39_2008.Htc2 = load([load_path_HH 'Htc2' year(3:4) '.dat']);
+TP39_2008.Hs = load([load_path_HH 'Hs' year(3:4) '.dat']);
+TP39_2008.CO2 = load([load_path_HH 'CO2' year(3:4) '.dat']);
+TP39_2008.H2O = load([load_path_HH 'H2O' year(3:4) '.dat']);
+TP39_2008.Fc = load([load_path_HH 'Fc' year(3:4) '.dat']);
+
+%% Fill Metfiles for 2008:
+hdr_TP74 = jjb_hdr_read([hdr_path 'TP74_OutputTemplate.csv'], ',', 2);
+hdr_TP39 = jjb_hdr_read([hdr_path 'TP39_OutputTemplate.csv'], ',', 2);
+
+TP39.PAR = load([load_path_met 'TP39/TP39_' year '.015']);

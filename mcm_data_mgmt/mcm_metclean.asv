@@ -1,0 +1,474 @@
+function [] = mcm_metclean(year, site)
+%% mcm_metclean.m
+%%% This function is used to visually inspect and rough-clean
+%%% meteorological data that has been organized from raw files.
+%%% usage: metclean(year,site)
+%%% Created by JJB
+loadstart = addpath_loadstart;
+
+%% Check if site is entered as string -- if not, convert it.
+if ischar(site) == false
+    site = num2str(site);
+end
+%%% Convert yr into a string
+if ischar(year) == false
+    year = num2str(year);
+end
+
+%% Declare Paths
+
+%%% Header path
+hdr_path = [loadstart 'Matlab/Data/Met/Raw1/Docs/'];
+
+%%% Folder to load organize data from
+load_path = [loadstart 'Matlab/Data/Met/Organized2/' site '/Column/30min/'];
+
+%%% Folder to output loaded data
+output_path = [loadstart 'Matlab/Data/Met/Cleaned3/' site '/'];
+
+%%% Folder for storing threshold files
+thresh_path = [loadstart 'Matlab/Data/Met/Cleaned3/Threshold/'];
+
+%%% Folder for filled files
+% fill_path = [loadstart 'Matlab/Data/Met/Filled3a/' site '/'];
+%% Load Header File
+
+header = jjb_hdr_read([hdr_path site '_OutputTemplate.csv'], ',', 3);
+
+
+%% Take information from columns of the header file
+%%% Column vector number
+col_num = str2num(char(header(:,1)));
+
+%%% Title of variable
+var_names = char(header(:,2));
+
+%%% Minute intervals
+header_min = str2num(char(header(:,3)));
+
+%%% Use minute intervals to find 30-min variables only
+vars30 = find(header_min == 30);
+%%% Create list of extensions needed to load all of these files
+vars30_ext = create_label(col_num(vars30),3);
+
+if isleapyear(year) == 1;
+    len_yr = 17568;
+else
+    len_yr = 17520;
+end
+save_output = NaN.*ones(len_yr,length(vars30));
+%% Run through the variables first, so that we can see what may need to be
+%%% changed:
+for k = 1:1:length(vars30)
+    save_output(:,k) = load([load_path site '_' year '.' vars30_ext(k,:)]);
+end
+
+quitflag = 0;
+while quitflag == 0;
+
+    j = 1;
+    while j <= length(vars30)
+        temp_var = save_output(:,j);
+        figure(1)
+        clf;
+        plot(temp_var);
+        hold on;
+        title(var_names(vars30(j),:));
+        grid on;
+
+        %% Gives the user a chance to change the thresholds
+        response = input('Press enter to move forward, enter "1" to move backward, q to go straight to cleaning: ', 's');
+
+        if isempty(response)==1
+            j = j+1;
+
+        elseif strcmp(response,'1')==1 && j > 1;
+            j = j-1;
+        elseif strcmp(response,'q')==1
+            j = length(vars30)+1;
+        else
+            j = 1;
+        end
+    end
+    clear j response accept
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% % Run Metfix file to fix any problems that need an NAN:
+% % Otherwise, it needs to be done here:
+% %     metfixer(year, site);
+%     switch site
+%         case 'TP39'
+%             switch year
+%                 case '2008'
+%                     
+% % fix RH_blwcnpy
+%         save_output(3167:3837,vars30 ==  find(strcmp(header(:,2),'RelHum_BlwCnpy')==1)) = NaN;
+% % fix CO2 blwcnpy
+%         save_output(15822:17568,vars30 == find(strcmp(header(:,2),'CO2_BlwCnpy')==1)) = save_output(15822:17568,vars30 == find(strcmp(header(:,2),'CO2_BlwCnpy')==1))+33;
+% % fix Ts2a:
+%         save_output(10457:10595,vars30 == find(strcmp(header(:,2),'SoilTemp_A_2cm')==1)) = NaN;
+% 
+%             end
+%     end
+    
+%%    
+    
+    %% Load Threshold file -- If it does not exist, start creating one
+    if exist([thresh_path site '_thresh_' year '.dat'])
+        thresh = load([thresh_path site '_thresh_' year '.dat']);
+        threshflag = 1;
+        thresh_out_flag = 1;
+        disp('Threshold file exists: Uploading');
+
+    else
+        thresh(1:length(vars30),1:3) = NaN;
+        thresh(:,1) = vars30;
+        threshflag = 0;
+        thresh_out_flag = 0;
+        disp('Threshold file does not exist. A new one will be made now');
+    end
+
+
+
+    %% Load file, plot it, and give cleaning options
+    for i = 1:1:length(vars30)
+        accept = 1;
+%         temp_var = load([load_path site '_' year '.' vars30_ext(i,:)]);
+        figure(1)
+        clf;
+        plot(save_output(:,i));
+        hold on;
+        title(var_names(vars30(i),:));
+        grid on;
+        switch threshflag
+            case 1
+                %%% Load lower and upper limits
+                thresh_row = find(thresh(:,1) == vars30(i));  %% Select correct row in thresh
+                low_lim = thresh(thresh_row,2);
+                up_lim = thresh(thresh_row,3);
+
+            case 0
+                low_lim_str = input('Enter Lower Limit: ', 's');
+                low_lim = str2double(low_lim_str);
+
+                up_lim_str = input('Enter Upper Limit: ', 's');
+                up_lim = str2double(up_lim_str);
+
+                %%% Write new values to thresh matrix
+                thresh_row = find(thresh(:,1) == vars30(i));  %% Select correct row in thresh
+                thresh(thresh_row,2) = low_lim;
+                thresh(thresh_row,3) = up_lim;
+
+        end
+
+        %%% Plot lower limit
+        line([1 length(save_output(:,i))],[low_lim low_lim],'Color',[1 0 0], 'LineStyle','--')
+        %%% Plot upper limit
+        line([1 length(save_output(:,i))],[up_lim up_lim],'Color',[1 0 0], 'LineStyle','--')
+
+        axis([1   length(save_output(:,i))    low_lim-2*abs(low_lim)     up_lim+2*abs(up_lim)]);
+        title(var_names(vars30(i),:));
+
+        %% Gives the user a chance to change the thresholds
+        response = input('Press enter to accept, "1" to enter new thresholds: ', 's');
+
+        if isempty(response)==1
+            accept = 1;
+
+        elseif isequal(str2double(response),1)==1;
+            accept = 0;
+            thresh_out_flag = 1;
+        end
+
+        while accept == 0;
+            %%% New lower limit
+            low_lim_new = input('enter new lower limit: ','s');
+            if isempty(low_lim_new)
+            else
+                low_lim = str2double(low_lim_new);
+            end
+            
+
+            thresh(thresh_row,2) = low_lim;
+
+            %%% New upper limit
+            up_lim_new = input('enter new upper limit: ','s');
+            if isempty(up_lim_new)
+            else
+                up_lim = str2double(up_lim_new);
+            end
+
+            
+            
+            thresh(thresh_row,3) = up_lim;
+            %%% plot again
+            figure (1)
+            clf;
+            plot(save_output(:,i))
+            hold on
+            %%% Plot lower limit
+            line([1 length(save_output(:,i))],[low_lim low_lim],'Color',[1 0 0], 'LineStyle','--')
+            %%% Plot lower limit
+            line([1 length(save_output(:,i))],[up_lim up_lim],'Color',[1 0 0], 'LineStyle','--')
+
+            axis([1   length(save_output(:,i))    low_lim-2*abs(low_lim)     up_lim+2*abs(up_lim)]);
+            title(var_names(vars30(i),:));
+            grid on
+
+
+            accept_resp = input('hit enter to accept, 1 to change again: ','s');
+            if isempty(accept_resp)
+                accept = 1;
+            else
+                accept = 0;
+            end
+        end
+
+        save_output(save_output(:,i) > up_lim | save_output(:,i) < low_lim,i) = NaN;
+        if strcmp(site,'3') && strcmp(year,'2007');
+            save_output(10000:10600,i) = NaN;
+        end
+
+        clear temp_var up_lim low_lim accept_resp accept response thresh_row;
+    end
+
+    %% Save variable to /Cleaned3 directory
+    resp2 = input('Are you ready to print this data to /Cleaned3? <y/n> ','s');
+    output_flag = 0;
+    
+    while output_flag = 0
+    
+    if strcmpi(resp2,'y')==1
+        for i = 1:1:length(vars30)
+    temp_var = save_output(:,i);
+    
+        save([output_path site '_' year '.' vars30_ext(i,:)], 'temp_var','-ASCII');
+%         save([fill_path site '_' year '.' vars30_ext(i,:)], 'temp_var','-ASCII');
+
+        end
+        %% Save threshold file
+        if isequal(thresh_out_flag,1) == 1;
+            save([thresh_path site '_thresh_' year '.dat'],'thresh','-ASCII');
+        end
+        quitflag = 1;
+    else
+        quitflag = 0;
+    end
+
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+%
+% %% Fill data for specific years
+% %%% M2, 2007 - fill in soil data with M1 data
+% % fill_path = ['C:/HOME/Matlab/Data/Met/Filled3a/Met' site '/'];
+% if strcmp(site,'TP74') == 1 && strcmp(year,'2007') == 1;
+% M1data = jjb_flux_load('SHF', '2007', 'TP39', 'processed', 'processed');
+% M1SHF1 = M1data(:,5); M1SHF2 = M1data(:,6);
+% SHF1 = load([output_path site '_2007.016' ]); SHF2 = load([output_path site '_2007.017' ]);
+%
+% SHF1(12625:17520,1) = M1SHF1(12625:17520,1); save([fill_path site '_2007.016'],'SHF1','-ASCII');
+% SHF2(12625:17520,1) = M1SHF2(12625:17520,1); save([fill_path site '_2007.017'],'SHF2','-ASCII');
+% figure(1); clf;
+% plot(SHF1,'b'); hold on; plot(SHF2,'r');
+% clear M1data M1SHF1 M1SHF2 SHF1 SHF2
+%
+% M1s = jjb_flux_load('Ts', '2007', 'TP39', 'processed', 'processed');
+% Ts2a = load([output_path 'Met2_2007.025' ]); Ts2b = load([output_path 'Met2_2007.031']);
+% Ts2a(15169:17520,1) = M1s(15169:17520,1); save([fill_path 'TP74_2007.025'],'Ts2a','-ASCII');
+% Ts2b(15169:17520,1) = M1s(15169:17520,2); save([fill_path 'TP74_2007.031'],'Ts2b','-ASCII');
+%
+% Ts5a = load([output_path 'TP74_2007.024' ]); Ts5a(15169:17520,1) = M1s(15169:17520,3);
+% save([fill_path 'TP74_2007.024'], 'Ts5a','-ASCII');
+% Ts5b = load([output_path 'TP74_2007.030' ]); Ts5b(15169:17520,1) = M1s(15169:17520,4);
+% save([fill_path 'TP74_2007.030'], 'Ts5b','-ASCII');
+%
+% Ts10a = load([output_path 'TP74_2007.023' ]); Ts10a(15169:17520,1) = M1s(15169:17520,5);
+% save([fill_path 'TP74_2007.023'], 'Ts10a','-ASCII');
+%
+% Ts10b = load([output_path 'TP74_2007.029' ]); Ts10b(15169:17520,1) = M1s(15169:17520,6);
+% save([fill_path 'TP74_2007.029'], 'Ts10b','-ASCII');
+%
+% Ts20a = load([output_path 'TP74_2007.022' ]); Ts20a(15169:17520,1) = M1s(15169:17520,7);
+% save([fill_path 'TP74_2007.022'], 'Ts20a','-ASCII');
+%
+% Ts20b = load([output_path 'TP74_2007.028' ]); Ts20b(15169:17520,1) = M1s(15169:17520,8);
+% save([fill_path 'TP74_2007.028'], 'Ts20b','-ASCII');
+%
+% Ts50a = load([output_path 'TP74_2007.021' ]); Ts50a(15169:17520,1) = M1s(15169:17520,9);
+% save([fill_path 'TP74_2007.021'], 'Ts50a','-ASCII');
+%
+% Ts50b = load([output_path 'TP74_2007.027' ]); Ts50b(15169:17520,1) = M1s(15169:17520,10);
+% save([fill_path 'TP74_2007.027'], 'Ts50b','-ASCII');
+%
+% Ts100a = load([output_path 'TP74_2007.020' ]); Ts100a(15169:17520,1) = M1s(15169:17520,11);
+% save([fill_path 'TP74_2007.020'], 'Ts100a','-ASCII');
+%
+% Ts100b = load([output_path 'TP74_2007.026' ]); Ts100b(15169:17520,1) = M1s(15169:17520,12);
+% save([fill_path 'TP74_2007.026'], 'Ts100b','-ASCII');
+%
+% figure(2); clf;
+% plot(Ts2a,'b'); hold on; plot(Ts2b,'r'); plot(Ts5a,'g'); plot(Ts5b,'c');
+%
+% fillflag = 1;
+% end
+%
+% %% M3, 2007 - fill in gaps with M1 data
+% % fill_path = ['C:/HOME/Matlab/Data/Met/Filled3a/Met' site '/'];
+% if strcmp(site,'TP89') == 1 && strcmp(year,'2007') == 1;
+% M1data = jjb_flux_load('SHF', '2007', 'TP39', 'processed', 'processed');
+% M1SHF1 = M1data(:,5); M1SHF2 = M1data(:,6);
+% SHF1 = load([output_path 'TP89_2007.014' ]); SHF2 = load([output_path 'TP89_2007.015' ]);
+%
+% SHF1(isnan(SHF1),1) = M1SHF1(isnan(SHF1),1); save([fill_path 'TP89_2007.014'],'SHF1','-ASCII');
+% SHF2(isnan(SHF2),1) = M1SHF2(isnan(SHF2),1); save([fill_path 'TP89_2007.015'],'SHF2','-ASCII');
+% figure(1); clf;
+% plot(SHF1,'b'); hold on; plot(SHF2,'r');
+% clear M1data M1SHF1 M1SHF2 SHF1 SHF2
+%
+% % M1s = jjb_flux_load('Ts', '2007', '1', 'processed', 'processed');
+% % Ts2a = load([output_path 'TP89_2007.024' ]); Ts2b = load([output_path 'TP89_2007.030']);
+% % Ts2a(isnan(Ts2a),1) = M1s(isnan(Ts2a),1); %save([fill_path 'TP89_2007.024'],'Ts2a','-ASCII');
+% % Ts2b(isnan(Ts2b),1) = M1s(isnan(Ts2b),2); %save([fill_path 'TP89_2007.030'],'Ts2b','-ASCII');
+% %
+% Ts5a = load([output_path 'TP89_2007.023' ]);
+% % save([fill_path 'TP89_2007.023'], 'Ts5a','-ASCII');
+% %
+%
+%
+% %%%% OTHER VARIABLES:
+% M1data = jjb_flux_load('Analysis', '2007', 'TP39', 'processed', 'processed');
+%
+% %%% Ta
+% Ta = load([output_path 'TP89_2007.007' ]); Ta(isnan(Ta),1) = M1data(isnan(Ta),1);
+% save([fill_path 'TP89_2007.007'], 'Ta','-ASCII');
+%
+% %%% Down PAR
+% PAR_down = load([output_path 'TP89_2007.012' ]); PAR_down(isnan(PAR_down),1) = M1data(isnan(PAR_down),2);
+% save([fill_path 'TP89_2007.012'], 'PAR_down','-ASCII');
+%
+% %%% WS
+% WS = load([output_path 'TP89_2007.009' ]); WS(isnan(WS),1) = M1data(isnan(WS),3);
+% save([fill_path 'TP89_2007.009'], 'WS','-ASCII');
+%
+% %%% Rn
+% Rn = load([output_path 'TP89_2007.013' ]); Rn(isnan(Rn),1) = M1data(isnan(Rn),4);
+% save([fill_path 'TP89_2007.013'], 'Rn','-ASCII');
+%
+% %%% RH
+% RH = load([output_path 'TP89_2007.008' ]); RH(isnan(RH),1) = M1data(isnan(RH),15);
+% save([fill_path 'TP89_2007.008'], 'RH','-ASCII');
+%
+% fillflag = 1;
+%
+% %%% Fill soil temp data:
+% % [Ts5a_filled_md Ts5a_model_md] = jjb_WLR_gapfill(Ta, Ts5a, 500, 'on');
+% % Ts5a(10500:11000,1) = Ts5a_model_md(10500:11000,1);
+%
+%
+% [Ts5a_filled_md Ts5a_model_md] = jjb_WLR_gapfill(Ta, Ts5a, 490, 'on');
+% [Ts5a_filled_lg Ts5a_model_lg] = jjb_WLR_gapfill(Ta, Ts5a, 1100, 'on');
+%
+% [Ts5a_filled_sm Ts5a_model_sm] = jjb_WLR_gapfill(Ta, Ts5a, 2000, 'on');
+%
+%
+% Ts5a(10000:11295,1) = Ts5a_model_lg(10000:11295,1);
+% Ts5a(6797:7091,1) = Ts5a_model_md(6797:7091,1);
+% % Ts5a(11000:11295,1) = Ts5a_model_md(11000:11295,1);
+% Ts5a(14475:14599,1) = Ts5a_model_lg(14475:14599,1);
+% Ts5a(15400:16004,1) = Ts5a_model_lg(15400:16004,1);
+%
+% size_gap = 15400-14600+1;
+% incr = (10.12-1.14-1.2896)./size_gap;
+% decr = (incr:incr:(10.12-1.14-incr-1.2896))';
+%
+% Ts5a(14600:15399,1) = Ts5a_model_lg(14600:15399,1)-decr;
+%
+% %%% Fill with Met 1 for any gaps that remain
+% % M1s = jjb_flux_load('Ts', '2007', '1', 'processed', 'processed');
+% Ts5a(isnan(Ts5a),1) = Ts5a_model_lg(isnan(Ts5a),1);
+% save([fill_path 'TP89_2007.023'], 'Ts5a','-ASCII');
+% %clear M1s
+%
+% figure(8)
+% clf
+% subplot(3,1,1)
+% plot(Ts5a_model_lg)
+% hold on
+% plot(Ts5a,'g')
+% plot(Ta,'r')
+% subplot(3,1,2)
+% plot(Ts5a_model_md)
+% hold on
+% plot(Ts5a,'g')
+% plot(Ta,'r')
+% subplot(3,1,3)
+% plot(Ts5a_model_sm)
+% hold on
+% plot(Ts5a,'g')
+% plot(Ta,'r')
+%
+% end
+% % %% Fill Met 4 file for missing values in 2005:
+% % if strcmp(site,'4') == 1 && strcmp(year,'2005') == 1;
+% %
+% % M1data = jjb_flux_load('Analysis', '2007', '1', 'processed', 'processed');
+% %
+% % %%% Ta
+% % Ta = load([output_path 'TP02_2005.005' ]); Ta(isnan(Ta),1) = M1data(isnan(Ta),1);
+% % save([fill_path 'TP02_2007.005'], 'Ta','-ASCII');
+% %
+% % RH = load([output_path 'TP02_2005.006' ]); RH(isnan(RH),1) = M1data(isnan(RH),15);
+% % save([fill_path 'TP02_2007.006'], 'RH','-ASCII');
+% %
+% % PAR = load([output_path 'TP02_2005.009' ]); PAR(isnan(PAR),1) = M1data(isnan(PAR),2);
+% % save([fill_path 'TP02_2007.009'], 'PAR','-ASCII');
+% %
+% %
+% % Ts5a = load([output_path 'TP02_2005.021' ]);
+% % [Ts5a_filled_md Ts5a_model_md] = jjb_WLR_gapfill(Ta, Ts5a, 1500, 'on');
+% % [Ts5a_filled_lg Ts5a_model_lg] = jjb_WLR_gapfill(Ta, Ts5a, 700, 'on');
+% % [Ts5a_filled_sm Ts5a_model_sm] = jjb_WLR_gapfill(Ta, Ts5a, 350, 'on');
+% %
+% % Ts5a(1:1046,1) = -1.35;
+% % Ts5a(isnan(Ts5a),1) = Ts5a_model_md(isnan(Ts5a),1);
+% %
+% % figure(8)
+% % clf
+% % subplot(3,1,1)
+% % plot(Ts5a_model_lg)
+% % hold on
+% % plot(Ts5a,'g')
+% % plot(Ta,'r')
+% % subplot(3,1,2)
+% % plot(Ts5a_model_md)
+% % hold on
+% % plot(Ts5a,'g')
+% % plot(Ta,'r')
+% % subplot(3,1,3)
+% % plot(Ts5a_model_sm)
+% % hold on
+% % plot(Ts5a,'g')
+% % plot(Ta,'r')
+% %
+% %
+% %
+% %
+% % save([fill_path 'TP02_2005.021'], 'Ts5a','-ASCII');
+% % end
+%
+
+
+
+

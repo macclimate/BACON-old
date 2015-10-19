@@ -1,0 +1,9 @@
+function [en_avg] = ensemble_avg(data_in,pts_day)
+
+if nargin == 1;
+    pts_day = 48;
+end
+
+p = reshape(data_in,pts_day,[]);
+en_avg = row_nanmean(p);
+end

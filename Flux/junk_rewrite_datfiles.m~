@@ -1,0 +1,72 @@
+%%% junk_rewrite_datfiles.m
+
+%junk_addSM30avg_to_metfiles.m
+%%% This script adds 
+clear all; close all;
+
+ls  = addpath_loadstart;
+mat_path = [ls 'Matlab/Data/Flux/OPEC/'];
+dat_path = [ls 'Matlab/Data/CCP/Final_dat/'];
+site_tag = ['TP74'; 'TP89' ;'TP02' ];
+
+
+for site_ctr = 1:1:3
+    site = site_tag(site_ctr,:);
+    load([mat_path site '_master.mat']);
+    master = eval(site); 
+    eval(['clear ' site])
+
+    for year = 2003:1:2007
+    yr_ctr = year - 2002;
+    disp(['site = ' site ', year = ' num2str(year)]);
+% load .dat files, take necessary files out:
+%   (Fc, CO2_top, CO2_cpy, Jt, & SMs for both pits 5 to 50cm:
+clear data;
+clear Fc CO2* Jt Rn G SM*
+try
+data = load([dat_path site '_final_' num2str(year) '.dat']);
+
+%%%% Overwrite numbers in here:
+% NEEraw, NEEfilled, GEPfilled, Rfilled, ustar, Fc, CO2_top, CO2_cpy,
+% Hraw, Hfilled, LEraw, LEfilled
+data(:,7) = master(yr_ctr).NEEfilled
+
+Fc = data(:,11); 
+CO2_top = data(:,12);
+CO2_cpy = data(:,13);
+Jt = data(:,21);
+Rn = data(:,26);
+G = data(:,22);
+
+SM5A = data(:,48); SM5B = data(:,53);
+SM10A = data(:,49); SM10B = data(:,54);
+SM20A = data(:,50); SM20B = data(:,55);
+SM50A = data(:,51); SM50B = data(:,56);
+
+%%% Calculate depth-weighted 30-cm soil moisture
+[SM30a] = SM30cm_avg(SM5A, SM10A, SM20A, SM50A);
+[SM30b] = SM30cm_avg(SM5B, SM10B, SM20B, SM50B);
+SM30_avg(~isnan(SM30a.*SM30b),1) = (SM30a(~isnan(SM30a.*SM30b),1) + SM30b(~isnan(SM30a.*SM30b),1))./2;
+SM30_avg(isnan(SM30_avg),1) = SM30a(isnan(SM30_avg),1);
+SM30_avg(isnan(SM30_avg),1) = SM30b(isnan(SM30_avg),1);
+
+master(yr_ctr).Fc = Fc;
+master(yr_ctr).CO2_top = CO2_top;
+master(yr_ctr).CO2_cpy = CO2_cpy;
+master(yr_ctr).Jt = Jt;
+master(yr_ctr).Rn = Rn;
+master(yr_ctr).G = G;
+master(yr_ctr).SM30a = SM30a;
+master(yr_ctr).SM30b = SM30b;
+master(yr_ctr).SM30_avg = SM30_avg;
+
+catch
+    disp(['did not work for site = ' site ', year = ' num2str(year)]);
+end
+    end
+
+    eval([site '=master;']);
+    save([mat_path site '.mat'],site)
+clear master
+eval(['clear ' site])
+end

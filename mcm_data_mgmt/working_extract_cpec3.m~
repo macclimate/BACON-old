@@ -1,0 +1,167 @@
+%%% What I need this file to do:
+% Go through source folders
+% See
+% Make sure tags are OK - only move data if tags are OK
+%
+
+path = '/media/Deskie/home/Matlab/Data/DUMP_Data/TP74/01-03-2008/MET-DATA/data/';
+site = 'TP74';
+switch site
+    case 'TP74'
+        tag(1) = cellstr('.DMCM21');
+        tag(2) = cellstr('.DMCM22');
+        tag(3) = cellstr('.DMCM23');
+    case 'TP02'
+        tag(1) = cellstr('.DMCM31');
+        tag(2) = cellstr('.DMCM32');
+        tag(3) = cellstr('.DMCM33');
+end
+
+
+%%% Step 1 -- Load the source /data folder and look inside:
+d = dir(path);
+if length(d) > 2 % If d is larger than 2, we know there is data in the folder
+
+    %%% Step 2: Look inside each folder inside of /data:
+    for i = 3:1:length(d)
+        move_flag = []; tag_flag = []; final_flag = [];
+        clear d2 d_dest junk* file_list
+        
+        
+        
+        
+        
+        if d(i).isdir == 1;  d2 = dir([path d(i).name]); end % make sure that we are opening a folder
+
+        if ~isempty(d2) && length(d2) > 2
+
+            %%% Step 3: Load the destination folder
+            if exist([data_save_path d(i).name])==7
+            else
+                mkdir([data_save_path d(i).name]);
+                disp(['Directory ' d(i).name ' does not exist; creating.']);
+            end
+            d_dest = dir([data_save_path d(i).name]);
+
+            if length(d_dest) <= 2
+                %                     move_flag(3:length(d2),1) = 1;
+            else
+                for k = 3:1:length(d_dest)
+                    dest_sizes(k,1) = d_dest(k).bytes;
+                    dest_fullname(k,:) = cellstr(d_dest(k).name);
+                end
+            end
+
+            for j = 3:1:length(d2)
+                [junk1, junk3, file_list(j).ext, junk2] = fileparts(d2(j).name); % get tag
+                source_sizes(j,1) = d2(j).bytes;
+                source_fullname(j,1) = cellstr(d2(j).name);
+
+                %%% Step 3: Make flags for data tags:
+                if sum(strcmp(file_list(j).ext,tag)) > 0
+                    tag_flag(j,1) = 1;
+                end
+
+                ind_copy = find(strcmp(source_fullname(j,1),source_destname)==1);
+
+                if isempty(ind_copy) % if no copy of the file is found in destination:
+                    move_flag(j,1) = 1;
+                else
+                    if source_sizes(j,1) > dest_sizes(ind_copy,1)
+                        move_flag(j,1) = 1; % if source file is larger than dest file -- we move it.
+                    else
+                        move_flag(j,1) = 0; % if same file is already in destination:
+                    end
+                end
+            end
+
+            final_flag = move_flag.*tag_flag; % if final_flag is 1, then we can move it over:
+
+%%% Move data (if needed);
+if sum(final_flag) > 0;
+    ind_move = find(final_flag == 1); % gives list of files to move
+    
+    for k = 1:1:length(ind_move)
+        copyfile([path d2(ind_move).name], [data_save_path d(i).name '/' d2(ind_move).name]);
+    end
+    disp(['total of ' num2str(length(ind_move)) ' files copied for ' d(i).name])
+else
+    disp(['no data copied for ' d(i).name '.']);
+end
+
+        else
+            disp(['The folder ' d(i).name ' seems to be empty']);
+        end
+    end
+else
+    disp('data folder seems to be empty')
+end
+
+
+
+
+
+%
+%
+%
+%
+% %%% Step 3: Go through all files inside each folder
+%
+%
+%
+% %%%% Make a list of all the files:
+%
+% for j = 3:1:length(d2)
+%     [junk1, file_list(j).name, file_list(j).ext, junk2] = fileparts(d2(j).name);
+%     file_list(j).size = d2(j).bytes;
+%
+%     exts(j,:) =  file_list(j).ext;
+%
+%
+% end
+%
+% [row col] = size(tag)
+%
+% for k = 1:1:length(exts)
+%     for i = 1:1:row
+%         if exts(k,:) ==
+%
+%
+%             good_exts_ind = NaN.*ones(length(exts),1);
+%             for j = 1:1:length(d2)-2
+%                 good_exts_ind(strcmp(exts(j,2:end),tag(1,:)) == 1,1) = 1;
+%                 good_exts_ind(strcmp(exts(j,2:end),tag(2,:)) == 1,1) = 2;
+%             end
+%
+%
+%             %%%% Check for the same folder in the destination area
+%             if exist([save_path_data d(i).name]) == 7;
+%                 % if it exists, check contents:
+%                 d_dest = dir([save_path_data d(i).name]);
+%             else
+%                 % if it doesn't exist, make the folder:
+%                 mkdir([save_path_data d(i).name]);
+%             end
+%
+%             %%%% Start transfering files:
+%             %             for j =
+%
+%
+%
+%
+%
+%
+%         else
+%             disp(['The folder ' d2(i).name ' seems to be empty']);
+%
+%         end
+%
+%
+%         clear d2;
+%     end
+%
+%
+%     else
+%         disp('data folder seems to be empty')
+%
+% end

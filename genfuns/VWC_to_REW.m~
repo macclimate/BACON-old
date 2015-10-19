@@ -1,0 +1,5 @@
+function [REW] = VWC_to_REW(VWC,fc, wp)
+% This function converts VWC to REW
+
+
+REW = (VWC-wp)./(fc - wp);

@@ -1,0 +1,93 @@
+function [hdr_cell] = jjb_hdr_read(hdr_txt_path, sep, num_cols)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%% jjb_hdr_read %%%%%%%%%%%%%%%%%%%%%%
+%%% This function loads a .txt file with headers and other information, and
+%%% returns the data in a structure array 
+% hdr_txt_path = ('C:\Home\Matlab\Data\Met\Organized2\Docs\Met1Output_Columns_2007.txt');
+% 'sep' is a string denoting the symbol used to separate different columns
+% of information (e.g. '_' or '*')
+% num_cols specifies the number of columns in the file to be read-in
+% Currently, program can handle maximum of 4 columns.
+% usage: [hdr_cell] = jjb_hdr_read(hdr_txt_path, sep, num_cols)
+%%
+if nargin == 2;
+    num_cols = 2;
+end
+
+
+eofstat = 0;
+i = 1;
+
+fid = fopen(hdr_txt_path);
+
+
+while eofstat == 0;
+tline = fgets(fid);
+star = find(tline == sep);
+% notspace = find(~isspace(tline)==1);
+%%% Store data into a structure array %%%%
+% col_num(i,1) = str2double(tline(1:spaces(1)-1));
+
+switch num_cols
+    case 1
+        hdr_cell(i,1) = cellstr(tline(1:length(tline)));
+    case 2
+        hdr_cell(i,2) = cellstr(tline(star(1)+1:length(tline)));
+        hdr_cell(i,1) = cellstr(tline(1:star(1)-1));
+    case 3
+        hdr_cell(i,3) = cellstr(tline(star(2)+1:length(tline))); 
+        hdr_cell(i,2) = cellstr(tline(star(1)+1:star(2)-1));
+        hdr_cell(i,1) = cellstr(tline(1:star(1)-1));
+    case 4
+        hdr_cell(i,4) = cellstr(tline(star(3)+1:length(tline)));
+        hdr_cell(i,3) = cellstr(tline(star(2)+1:star(3)-1));
+        hdr_cell(i,2) = cellstr(tline(star(1)+1:star(2)-1));
+        hdr_cell(i,1) = cellstr(tline(1:star(1)-1));
+end
+
+i = i + 1;
+eofstat = feof(fid);
+
+end
+%% OLD STUFF --- TO work out later...
+% if j == length(star)+1
+%     hdr_cell(i,j) = cellstr(tline(star(j-1)+1:length(tline)));
+% %     if j == 2 
+% %         hdr_cell(i,j) = cellstr(tline(star(j-1)+1:star(j)-1));
+% %     end
+% %     if j == 3 
+% %         hdr_cell(i,j-1) = cellstr(tline(star(j-2)+1:star(j)-1));
+% %     end
+% elseif j == 1
+%     hdr_cell(i,1) = cellstr(tline(1:star(1)-1));
+% elseif j == 2
+%     hdr_cell(i,1) = cellstr(tline(star(1)+1: star(2)-1))
+% else
+%     hdr_cell(i,j-1) = cellstr(tline(star(j-2)+1:star(j-1)-1));
+% %     hdr_cell(i,j) = cellstr(tline(star((:
+% 
+% end
+% end
+% 
+% hdr_cell(i,2) = cellstr(tline(star(1)+1:star(2)-1));
+% 
+% hdr_cell(i,1) = cellstr(tline(1:star(1)-1));
+
+% time_int (i,1) = str2double(tline(
+
+
+
+
+
+        
+        
+        
+% hdr_list = char(hdr_cell(:,2));
+% hdr_num = hdr_cell(:,1);
+
+% %% Take out extra spaces at the end of the header variable list:
+% 
+% for i = 1:length(hdr_list)
+%     hdr_list(i,:)
+%     sp = find(isspace(hdr_list(i,:))==0); % finds where there aren't spaces
+%     hdr_list2(i,:) = hdr_list(i,sp);
+% end

@@ -1,0 +1,33 @@
+cleaned_Ch1 = output_2008(:,16);
+cleaned_Ch1(cleaned_Ch1==0,1) = NaN;
+
+cleaned_Ch2 = output_2008(:,26);
+cleaned_Ch2(cleaned_Ch2==0,1) = NaN;
+
+cleaned_Ch3 = output_2008(:,36);
+cleaned_Ch3(cleaned_Ch3==0,1) = NaN;
+
+cleaned_Ch4 = output_2008(:,46);
+cleaned_Ch4(cleaned_Ch4==0,1) = NaN;
+
+
+function [mon_sums] = mcm_monsum(data_in, year)
+
+[days] = jjb_days_in_month(2008);
+hhrs = days.*48; % converts days into half-hours
+
+    st = 1;
+for i = 1:1:length(days) % cycles from months 1 -- 12
+
+    mon_sums(i,1) = sum(Cleaned_Ch1(st:st+hhrs(i)-1,1));
+    mon_sums(i,2) = nansum(Cleaned_Ch1(st:st+hhrs(i)-1,1));
+    
+    st = st + hhrs(i);
+   
+end
+
+
+% C_1 = output_2008(:,16);
+% C_2 = output_2008(:,26);
+% C_3 = output_2008(:,36);
+% C_4 = output_2008(:,46);

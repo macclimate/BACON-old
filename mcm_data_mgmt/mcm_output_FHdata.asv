@@ -1,0 +1,98 @@
+function [] = mcm_output_FHdata(year,data_level)
+%%% mcm_output_FHdata.m
+% This function is used to output TP_PPT data into a yearly file in a format 
+% that can be easily shared with others (e.g. Fish Hatchery people).
+% usage: mcm_output_FHdata(year,data_level), where
+% data_level = 1 denotes cleaned data, and data_level = 2 denotes filled.
+loadstart = mcm_loadstart;
+
+if ischar(year)==1
+    yr_str = year;
+else
+    yr_str = num2str(year);
+end
+year = str2double(yr_str);
+
+
+if nargin == 1
+    resp = input('Enter 1 for cleaned data; enter 2 for filled data: ');
+    data_level = resp;
+end
+
+   [YYYY, JD, HHMM, dt] = jjb_makedate(year, 30);
+   [Mon Day] = make_Mon_Day(year, 30);
+    
+   %%% Load Data:
+    if data_level == 1; % Cleaned Data:
+        met_path = 'D:\Matlab\Data\Met\Cleaned3\TP39\';
+        ppt_path = ['D:\Matlab\Data\Met\Cleaned3\TP_PPT\GN_Precip_' yr_str '.dat'];
+        PPT = load(ppt_path);
+        PAR = quickload_met(year,'TP39','DownPAR_AbvCnpy');
+        Ta = quickload_met(year,'TP39','AirTemp_AbvCnpy');
+        RH = quickload_met(year,'TP39','RelHum_AbvCnpy');
+        WS = quickload_met(year,'TP39','WindSpd');
+        
+    else % Filled Data:
+        met_path = 'D:\Matlab\Data\Met\Final_Filled\TP39\';
+        ppt_path = ['D:\Matlab\Data\Met\Final_Filled\TP_PPT\TP_PPT_' yr_str '_UTC.dat'];
+        PPT = load(ppt_path);
+    PAR = load([met_path 'TP39_' yr_str '.PAR']);
+    Ta = load([met_path 'TP39_' yr_str '.Ta']);
+    RH = load([met_path 'TP39_' yr_str '.RH']);
+    WS = load([met_path 'TP39_' yr_str '.WS']);
+    end
+
+       
+%%% Converts all to EST (from UTC):
+Final = [YYYY JD Mon Day HHMM PPT Ta RH PAR WS];
+[rows cols] = size(Final);
+Final_EST = [Final(1:end,1:5) [Final(11:end,6:cols); NaN.*ones(10,cols-6+1)]];
+
+A(1,1)  = cellstr('Year'); A(2,1)  = cellstr('JD'); A(3,1)  = cellstr('Month'); 
+A(4,1)  = cellstr('Day'); A(5,1)  = cellstr('HHMM'); A(6,1)  = cellstr('PPT'); 
+A(7,1)  = cellstr('Ta'); A(8,1)  = cellstr('RH'); A(9,1)  = cellstr('PAR'); 
+A(10,1)  = cellstr('WS'); 
+AA = char(A);
+format_code = '\n %4.0f\t %3.0f\t %2.0f\t %2.0f\t %4.0f\t %4.2f\t %3.1f\t %4.1f\t %5.1f\t %4.2f\t';
+
+Preamble(1,1) =cellstr(['Fish Hatchery and TP39 half-hourly data for year: ' yr_str]);
+Preamble(2,1) =cellstr('All variables are listed in EST timecode (GMT-5)');
+Preamble(3,1) =cellstr('Variable Explanation: ');
+Preamble(4,1) =cellstr('col 1: Year ');
+Preamble(5,1) =cellstr('col 2: JD ');
+Preamble(6,1) =cellstr('col 3: Month ');
+Preamble(7,1) =cellstr('col 4: Day ');
+Preamble(8,1) =cellstr('col 5: HHMM - 24hr daily clock');
+Preamble(9,1) =cellstr('col 6: PPT - half hourly precipitation accumulation (mm) at Fish Hatchery');
+Preamble(10,1) =cellstr('col 7: Ta - 1/2 hour average air temperature at 28m height at TP39 station');
+Preamble(11,1) =cellstr('col 8: RH - 1/2 hour average relative humidity at 28m height at TP39 station');
+Preamble(12,1) =cellstr('col 9: PAR - 1/2 hour average downwelling photosyntheically active radiation (sunshine) at 28m height at TP39 station');
+Preamble(13,1) =cellstr('col 10: WS - 1/2 hour Windspeed at 28m height at TP39 station');
+Preamble(14,1) =cellstr('Data is property of McMaster University, Climate Change Research Group');
+Preamble(15,1) =cellstr('For further inquiries, please contact Dr. Altaf Arain: 905-525-9140 ext. 27941');
+Preamble(16,1) = cellstr(' ');
+
+Pre_char = char(Preamble);
+
+
+
+fid = fopen([loadstart 'Data/Distributed/For_FH_' yr_str '_' '.dat'],'w');
+
+
+for i = 1:1:length(Preamble)
+    h3 = fprintf(fid,'%117s\n',Pre_char(i,:));
+end
+
+
+for j = 1:1:length(A)
+h = fprintf(fid, '%6s\t' , AA(j,:) );
+end
+
+
+for j = 1:1:length(YYYY)
+    h2 = fprintf(fid,format_code,Final_EST(j,:));
+end
+
+fclose(fid)
+
+disp(['You can find your data at: ' loadstart 'Data/Distributed/For_FH_' yr_str '.dat' ])

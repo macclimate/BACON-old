@@ -1,0 +1,83 @@
+function out = fitGEP_NR_LRC_VPD(c_hat,x)
+%%
+%%% fitGEP_NR_LRC.m
+%%% This function estimates NEE a non-rectangular
+%%% hyperbolic function and subtracting RE (using the L&T method, with only
+%%% one flexible parameter -- rb [a.k.a. Rref]).
+%%% The Eo parameter is set, but is not a fixed value.  Therefore, it needs
+%%% to be inputted as a third column in x.
+%%% Input: x (or X) must be in the form: [PAR T Eo VPD k(optional)]
+
+%%% Four total coefficients: [alpha beta curve_param Rref]
+
+global X Y stdev objfun fixed_coeff coeffs_to_fix;
+
+if ~isempty(coeffs_to_fix)==1
+    ctr = 1;
+    for i = 1:1:length(fixed_coeff)
+        if isnan(fixed_coeff(i))
+            c_hat_tmp(i) = c_hat(ctr);
+            ctr = ctr+1;
+        else
+            c_hat_tmp(i) = fixed_coeff(i);
+        end
+        
+    end
+    
+    c_hat = c_hat_tmp;
+end
+
+%% Evaluation Mode: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+if nargin > 1
+        y_hat = NaN.*ones(size(x,1),1);
+    %%% Evaluation Mode, Dynamic k value (triggered when x has 5 columns):
+    if size(x,2) == 5
+        ind_VPD_up = find(x(:,4) > 1);
+        B2 = c_hat(2).*exp(-1.*x(ind_VPD_up,5).*(x(ind_VPD_up,4)-1));% VPD-modified value of Beta:
+        % Replace what was c_hat(2) with B2:
+        y_hat(ind_VPD_up,1) = c_hat(4).*(exp( x(ind_VPD_up,3).*( (1./(10-(-46.02))) - (1./(x(ind_VPD_up,2)-(-46.02)))) )) - ...
+            ((c_hat(1).*x(ind_VPD_up,1) + B2 - sqrt( (c_hat(1).*x(ind_VPD_up,1) + B2).^2 - 4.*c_hat(1).*B2.*c_hat(3).*x(ind_VPD_up,1))) ./2.*c_hat(3));
+        ind_VPD_down = find(x(:,4) <= 1);
+        B2 = c_hat(2);% unmodified value of Beta:
+        % Replace what was c_hat(2) with B2:
+        y_hat(ind_VPD_down,1) = c_hat(4).*(exp( x(ind_VPD_down,3).*( (1./(10-(-46.02))) - (1./(x(ind_VPD_down,2)-(-46.02)))) )) - ...
+            ((c_hat(1).*x(ind_VPD_down,1) + B2 - sqrt( (c_hat(1).*x(ind_VPD_down,1) + B2).^2 - 4.*c_hat(1).*B2.*c_hat(3).*x(ind_VPD_down,1))) ./2.*c_hat(3));
+    else
+        %%% Evaluation Mode, Static k value (triggered when x has <= 4 columns):
+        ind_VPD_up = find(x(:,4) > 1);
+        B2 = c_hat(2).*exp(-1.*c_hat(5).*(x(ind_VPD_up,4)-1));% VPD-modified value of Beta:
+        % Replace what was c_hat(2) with B2:
+        y_hat(ind_VPD_up,1) = c_hat(4).*(exp( x(ind_VPD_up,3).*( (1./(10-(-46.02))) - (1./(x(ind_VPD_up,2)-(-46.02)))) )) - ...
+            ((c_hat(1).*x(ind_VPD_up,1) + B2 - sqrt( (c_hat(1).*x(ind_VPD_up,1) + B2).^2 - 4.*c_hat(1).*B2.*c_hat(3).*x(ind_VPD_up,1))) ./2.*c_hat(3));
+        ind_VPD_down = find(x(:,4) <= 1);
+        B2 = c_hat(2);% unmodified value of Beta:
+        % Replace what was c_hat(2) with B2:
+        y_hat(ind_VPD_down,1) = c_hat(4).*(exp( x(ind_VPD_down,3).*( (1./(10-(-46.02))) - (1./(x(ind_VPD_down,2)-(-46.02)))) )) - ...
+            ((c_hat(1).*x(ind_VPD_down,1) + B2 - sqrt( (c_hat(1).*x(ind_VPD_down,1) + B2).^2 - 4.*c_hat(1).*B2.*c_hat(3).*x(ind_VPD_down,1))) ./2.*c_hat(3));
+      
+    end
+ 
+        out = y_hat;
+
+%% Parameterization Mode: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+else
+
+    
+    
+    
+    
+    
+    
+switch objfun
+    case 'OLS'
+        err = sum((y_hat - Y).^2);
+    case 'WSS'
+        err = sum(((y_hat - Y).^2)./(stdev.^2));
+    case 'MAWE'
+        err = (1./length(X)) .* ( sum(abs(y_hat - Y)./stdev));
+    otherwise
+        disp('no objective function specified - using least-squares')
+      err = sum((y_hat - Y).^2);
+end
+out = err;
+end

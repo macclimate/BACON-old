@@ -1,0 +1,26 @@
+path = '/1/fielddata/Matlab/Data/Met/Final_Cleaned/CCP/TP02/';
+
+a = load([path 'TP02_2003.027']);
+a(1:length(a),1) = a.*1.2419;
+
+b = load([path 'TP02_2004.027']);
+b(1:length(b),1) = b.*1.2419;
+
+c = load([path 'TP02_2005.027']);
+c(1:length(c),1) = c.*1.2419;
+
+d = load([path 'TP02_2006.027']);
+d(1:7371,1) = d(1:7371,1).*1.2419;
+
+save([path 'TP02_2003.027'],'a','-ASCII');
+save([path 'TP02_2004.027'],'b','-ASCII');
+save([path 'TP02_2005.027'],'c','-ASCII');
+save([path 'TP02_2006.027'],'d','-ASCII');
+
+
+
+
+
+figure(2)
+plot(d,'r')
+

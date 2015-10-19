@@ -1,0 +1,12 @@
+function [list] = jjb_gapfinder(input_list, max_gap)
+%% jjb_gapfinder.m
+%%% This function is used to find all gaps within a dataset that are as
+%%% much as, or less than a specified number of data points.
+%%% The output is a list of locations in the input file where this
+%%% condition exists
+%%% for gap of 3, must go up to 3
+
+
+a = input_list;
+
+a_m1

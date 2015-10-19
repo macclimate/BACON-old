@@ -1,0 +1,201 @@
+function[met_master] = CR1000_metloader(site, year)
+loadstart = addpath_loadstart;
+if ischar(year) == false
+yr_str = num2str(year);    
+else
+yr_str = year;
+end
+%% DECLARE PATHS
+
+%%% Loads paths for Sapflow data
+if strcmp(site,'sf')==true        %%%% check if processing sapflow or met data
+    %%% Defines the path where the raw data file is to be loaded
+    pth_data_start = ([ loadstart 'Matlab/Data/Met/Raw1/Sapflow/' yr_str '/']);
+    %%% Establish Output directories for master file, 5min, 30min and 1 hour column vectors
+    output_dir = ([ loadstart 'Matlab/Data/Met/Organized2/Sapflow/Master/']);    % Master file
+
+    % elseif strcmp(site,'TP_PPT')==true        %%%% check if processing Fish Hatchery Precip Data
+    % pth_data_start = ([ loadstart 'Matlab/Data/Met/Raw1/' site '/' yr_str '/']);
+    % %%% Establish Output directories for master file, 5min, 30min and 1 hour column vectors
+    % output_dir = ([ loadstart 'Matlab/Data/Met/Organized2/' site '/Master/']);    % Master file
+
+else
+    % pth_hdr = ('C:/Home/Matlab/Data/Met/Raw1/Docs/'); %% declare the folder where column header .txt files are located
+    %%% Defines the path where the raw data file is to be loaded
+    pth_data_start = ([ loadstart 'Matlab/Data/Met/Raw1/' site '/' yr_str '/' ]);        % Defines the path where the raw data file is to be loaded
+    %%% Establish Output directories for master file, 5min, 30min and 1 hour column vectors
+    output_dir = [ loadstart 'Matlab/Data/Met/Organized2/' site '/Master/'];    % Master File
+end
+
+%%% Declare the header .txt (or .csv) files and data files are located
+pth_hdr_start = ([ loadstart 'Matlab/Data/Met/Raw1/Docs/']);
+
+[dir_data] = uigetdir(pth_data_start,'Select directory to process data');
+
+[file_tmpt dir_tmpt] = uigetfile('*.csv','Select Output Template file for atmo data',pth_hdr_start);
+pth_tmpt = [dir_tmpt file_tmpt];
+
+pth_names = [loadstart 'Matlab/Data/Met/Raw1/Docs/' site '_CR1000_Namefile.csv'];
+
+
+%% OPEN HEADER FILES %%%%%%%%%%%%%%%%%%%%%%%
+%%% Open the output template file
+[hdr_cell_tmpt] = jjb_hdr_read(pth_tmpt ,',',3);
+%%% Open the variable name conversion file
+[hdr_names] = jjb_hdr_read(pth_names,',',2);
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%                   LOADING OR CREATING MASTER FILE:
+% Determine length of columns needed if master file needs to be created:
+if strcmp(site,'TP39')==true
+    num_cols = 110;
+elseif strcmp(site,'TP_PPT')==true
+    num_cols = 30;
+else
+    num_cols = 60;
+end
+% Determine Year length:
+[junk(:,1) junk(:,2) junk(:,3) junk(:,4)]  = jjb_makedate(str2double(yr_str),30);
+yr_len = length(junk);
+clear junk
+% Find out if master file exists, or if one needs to be made:
+if exist([output_dir site 'master' yr_str '.dat']);                           % Check if the output master file already exists
+    disp ('Master File exists --- Opening for appending')
+    met_master = load([output_dir site 'master' yr_str '.dat']); % If master file exists, open it for appending
+       
+    if strcmp(site,'TP_PPT')==true
+        TV = make_tv(str2num(yr_str),30);
+        [year JD HHMM] =jjb_makedate(str2num(yr_str),30);
+    else
+        TV = make_tv(str2num(yr_str),5);
+        [year JD HHMM] =jjb_makedate(str2num(yr_str),5);
+    end      
+    
+else
+    disp('Master File does not exist --- Creating file')                      % If master file does not exist,
+    if strcmp(site,'TP_PPT')==true
+        met_master(1:yr_len,1:num_cols) = NaN;
+    else
+        met_master(1:yr_len*6,1:num_cols) = NaN;                                % create a matrix with 60 (0r 110) empty NaN columns for every 5 minutes in a year
+    end
+    % make a time vector using make_tv function, place it into the first
+    % column of master file
+    if strcmp(site,'TP_PPT')==true
+        TV = make_tv(str2num(yr_str),30);
+        [year JD HHMM] =jjb_makedate(str2num(yr_str),30);
+    else
+        TV = make_tv(str2num(yr_str),5);
+        [year JD HHMM] =jjb_makedate(str2num(yr_str),5);
+    end
+    met_master(:,1) = TV;
+    met_master(:,2) = year(:,1);
+    met_master(:,3) = JD(:,1);
+    met_master(:,4) = HHMM(:,1);
+end
+
+%% **************************** LOAD data files from selected directory:
+D = dir(dir_data);
+good_file(1:length(D),1) = 0;
+for j = 1:1:length(D)
+    if D(j).isdir == 0;
+        good_file(j,1) = 1;
+    end
+end
+load_files = find(good_file == 1);
+clear good_file 
+%% Loop through files:
+for fn = 1:1:length(load_files)
+    disp(['Reading ' dir_data '/' D(load_files(fn)).name]);
+    fid = fopen([dir_data '/' D(load_files(fn)).name]);
+    data = [];
+    input_date = [];
+    error_ctr = 1;
+    %%%%%%%%%%%%%%%%%%%%%%%%%% Rips data out of raw file and puts variable
+    % name into one array and data into another %%%%%%%%%%%%%%%%%%%%%%%%%%
+    eofstat = 0;
+    j = 1; % keeps track of what line you are on:
+    row_ctr = 1;
+
+    while eofstat == 0;
+        if j == 1 || j == 3 || j == 4 ; % skip these lines -- junk
+            tline = fgets(fid);
+
+        elseif j == 2   % second line has variable names
+            tline = fgets(fid);
+%             junks = find(tline == '"');
+%             tline(junks) = '';
+            coms = find(tline == ',');
+            coms = [0 coms length(tline)+1];
+            for i = 1:1:length(coms)-1
+                names(i,1) = cellstr(tline(coms(i)+1:coms(i+1)-1));
+            end
+
+        else
+            tline = fgets(fid);
+            junks = find(tline == '"');
+            tline(junks) = '';
+            junks_nan = find(tline == 'A');
+            tline(junks_nan) = 'a';
+
+            coms = find(tline == ',');
+            coms = [0 coms length(tline)+1];
+
+            time_stamp(row_ctr,:) = tline(coms(1)+1:coms(2)-1);
+
+            for i = 2:1:length(coms)-1
+                try
+                data(row_ctr,i) = str2num(tline(coms(i)+1:coms(i+1)-1));
+                catch
+                data(row_ctr,i) = NaN;    
+                disp(['data error at row: ' num2str(row_ctr) ', column: ' num2str(i) ' of file: ' D(load_files(fn)).name]) 
+                error(fn).name = D(load_files(fn)).name;
+                error(fn).log(error_ctr,1:2) = [row_ctr i];
+                error_ctr = error_ctr + 1; 
+                end
+            end
+
+
+            row_ctr = row_ctr+1;
+        end
+        clear tline junks coms;
+        eofstat = feof(fid);
+        j = j + 1;
+
+    end
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+    %%% Convert time_stamp into a timevector
+
+    % YYYY(:,1) = str2num(time_stamp(:,1:4));
+
+    input_date(:,1) = JJB_DL2Datenum(str2num(time_stamp(:,1:4)), str2num(time_stamp(:,6:7)), ...
+        str2num(time_stamp(:,9:10)), str2num(time_stamp(:,12:13)), str2num(time_stamp(:,15:16)), 00);
+%     input_date2(:,1) = datenum(str2num(time_stamp(:,1:4)), str2num(time_stamp(:,6:7)), ...
+%         str2num(time_stamp(:,9:10)), str2num(time_stamp(:,12:13)), str2num(time_stamp(:,15:16)), 00);
+
+    
+    [row_common row_in row_master] = intersect(input_date(:,1), TV);
+
+    for vars = 1:1:length(names) % cycles through all columns in raw data file
+        
+        name_row = find(strcmp(hdr_names(:,1),names(vars))==1); % finds row in namefile where variable name exists
+        right_name = char(hdr_names(name_row,2)); % converts variable name to its final storage name
+
+        if isempty(right_name)
+        else
+
+            try
+                right_name(right_name =='"') = '';
+                right_col = find(strcmp(hdr_cell_tmpt(:,2),right_name)==1);
+                met_master(row_master,right_col) = data(row_in,vars);
+                clear right_col
+            catch
+                disp(['variable ' char(right_name) ' not processed.']);
+            end
+        end
+        clear name_row right_name
+        
+        
+    end 
+    clear names
+end

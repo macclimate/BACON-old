@@ -1,0 +1,445 @@
+% EdiRe_clean_all.m
+
+clear all; close all;
+% site = 'TP74';
+% site = 'TP89';
+site = 'TP02';
+
+%% Declare Paths:
+ls = addpath_loadstart;
+load_dir = [ls 'Matlab/Data/Flux/OPEC/EdiRe/' site '/Processed/'];
+out_path = [ls 'Matlab/Data/Flux/OPEC/EdiRe/' site '/Processed/'];
+OPEC30_path = [ls 'Matlab/Data/Flux/OPEC/Cleaned3/' site '/'];
+thresh_path = [ls 'Matlab/Data/Flux/OPEC/EdiRe/Docs/'];
+fluxsave_path = [ls 'Matlab/Data/Flux/OPEC/EdiRe/' site '/Processed/'];
+
+%% Load Data and Threshold file:
+disp('Loading Master File.... Please Wait');
+load([load_dir  site '_EdiRe_all.mat']);
+disp('loading threshold file');
+thresh = jjb_hdr_read([thresh_path site '_EdiRe_OPEC_thresholds.csv'],',',4);
+
+low_thresh(length(thresh),1) = NaN;
+high_thresh(length(thresh),1) = NaN;
+
+for j = 5:1:length(thresh)
+    low_thresh(j,1) = str2num(char(thresh{j,3}));
+    high_thresh(j,1) = str2num(char(thresh{j,4}));
+end
+
+%% Clean outliers from data using thresholds
+[r c] = size(EdiRe_all);
+skip_flag = 0;
+for loop = 5:1:c
+    if skip_flag == 0;
+        accept = 1;
+        % columns 4 and 5 are the lower/upper thresholds, respectively.
+        if ~isnan(thresh{loop,3})
+            var_title = char(thresh{loop,2});
+            figure(1); clf;
+            plot(EdiRe_all(:,loop),'b-'); hold on; grid on;
+            line([1 length(EdiRe_all)],[low_thresh(loop,1) low_thresh(loop,1)],'Color',[1 0 0], 'LineStyle','--'); %lower limit
+            line([1 length(EdiRe_all)],[high_thresh(loop,1) high_thresh(loop,1)],'Color',[1 0 0], 'LineStyle','--'); %upper limit
+            thresh_range = abs(high_thresh(loop,1)- low_thresh(loop,1));
+            axis([1 length(EdiRe_all) low_thresh(loop,1)-(.1*thresh_range) high_thresh(loop,1)+(.1.*thresh_range)]);
+            title([var_title ', column' num2str(loop) 'of ' num2str(c)]);
+            response = input('Press enter to accept, "1" to enter new thresholds, 9 to accept all thresholds, or any other key to reject: ', 's');
+
+            if isequal(str2double(response),9)==1;
+                skip_flag = 1;
+            end
+
+
+            %%% If user wants to change thresholds..
+            if isequal(str2double(response),1)==1;
+                accept = 0;
+
+                while accept == 0;
+                    low_lim = input('enter new lower limit: ','s');
+                    low_thresh(loop,1) = str2double(low_lim);
+                    up_lim = input('enter new upper limit: ','s');
+                    high_thresh(loop,1) = str2double(up_lim);
+                    %%% plot again
+                    figure (1)
+                    clf;
+                    plot(EdiRe_all(:,loop),'b-'); hold on; grid on;
+                    line([1 length(EdiRe_all)],[low_thresh(loop,1) low_thresh(loop,1)],'Color',[1 0 0], 'LineStyle','--'); %lower limit
+                    line([1 length(EdiRe_all)],[high_thresh(loop,1) high_thresh(loop,1)],'Color',[1 0 0], 'LineStyle','--'); %upper limit
+                    thresh_range = abs(high_thresh(loop,1)- low_thresh(loop,1));
+                    axis([1 length(EdiRe_all) low_thresh(loop,1)-(.1*thresh_range) high_thresh(loop,1)+(.1.*thresh_range)]);
+                    title([var_title ', column' num2str(loop) 'of ' num2str(c)]);
+                    accept_resp = input('hit enter to accept, 1 to change again: ','s');
+                    if isempty(accept_resp)
+                        accept = 1;
+                    else
+                        accept = 0;
+                    end
+                end
+
+                saveflag = 1;
+
+            end
+
+            EdiRe_all(EdiRe_all(:,loop) < low_thresh(loop,1) | EdiRe_all(:,loop) > high_thresh(loop,1) ,loop) = NaN;
+            %         else
+            %         EdiRe_all(EdiRe_all(:,loop) < low_thresh(loop,1) | EdiRe_all(:,loop) > high_thresh(loop,1) ,loop) = NaN;
+
+        end
+    else
+        EdiRe_all(EdiRe_all(:,loop) < low_thresh(loop,1) | EdiRe_all(:,loop) > high_thresh(loop,1) ,loop) = NaN;
+    end
+end
+
+%% Save threshold file (if it has been changed)
+for j = 1:1:length(thresh);
+    thresh{j,3} = low_thresh(j,1);
+    thresh{j,4} = high_thresh(j,1);
+end
+
+format = '%s';
+fid = fopen([thresh_path site '_EdiRe_OPEC_thresholds.csv'],'w');
+for j = 1:1:length(thresh)
+    for k = 1:1:2
+        fprintf(fid, format, [char(thresh{j,k}) ',']);
+    end
+    fprintf(fid, '%6.2f',thresh{j,k+1});
+    fprintf(fid,'%s', ',');
+    fprintf(fid,'%6.2f\n', thresh{j,k+2});
+end
+fclose(fid)
+
+%% Special Location-Specific Fixes:
+switch site
+    case 'TP02';
+        % Large data shift
+EdiRe_all(65702:66366,5:end) = EdiRe_all(65168:65832,5:end);
+EdiRe_all(65168:65701,5:end) = NaN;
+        % Removing bad data
+EdiRe_all(45480:46735,5:end) = NaN; % remove what is really TP89 data in 2004
+EdiRe_all(64700:65175,5:end) = NaN; % remove what is really TP89 data in 2005
+
+    case 'TP89'
+                % Large data shift
+         EdiRe_all(64400:65169,5:end) = EdiRe_all(64363:65132,5:end);
+         EdiRe_all(64363:64399,5:end) = NaN;
+        % Removing bad data
+EdiRe_all(46740:48205,5:end) = NaN; % remove what is really TP02 data in 2004
+EdiRe_all(59900:61150,5:end) = NaN; % remove what is really TP02 data in 2005
+
+
+end
+
+
+
+%% Save cleaned version of data:
+save([out_path site '_EdiRe_all_cleaned.mat'], 'EdiRe_all');
+
+%% Load relevant met data:
+load([ls 'Matlab/Data/Data_Analysis/rEC/' site '.mat']);
+met = eval(site);
+eval( ['clear ' site]);
+
+%%% Organize height information
+toph(1:length(EdiRe_all),1) = NaN; % height from cpy CO2 sensor to top sensor
+cpyh(1:length(EdiRe_all),1) = NaN; % height from ground to cpy CO2 sensor
+z_tot(1:length(EdiRe_all),1) = NaN;
+
+ctr = 1;
+for yr = 2002:1:2010
+    try
+        [final] = params(num2str(yr), site, 'CO2_storage');
+        z = final(:,1); z_top = final(:,2); z_cpy = final(:,3); col_flag = final(:,4);
+    catch
+        z = 1; z_top = 1; z_cpy = 1;
+    end
+    %         yr_len = yr_length(yr);
+    toph(EdiRe_all(:,2)==yr) = z_top;
+    cpyh(EdiRe_all(:,2)==yr) = z_cpy;
+%     [junk1, junk2, junk3, dt_temp] = jjb_makedate(yr, 30);
+%     dt_30 = [dt_30; dt_temp];
+    clear z z_top z_cpy;
+end
+
+%%% Met data:
+Ta(1:(length(EdiRe_all)),1) = NaN;APR(1:(length(EdiRe_all)),1) = NaN;
+WS(1:(length(EdiRe_all)),1) = NaN;WDir(1:(length(EdiRe_all)),1) = NaN;
+Year30(1:(length(EdiRe_all)),1) = NaN;dt30(1:(length(EdiRe_all)),1) = NaN;
+Hour(1:(length(EdiRe_all)),1) = NaN;Minute(1:(length(EdiRe_all)),1) = NaN;
+VPD(1:(length(EdiRe_all)),1) = NaN;Ts5(1:(length(EdiRe_all)),1) = NaN;
+PAR(1:(length(EdiRe_all)),1) = NaN;SMa(1:(length(EdiRe_all)),1) = NaN;
+SMb(1:(length(EdiRe_all)),1) = NaN;
+
+%%% Put met Ta into a vector and then put it into hhourly Ta for
+Ta_sub = jjb_struct2col(met, 'Ta'); Ta(17521:17520+length(Ta_sub),1) = Ta_sub;
+APR_sub = jjb_struct2col(met, 'APR'); APR(17521:17520+length(APR_sub),1) = APR_sub;
+WS_sub = jjb_struct2col(met, 'WS'); WS(17521:17520+length(WS_sub),1) = WS_sub;
+WDir_sub = jjb_struct2col(met, 'WDir');WDir(17521:17520+length(WDir_sub),1) = WDir_sub;
+Year30_sub = jjb_struct2col(met, 'Year');Year30(17521:17520+length(Year30_sub),1) = Year30_sub;
+dt_sub = jjb_struct2col(met, 'dt'); dt30(17521:17520+length(dt_sub),1) = dt_sub;
+Hour_sub = jjb_struct2col(met, 'Hour'); Hour(17521:17520+length(Hour_sub),1) = Hour_sub;
+Minute_sub = jjb_struct2col(met, 'Minute'); Minute(17521:17520+length(Minute_sub),1) = Minute_sub;
+VPD_sub = jjb_struct2col(met, 'VPD'); VPD(17521:17520+length(VPD_sub),1) = VPD_sub;
+Ts5_sub = jjb_struct2col(met, 'Ts5'); Ts5(17521:17520+length(Ts5_sub),1) = Ts5_sub;
+PAR_sub = jjb_struct2col(met, 'PAR'); PAR(17521:17520+length(PAR_sub),1) = PAR_sub;
+SMa_sub = jjb_struct2col(met, 'SMa'); SMa(17521:17520+length(SMa_sub),1) = SMa_sub;
+SMb_sub = jjb_struct2col(met, 'SMb'); SMb(17521:17520+length(SMb_sub),1) = SMb_sub;
+
+%%%% Sub in numbers for 2002:
+Year30(1:17520,1) = 2002; 
+dt30(1:17520,1) = dt30(Year30==2003,1); 
+Hour(1:17520,1) = Hour(Year30==2003,1); 
+Minute(1:17520,1) = Minute(Year30==2003,1);
+
+start_2008 = find(Year30==2008,1,'first');
+if isempty(start_2008); start_2008 = 105169; end
+Ta(start_2008:length(Ta),1) = [Ta(start_2008+10:length(Ta),1); NaN.*ones(10,1)];
+APR(start_2008:length(APR),1) = [APR(start_2008+10:length(APR),1); NaN.*ones(10,1)];
+WS(start_2008:length(WS),1) = [WS(start_2008+10:length(WS),1); NaN.*ones(10,1)];
+WDir(start_2008:length(WDir),1) = [WDir(start_2008+10:length(WDir),1); NaN.*ones(10,1)];
+dt30(start_2008:length(dt30),1) = [dt30(start_2008+10:length(dt30),1); NaN.*ones(10,1)];
+Hour(start_2008:length(Hour),1) = [Hour(start_2008+10:length(Hour),1); NaN.*ones(10,1)];
+Minute(start_2008:length(Minute),1) = [Minute(start_2008+10:length(Minute),1); NaN.*ones(10,1)];
+VPD(start_2008:length(VPD),1) = [VPD(start_2008+10:length(VPD),1); NaN.*ones(10,1)];
+Ts5(start_2008:length(Ts5),1) = [Ts5(start_2008+10:length(Ts5),1); NaN.*ones(10,1)];
+PAR(start_2008:length(PAR),1) = [PAR(start_2008+10:length(PAR),1); NaN.*ones(10,1)];
+SMa(start_2008:length(SMa),1) = [SMa(start_2008+10:length(SMa),1); NaN.*ones(10,1)];
+SMb(start_2008:length(SMb),1) = [SMb(start_2008+10:length(SMb),1); NaN.*ones(10,1)];
+
+clear *_sub;
+
+APR(isnan(APR),1) = 99;
+
+EdiRe_APR = EdiRe_all(:,13);
+EdiRe_Ta = EdiRe_all(:,16);
+EdiRe_WS = EdiRe_all(:,21);
+
+%%%% Plot Ta and APR data to see what data looks like:
+figure('Name', 'Ta, APR & WS: before shifting');clf;
+subplot(3,1,1);
+plot(Ta,'b.-'); hold on;
+plot(EdiRe_Ta,'r.-');
+legend('met', 'EdiRe');
+title('Ta');
+subplot(3,1,2);
+plot(APR,'b.-');hold on;
+plot(EdiRe_APR,'g.-')
+legend('met', 'EdiRe');
+title('APR');
+subplot(3,1,3);
+plot(WS,'b.-');hold on;
+plot(EdiRe_WS,'c.-')
+legend('met', 'EdiRe');
+title('WS');
+grid on;
+%% Calculate time-lag and shift data by appropriate amount:
+%%% First, try with Ta (might have to shift to WS)
+clear c lags;
+num_lags = 10;
+[start_times] = find_OPEC_intervals(EdiRe_Ta, 30);
+
+for j = 1:1:length(start_times)
+    try
+    Ta_met_in = Ta(start_times(j,1):start_times(j,2),1);
+    Ta_Edi_in = EdiRe_Ta(start_times(j,1):start_times(j,2),1);
+
+        [c_temp, lags_temp] = xcorr(Ta_met_in(~isnan(Ta_met_in.*Ta_Edi_in),1),Ta_Edi_in(~isnan(Ta_met_in.*Ta_Edi_in),1),num_lags);
+        c(1:num_lags*2+1,j) = c_temp(1:num_lags*2+1,1);
+        lags(1:num_lags*2+1,j) = lags_temp(1:num_lags*2+1);
+        c(:,j) = c(:,j)./(max(c(:,j)));
+        clear c_temp lags_temp;
+
+        shift(j,1) = lags(find(c(:,j) == 1),j);
+    catch
+        c(:,j) = NaN;
+        lags(:,j) = NaN;
+        shift(j,1) = 0;
+    end
+
+%     clear Ta_met_in Ta_Edi_in
+end
+
+%%% Second, try with WS (APR is already taken from EdiRe APR):
+
+% clear c lags;
+
+num_lags = 10;
+[start_times2] = find_OPEC_intervals(EdiRe_WS, 30);
+
+for j = 1:1:length(start_times2)
+    try
+      
+    WS_met_in = WS(start_times2(j,1):start_times2(j,2),1);
+    WS_Edi_in = EdiRe_WS(start_times2(j,1):start_times2(j,2),1);
+
+        [c_temp2, lags_temp2] = xcorr(WS_met_in(~isnan(WS_met_in.*WS_Edi_in),1),WS_Edi_in(~isnan(WS_met_in.*WS_Edi_in),1),num_lags);
+        c2(1:num_lags*2+1,j) = c_temp2(1:num_lags*2+1,1);
+        lags2(1:num_lags*2+1,j) = lags_temp2(1:num_lags*2+1);
+        c2(:,j) = c2(:,j)./(max(c2(:,j)));
+        clear c_temp2 lags_temp2;
+
+        shift2(j,1) = lags2(find(c2(:,j) == 1),j);
+    catch
+        c2(:,j) = NaN;
+        lags2(:,j) = NaN;
+        shift2(j,1) = 0;
+    end
+
+%     clear Ta_met_in Ta_Edi_in
+end
+figure('Name','Compare windspeeds');clf
+plot(WS,'b.-'); hold on;
+plot(EdiRe_WS,'r.-');
+legend('met','EdiRe');
+grid on;
+%% Apply shifts to data to make EdiRe data conform to Met data:
+%%% Keep in mind that shift numbers in this program are the opposite to
+%%% those produced in the 10-min OPEC data comparison -- A negative shift
+%%% here means that EdiRe data needs to be shifted forward, whereas in
+%%% 10-min OPEC program, negative 'shift' means data needs to be moved
+%%% backwards.
+[rows cols] = size(EdiRe_all);
+tmp = EdiRe_all;
+
+for j = 1:1:length(start_times2)
+    ind_orig = (start_times2(j,1):1:start_times2(j,2))';
+    ind_new = ind_orig;
+    if shift2(j,1) > 0 %%% case where EdiRe data should be shifted ahead
+        for i = 1:1:abs(shift2(j,1))
+            ind_new = [ ind_new ; ind_new(end)+1];
+        end
+
+        EdiRe_all(ind_new, 5:cols) = [NaN.*ones(abs(shift2(j,1)),cols-5+1); EdiRe_all(ind_orig, 5:cols)];
+
+    elseif shift2(j,1) < 0 %% case where EdiRe data should be shifted back
+        
+        for i = 1:1:abs(shift2(j,1))
+            ind_new = [ind_new(1)-1 ; ind_new];
+        end
+
+        EdiRe_all(ind_new, 5:cols) = [EdiRe_all(ind_orig, 5:cols) ; NaN.*ones(abs(shift2(j,1)),cols-5+1)];
+
+    end
+
+    clear ind_orig ind_new
+end
+
+%%%% Plot Ta and APR data to see what data looks like:
+
+clear EdiRe_APR EdiRe_Ta EdiRe_WS;
+
+figure('Name', 'Ta, APR & WS: After shifting');clf;
+subplot(3,1,1);
+plot(Ta,'b.-'); hold on;
+plot(EdiRe_all(:,16),'r.-');
+legend('met', 'EdiRe');
+title('Ta');
+subplot(3,1,2);
+plot(APR,'b.-');hold on;
+plot(EdiRe_all(:,13),'g.-')
+legend('met', 'EdiRe');
+title('APR');
+subplot(3,1,3);
+plot(WS,'b.-');hold on;
+plot(EdiRe_all(:,21),'c.-')
+legend('met', 'EdiRe');
+title('WS');
+
+%% Now, we need to load CO2 storage data and calculate storage...
+% file will be loaded as OPEC_all30
+load([OPEC30_path site '_30min_all.mat']);
+CO2_cpy = OPEC_all30(:,92);
+CO2_top = EdiRe_all(:,19);
+% Fc_raw = EdiRe_all(:,20);
+% Fc_rot = EdiRe_all(:,32);
+% Fc_rot_freq = EdiRe_all(:,43);
+Fc_rot_freq_WPL = EdiRe_all(:,47);
+
+% clear OPEC_all30;
+
+figure('Name', 'Fc & CO_2');clf;
+subplot(2,1,1);
+plot(Fc_rot_freq_WPL,'b');
+title('Fc')
+subplot(2,1,2);
+plot(CO2_top,'b');hold on;
+plot(CO2_cpy,'g');
+title('CO_2 Concentrations');
+legend('top','cpy')
+
+switch site
+    case 'TP02'; height_flag = 1;    case 'TP74'; height_flag = 2;    case 'TP89'; height_flag = 2;    case 'TP39'; height_flag = 2;
+end
+
+%%%%%%% Final Storage Calculation and output of NEE
+[NEE_rot_freq_WPL Jt] = OPEC_storage_all(Fc_rot_freq_WPL, CO2_top, CO2_cpy, Ta, APR, toph, cpyh, dt30, height_flag);
+
+
+
+
+%% Advanced cleaning of H and LE (added 25-Nov-2009 by JJB):
+% Remove strings of zeros from data -- obvious erroneous data, and it
+% screws up the spike detection algorithms
+Hsraw = EdiRe_all(:,40); Hsraw(Hsraw == 0) = NaN;
+Htraw = EdiRe_all(:,41); Htraw(Htraw == 0) = NaN;
+LEraw = EdiRe_all(:,45); LEraw(LEraw == 0) = NaN;
+% Spike detection and removal algorithms:
+Hsraw_spike = OPEC_outlier_removal(site, Hsraw, 30, 'H');
+Htraw_spike = OPEC_outlier_removal(site, Htraw, 30, 'H');
+LEraw_spike = OPEC_outlier_removal(site, LEraw, 30, 'LE');
+
+figure('Name', 'Hs, Ht, LE' );clf;
+plot(Htraw_spike,'c');hold on;
+plot(Hsraw_spike,'b');
+plot(LEraw_spike,'m');
+legend('Ht','Hs','LE');
+
+
+%% Spike Detection and Removal:
+% A) For non-wind filtered data:
+NEE_spike_rot_freq_WPL = OPEC_outlier_removal(site, NEE_rot_freq_WPL, 30, 'Fc'); %OPEC_findspike(NEE_wind_rot, site, z_score, stdev);
+% B) For wind filtered data:
+
+
+%% Wind Filtering Data:
+%%% First, we have to fix some of this WDir data (some periods have a value
+%%% of 0 -- must have been broken.  This should be fixed in metcleaner or
+%%% metfixer in the future.
+OPEC_WDir = OPEC_all30(:,55);
+WDir(WDir==0,1) = NaN;
+WDir(isnan(WDir),1) = OPEC_WDir(isnan(WDir),1);
+
+NEE_spike_rot_freq_WPL_wind = OPEC_wind_filter(site, NEE_spike_rot_freq_WPL, WS, WDir);
+
+%% Create a master file for calculating fluxes:
+clear EdiRe_flux;
+EdiRe_flux = struct;
+EdiRe_flux.PAR = PAR;
+EdiRe_flux.WS = WS;
+EdiRe_flux.Ta = Ta;
+EdiRe_flux.APR = APR;
+EdiRe_flux.WDir = WDir;
+EdiRe_flux.Year = Year30;
+EdiRe_flux.dt = dt30;
+EdiRe_flux.Hour = Hour;
+EdiRe_flux.Minute = Minute;
+EdiRe_flux.VPD = VPD;
+EdiRe_flux.Ts5 = Ts5;
+EdiRe_flux.PAR = PAR;
+EdiRe_flux.SMa = SMa;
+EdiRe_flux.SMb = SMb;
+EdiRe_flux.ustar = EdiRe_all(:,25);
+EdiRe_flux.Hsraw = EdiRe_all(:,40);
+EdiRe_flux.Htraw = EdiRe_all(:,41);
+EdiRe_flux.LEraw = EdiRe_all(:,45);
+EdiRe_flux.Fc_freq_corr_factor = EdiRe_all(:,37);
+EdiRe_flux.NEE_rot_freq_WPL = NEE_spike_rot_freq_WPL;
+EdiRe_flux.NEE_rot_freq_WPL_wind = NEE_spike_rot_freq_WPL_wind;
+EdiRe_flux.site = site;
+% Following were added on 25-Nov-2009 by JJB
+EdiRe_flux.CO2_top = CO2_top;
+EdiRe_flux.CO2_cpy = CO2_cpy;
+EdirRe_flux.Fc = Fc_rot_freq_WPL;
+
+
+save([fluxsave_path site '_EdiRe_flux.mat'], 'EdiRe_flux');
+disp('done');

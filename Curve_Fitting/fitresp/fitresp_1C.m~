@@ -1,0 +1,52 @@
+function out = fitresp_1C(c_hat,x)
+%%% fitresp_1A: Lloyd and Taylor (RE-Ts) function, Reichstein and L&T Format
+%%% In this form, To is fixed at -46.02 C
+% c_hat(1) = Rref
+% c_hat(2) = Eo
+% c_hat(3) = To (fixed)
+global X Y stdev objfun fixed_coeff coeffs_to_fix;
+
+if ~isempty(coeffs_to_fix)==1
+    ctr = 1;
+    for i = 1:1:length(fixed_coeff)
+        if isnan(fixed_coeff(i))
+            c_hat_tmp(i) = c_hat(ctr);
+            ctr = ctr+1;
+        else
+            c_hat_tmp(i) = fixed_coeff(i);
+        end
+        
+    end
+    
+    c_hat = c_hat_tmp;
+end
+
+
+if nargin > 1
+%     y_hat = c_hat(:,1).*exp( -1.*c_hat(:,2) ./ ( x(:,1)+(273.15-c_hat(:,3)) ) );
+    y_hat = c_hat(:,1).*exp(c_hat(:,2).*( (1./(10-(-46.02))) - (1./x(:,1)-(-46.02)) ));
+    
+    out = y_hat;
+else
+% y_hat = c_hat(:,1).*exp( -1.*c_hat(:,2) ./ ( X(:,1)+(273.15-c_hat(:,3)) ) );
+    y_hat = c_hat(:,1).*exp(c_hat(:,2).*( (1./(10-(-46.02))) - (1./X(:,1)-(-46.02)) ));
+
+switch objfun
+    case 'OLS'
+        err = sum((y_hat - Y).^2);
+    case 'WSS'
+        err = sum(((y_hat - Y).^2)./(stdev.^2));
+    case 'MAWE'
+        err = (1./length(X)) .* ( sum(abs(y_hat - Y)./stdev));
+    otherwise
+        disp('no objective function specified')
+end
+out = err;
+end
+% end
+% if isempty(stdev)==1; err = sum((y_hat - Y).^2); else err = (1./length(X)) .* ( sum(abs(y_hat - Y)./stdev)); end
+% % try 
+% %     assignin('fit_eval','y_hat',y_hat);
+% % catch
+% % end
+% end

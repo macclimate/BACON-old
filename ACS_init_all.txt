@@ -1,0 +1,28 @@
+%ACS SAMPLE INI FILE
+Dates    = zeros(1,100);
+Dates(1) = datenum(2008,5,1,1,0,0);      %System initialization            
+
+c.ACS_name     = ['ACS Site #' num2str(SysNbr)];
+c.path         = [metdataPath 'data\'];
+c.hhour_path   = [metdataPath 'hhour\'];
+c.HF_ext       = '.DACS';
+c.hhour_ch_ext = ['.ACS_Flux_' num2str(SysNbr) '.mat'];
+
+c.chNbr = 8;                        %Number of chambers connected to the system
+c.slopeLength = 60;                 %Lenght of slope for each chamber in seconds 
+c.slopeDelay = 12;                  % delay time between solenoid switching and sample arrival to IRGA
+c.slopeSkipStart = 16;              %Number of seconds to skip at the beginning of each slope
+c.slopeSkipEnd = 14;                %Number of seconds to skip at the end of each slope
+c.chArea = 0.216 * ones(1,c.chNbr); %Chamber surface area in m2
+c.chVolume = 0.069 * ones(1,c.chNbr);%Chamber volume in m3
+
+c.chanMeasured.co2 = 1;     %High frequency co2 concentration channel
+c.chanMeasured.h2o = 2;     %High frequency h2o concentration channel
+c.chanMeasured.chNbr = 7;   %High frequency chamber number channel
+c.chanMeasured.airT = [13 13 13 13 13 13 13 13];   %High frequency air temperature channel
+c.chanMeasured.timer = 6;   %High frequency timer (seconds) channel
+c.chanMeasured.airP = [];   %High frequency pressure measurement channel (use [] if not measured and use the default c.pBar)
+c.chanNames = {'co2','h2o','Tlicor','Plicor','Vin','Timer','ChamberNum','DIO','Tc1','Tc2','Tc3','Tc4','Tc5','Tc6','Tc7','Tc8','Tc9','Tc10'};
+c.chanUnits = {'ppm','mmol/mol','\circC','kPa','V','Seconds','','','\circC','\circC','\circC','\circC','\circC','\circC','\circC','\circC','\circC','\circC'};
+
+c.pBar = 99000;            %Barometric pressure in pascals

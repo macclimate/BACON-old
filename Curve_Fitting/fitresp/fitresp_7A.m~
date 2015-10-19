@@ -1,0 +1,21 @@
+function out = fitresp_7A(c_hat,x)
+global X Y stdev objfun;
+
+if nargin > 1
+    
+    
+y_hat = (c_hat(1).*exp(c_hat(2).*X(:,1))).*(c_hat(3).*X(:,2) + c_hat(4).*X(:,2).^2);
+switch objfun
+    case 'OLS'
+        err = sum((y_hat - Y).^2);
+    case 'WSS'
+        err = sum(((y_hat - Y).^2)./stdev);
+    case 'MAWE'
+        err = (1./length(X)) .* ( sum(abs(y_hat - Y)./stdev));
+    otherwise
+        disp('no objective function specified')
+end
+
+% 
+% if isempty(stdev)==1; err = sum((y_hat - Y).^2); else err = (1./length(X)) .* ( sum(abs(y_hat - Y)./stdev)); end
+% end

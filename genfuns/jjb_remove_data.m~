@@ -1,0 +1,55 @@
+function [tracker] = jjb_remove_data(data)
+%%% This function allows the user to manually scroll through
+
+tracker = ones(length(data),1); % tracker is a column of ones -- if data deemed bad, will be changed to NaNs
+
+
+figure(10); clf;
+plot(1:1:length(data),data,'k.-'); hold on;
+st = input('select starting point for manual cleaning: ');
+if isempty(st)==1
+    %%% exit without doing anything
+    st = 1;
+end
+
+en = input('select end point: ');
+if isempty(en)==1
+    %%% exit without doing anything
+    en = length(data);
+
+end
+
+ctr = st;
+
+while ctr <=en
+% for loop2 = st:en
+    if ~isnan(data(ctr,1))
+        clf; plot(1:1:length(data),data,'k.-'); hold on;
+        axis([ctr-10 ctr+40 min(data(st:en,1)) max(data(st:en,1))])
+        plot(ctr,data(ctr,1),'MarkerEdgeColor','r','Marker','o','MarkerSize',10)
+        decision = input('0 to remove, enter to keep, 3 to skip ahead by 30 points');
+
+        if decision == 0
+            data(ctr,1) = NaN;
+            tracker(ctr,1) = NaN;
+            ctr = ctr+1;
+        elseif decision == 3
+            ctr = ctr+30;
+         ctr = ctr+30;
+        else
+            ctr = ctr+1;
+        end
+        
+        
+    end
+
+   else
+        ctr = ctr + 1;
+        
+    
+clear decision;
+end
+
+%
+%     save(['C:\HOME\MATLAB\Data\Met\Cleaned3\Met2\Met2_2007.' ext],'data','-ASCII');
+%     save(['C:\HOME\MATLAB\Data\Met\Organized2\Docs\M2_2007_Ts_tracker\Met2_2007.' ext],'tracker','-ASCII');

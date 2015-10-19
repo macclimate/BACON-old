@@ -1,0 +1,76 @@
+%This script is designed to take the daily average of PPT
+%%%%Created on February 26, 2009%%%%
+
+
+% --- get time ---
+days = 1;
+
+%%%%%%%%%%%%% 2003 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% --- get time vector ---
+load decdoy_00.txt;
+dt = decdoy_00;
+TimeX = dt;
+
+%To load data%
+
+PPT= load('C:/DATA/metdata 2008/TP39_2008.038');
+
+JD = load('C:/DATA/metdata 2008/TP39_2008.003');
+HHMM = load('C:/DATA/metdata 2008/TP39_2008.004');
+
+% --- get PPT ---
+PPT =  PPT; % mm
+[PPTsum,PPTmean,TimeX] = integzBC1(dt(~isnan(PPT)),PPT(~isnan(PPT)),1:365,days); 
+PPTsum	=	PPTsum'; 
+save 'C:\DATA\condensed\daily\PPT_DM.dat'  PPTsum   -ASCII
+
+% % --- get Ts5, oC ---
+% SM10 =  SM10; % oC 
+% [SM10sum,SM10mean,TimeX] = integzBC1(dt(~isnan(SM10)),SM10(~isnan(SM10)),1:365,days); 
+% SM10Mean	=	SM10mean'; 
+% save 'C:\DATA\condensed\daily\SM10_DM.dat' SM10Mean   -ASCII
+% 
+% % --- get Ts10, oC ---
+% SM20 =  SM20; % oC 
+% [SM20sum,SM20mean,TimeX] = integzBC1(dt(~isnan(SM20)),SM20(~isnan(SM20)),1:365,days); 
+% SM20Mean	=	SM20mean'; 
+% save 'C:\DATA\condensed\daily\SM20_DM.dat' SM20Mean   -ASCII
+
+% --- get Ts20, oC ---
+%Ts20 =  Ts20; % oC 
+%[Ts20sum,Ts20mean,TimeX] = integzBC1(dt(~isnan(Ts20)),Ts20(~isnan(Ts20)),1:365,days); 
+%Ts20Mean	=	Ts20mean'; 
+%save 'C:\DATA\condensed\daily\Ts20_DM.dat'  Ts20Mean   -ASCII
+
+
+
+%% Plot and see the data
+
+load 'C:\DATA\condensed\daily\PPT_DM.dat';
+% load 'C:\DATA\condensed\daily\SM10_DM.dat';
+% load 'C:\DATA\condensed\daily\SM20_DM.dat';
+% %load 'C:\DATA\condensed\daily\Ts20_DM.dat';
+
+figure (1);
+hold on;
+%plot (Ts2_DM, 'r','LineWidth',2);
+bar(PPT_DM);
+% plot (SM10_DM, 'c','LineWidth',2);
+% plot (SM20_DM, 'g','LineWidth',2);
+legend('PPT',1);
+AXIS([1 365 0 60]);
+xlabel 'DOY';
+ylabel 'Precipitation(mm)';
+title 'Precipitation 2008'
+
+figure (2);
+hold on;
+%plot (Ts2_DM, 'r','LineWidth',2);
+bar (PPT_DM);
+% plot (SM10_DM, 'c','LineWidth',2);
+% plot (SM20_DM, 'g','LineWidth',2);
+legend('PPT',1);
+AXIS([214 365 0 60]);
+xlabel 'DOY';
+ylabel 'Precipitation(mm)';
+title 'Precipitation for August to December 2008'

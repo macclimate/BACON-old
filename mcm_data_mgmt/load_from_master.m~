@@ -1,0 +1,28 @@
+function [var_out, varargout] = load_from_master(struct_in, var_to_find)
+
+[r c] = size(struct_in.labels);
+% var_to_find = 'Hs';
+right_row = [];
+for i = 1:1:r
+    test(i,1) = strncmp(var_to_find, struct_in.labels(i,:),length(var_to_find));
+end
+    right_col = find(test == 1);
+    
+    if isempty(right_col)
+        disp(['Cannot find the right row for the variable ' var_to_find])
+    var_out = [];
+    else
+        var_out = struct_in.data(:,right_col);
+    end
+
+    nout = max(nargout,1)-1;
+    for k = 1:nout
+        varargout = {right_col};
+    end
+%     if nargout == 1
+%         varargout = var_out;
+%     else 
+%         varargout = [right_col var_out];
+%     end
+end    
+    

@@ -1,0 +1,15 @@
+clear all;
+load('/home/brodeujj/1/fielddata/Matlab/Data/Master_Files/TP39/TP39_gapfill_data_in.mat');
+
+data = trim_data_files(data,2004,2006);
+
+ind_use = find(~isnan(data.NEE.*data.Ts5) & data.PAR < 20 & data.Ustar < 0.3);
+RE = data.NEE(ind_use);
+
+
+options.costfun = 'OLS';
+options.min_method = 'NM';
+options.f_coeff = [];
+
+    [c_hat, y_hat, y_pred, stats, sigma, err, exitflag, num_iter] = ...
+        fitresp([2 3], 'fitresp_3A', data.Ts5(ind_use), RE, data.Ts5, [], options);

@@ -1,0 +1,95 @@
+function [] = mcm_NEE_Gapfill_main(year, site)
+
+% mcm_NEE_Gapfill_main.m
+% usage: mcm_NEE_Gapfill_main(site, year)
+% This function is called by the mcm_start_mgmt GUI, and calls the
+% different gapfilling functions.
+
+%%% NOTES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% - Should we have the user set the Ustar_th, footprint, etc, or do we just
+% run for all possibilities? We could also make it so that it could be run
+% for a single case, but by default run for the entire range
+
+%%%%%%%%%%%%%%%%% Get Start and end Years: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+if nargin == 1
+    site = year;
+    year = [];
+elseif nargin == 2
+    if numel(year) == 1 || ischar(year)==1
+        if ischar(year)
+            year = str2double(year);
+        end
+        year_start = year;
+        year_end = year;
+    end
+end
+
+if isempty(year)==1
+    year_start = input('Enter start year: > ');
+    year_end = input('Enter end year: > ');
+end
+%%% Check if site is entered as string -- if not, convert it.
+if ischar(site) == false
+    site = num2str(site);
+end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Set Options:
+options.fp_type = {'Schuepp'};
+options.fp_Xcrit = (0.6:0.05:0.9)';
+switch site
+    case 'TP39'
+        options.ustar_th = (0.15:0.025:0.45)';
+    case 'TP74'
+        options.ustar_th = (0.10:0.025:0.40)';
+    case 'TP89'
+        options.ustar_th = (0.15:0.05:0.65)';
+    case 'TP02'
+        options.ustar_th = (0.05:0.025:0.30)';
+    case 'TP_OAK'
+        options.ustar_th = (0.15:0.025:0.45)';
+end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Pre-defined variables, mostly for plotting:
+test_Ts = (-10:2:26)';
+test_PAR = (0:200:2400)';
+clrs = [1 0 0; 0.5 0 0; 0 1 0; 0.8 0.5 0.7; 0 0 1; 0.2 0.1 0.1; ...
+    1 1 0; 0.4 0.5 0.1; 1 0 1; 0.9 0.9 0.4; 0 1 1; 0.4 0.8 0.1];
+% test_VPD = (0:0.2:3)';
+% test_SM = (0.045:0.005:0.10)';
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Paths:
+ls = addpath_loadstart;
+load_path = [ls 'Matlab/Data/Master_Files/' site '/'];
+save_path = [ls 'Matlab/Data/Flux/CPEC/' site '/Final_Calculated/'];
+footprint_path = [ls 'Matlab/Data/Flux/Footprint/'];
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Load gapfilling file and make appropriate adjustments:
+load([load_path site '_gapfill_data_in.mat']);
+% data.site = site;
+%%% trim data to fit with the years selected:
+data = trim_data_files(data,year_start, year_end,1);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Types of options:
+% 1. Method - FCRN vs ANN vs MDS, etc. etc.
+% 2. u*_th  - 
+% 3. Year - ** Although, this could be done by having continuous file for
+%%%%% all years
+% 4. Footprint Type (looking more and more like it should just be Scheupp)
+% 5. Footprint XCrit (usually 0.6 to 0.9)
+

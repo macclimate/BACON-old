@@ -1,0 +1,187 @@
+function [NEE_raw Jtfill] = OPEC_storage_all(FC, CO2_top, CO2_cpy, Ta, APR, toph_10, cpyh_10,dt, height_flag)
+
+
+%% OPEC_storage_all.m
+% This program calculates the changes in the amount of CO2 and heat stored beneath
+% the OPEC sensor, using CO2 concentration and temperature measured at the top of the
+% canopy, or measured at different points in the profile
+% Created July 31, 2007 by JJB
+% Inputs are year, site and input_loc
+% input_loc is simply 'met' or 'flux' and specifies if raw files are coming
+% from the met data or the flux data
+% Dr. Arain -- Please use the 'flux' option
+% Modified Feb 25, 2008 by JJB 
+%       - included raw NEE calculation into function, so that only Met_SHF
+%       and OPEC_storage have to be used before going to flux calculation
+%       scripts.
+
+% site = 'TP74';
+% 
+% %% Paths
+% loadstart = addpath_loadstart;
+% load_path_filled = ([loadstart 'Matlab/Data/Met/Final_Filled/' site '/' site '_' year '.']);
+% load_path_cleaned = ([loadstart 'Matlab/Data/Met/Cleaned3/' site '/' site '_' year '.']);
+% hdr_cleaned = jjb_hdr_read([loadstart 'Matlab/Data/Met/Raw1/Docs/' site '_OutputTemplate.csv'],',',3);
+% save_path = ([loadstart 'Matlab/Data/Flux/Final_Calculated/' site '/' site '_' year ]);
+% param_path = [loadstart 'Matlab/Data/Met/Calculated4/Docs/'];
+% 
+% load_path_OPEC = ([loadstart 'Matlab/Data/Flux/OPEC/Cleaned3/' site '/Column/' site '_HHdata_' year '.']);
+% hdr_OPEC = jjb_hdr_read([loadstart 'Matlab/Data/Flux/OPEC/Organized2/Docs/OPEC_30min_header.csv'],',',2);
+% 
+% %% Parameters:
+% [junk(:,1) junk(:,2) junk(:,3) dt]  = jjb_makedate(str2double(year),30);
+% param = params(year, num2str(site), 'CO2_storage');
+% z = param(:,1);     ztop = param(:,2);   zcpy = param(:,3);
+% col_flag = param(:,4);
+Ma = 28.97; % approx molar mass of dry air:
+rho_a = 1200;  % approx density of dry air (g/m3)
+z = toph_10+cpyh_10;
+% 
+% try
+%     Storage_params = dlmread([param_path 'TP_Storage_params.csv'],',');
+% catch
+%     Storage_params = [] ;
+% end
+
+% %% Load Variables;
+% %CO2 Concentrations:
+% [Y junk1 junk2 junk3] = jjb_makedate(str2num(year),30);
+% 
+% %%%%%%%%%% Try to load CO2 canopy
+% try
+%     CO2_cpy = jjb_load_var(hdr_cleaned, load_path_cleaned, 'CO2_Cnpy',2);
+% catch
+%     try
+%         CO2_cpy = jjb_load_var(hdr_OPEC, load_path_OPEC, 'co2stor_Avg',2);
+%     catch
+% 
+%         CO2_cpy = NaN.*ones(length(Y),1);
+%         disp('CO2_cpy not found');
+%     end
+% end
+% 
+% %%%%%%%%%% Load CO2 at EC sensor height:
+% CO2_top(1:length(CO2_cpy),1) = NaN;
+% 
+% try
+%     tmp_CO2_top = jjb_load_var(hdr_OPEC, load_path_OPEC, 'co2_Avg',2);
+% catch
+%     disp('cannot find CO2 at EC sensor height');
+% end
+% 
+% CO2_top(1:length(tmp_CO2_top),1) = tmp_CO2_top(1:length(tmp_CO2_top),1) ;
+% 
+% %%%%%%%%%% Load FC at EC sensor height:
+% 
+% FC(1:length(CO2_cpy),1) = NaN;
+% try
+%     tmp_FC = jjb_load_var(hdr_OPEC, load_path_OPEC, 'Fc_wpl',2);
+% catch
+%      disp('cannot find FC at EC sensor height');
+%  
+% end
+% FC(1:length(tmp_FC),1) = tmp_FC(1:length(tmp_FC),1) ;
+% 
+% %%%%%%%%%%%%% Try to load Ta and APR from Met source:
+% % From MET:
+% Ta = load([load_path_filled 'Ta']);
+% APR = load([load_path_filled 'APR']);
+% 
+% %% Convert FC and CO2 concentrations (if needed);
+% figure(4); clf
+% subplot(3,1,1); plot(CO2_cpy); hold on; title('CO2_cpy');
+% subplot(3,1,2); plot(CO2_top); hold on; title('CO2_top');
+% subplot(3,1,3); plot(FC); hold on; title('FC');
+% resp_CO2_cpy = input('do you want to convert CO2_cpy to ppm? <y/n> ','s');
+% if strcmp(resp_CO2_cpy,'y')==1; CO2_cpy = CO2_convert(CO2_cpy, Ta, APR, 4);end
+% subplot(3,1,1); plot(CO2_cpy,'r');
+% 
+% resp_CO2_top = input('do you want to convert CO2_top to ppm? <y/n> ','s');
+% if strcmp(resp_CO2_top,'y')==1; CO2_top = CO2_convert(CO2_top, Ta, APR, 4);end
+% subplot(3,1,2); plot(CO2_top,'r');
+% 
+% resp_FC = input('do you want to convert FC to umol/m2/s? <y/n> ','s');
+% if strcmp(resp_FC,'y')==1; FC = CO2_convert(FC, Ta, APR, 2);end
+% subplot(3,1,3); plot(FC,'r');
+
+%% Initial Clean on CO2_top and FC 
+%%% They may have come directly from the flux proc program:
+
+CO2_top(CO2_top < 300 | CO2_top > 800,1) = NaN;
+CO2_cpy(CO2_cpy < 300 | CO2_cpy > 800,1) = NaN;
+FC(FC < - 55 | FC > 25,1) = NaN;
+
+%% DO HEAT STORAGE FIRST:
+
+%%% Shift Temperature data by one point and take difference to get dT/dt
+%%% Also cuts off the extra data point that is created by adding NaN
+T1top = [NaN; Ta(1:length(Ta)-1)];
+T2top = [Ta(1:length(Ta)-1) ; NaN];
+
+%%% Heat Storage
+dTdt = T1top-T2top;
+Jt(:,1) = 22.25.*0.6.*dTdt +1.66;    %% Blanken et al. (1997)
+Jt(1,1) = Jt(2,1); Jt(length(dt),1) = Jt(length(dt)-1,1);
+%%% Fill small gaps with linear interp:
+[Jtfill] = jjb_interp_gap(Jt,[], 3);
+
+%% CO2 STORAGE:
+
+%%% Shift CO2_top data by one point and take difference to get dc/dt
+%%% Also cuts off the extra data point that is created by adding NaN
+c1top = [NaN; CO2_top(1:length(CO2_top)-1)];
+c2top = [CO2_top(1:length(CO2_top)-1) ; NaN];
+c1cpy = [NaN; CO2_cpy(1:length(CO2_cpy)-1)];
+c2cpy = [CO2_cpy(1:length(CO2_cpy)-1) ; NaN];
+
+%%%%%%%%%%%%%%%%%%%%% 1-height %%%%%%%%%%%%%%%%%%%%
+%%% Calculate CO2 storage in column below system: One-Height approach
+%%%*** Note the output of this is in umol/mol NOT IN mg/m^3 ***********
+% dcdt_1h(:,1) = (c2top-c1top).*(z/1800);
+dcdt_1h(:,1) = (c2top-c1top).*rho_a./Ma.*z./1800;
+
+%%%%%%%%%%%%%%%%% 2-height %%%%%%%%%%%%%%%%%%%%%%%%%%
+
+if height_flag == 2 % Calculate for the top and bottom halves
+    %%% top
+    dcdt_top = (c2top-c1top).*rho_a./Ma.*toph_10./1800;
+
+    %%% bottom
+    dcdt_cpy = (c2cpy-c1cpy).*rho_a./Ma.*cpyh_10./1800;   %%
+elseif height_flag == 1;
+    dcdt_top(1:length(dt),1) = NaN;
+    dcdt_cpy(1:length(dt),1) = NaN;
+end
+
+%%% Add top and bottom storages
+dcdt_2h(:,1) = dcdt_top + dcdt_cpy;  %% 2-height storage in umol/mol m^-2s^-1
+
+%% Remove outliers
+
+%%% Do the first-through removal of large outliers:
+dcdt_1h(abs(dcdt_1h) > 10) = NaN;
+dcdt_2h(abs(dcdt_2h) > 10) = NaN;
+
+figure(41);clf;
+plot(dcdt_1h,'b'); hold on;
+plot(dcdt_2h,'g');
+legend('1-height', '2-height')
+
+%%% We somehow need to quality control these CO2 storage estimates, since
+%%% we'll have to make a single estimate out of these-- average them?
+mean_ds(1:length(dcdt_1h),1) = NaN;
+% ind_both = find(~isnan(dcdt_1h.*dcdt_2h));
+mean_ds(~isnan(dcdt_1h.*dcdt_2h),1) = mean([dcdt_1h(~isnan(dcdt_1h.*dcdt_2h),1)' ; dcdt_2h(~isnan(dcdt_1h.*dcdt_2h),1)']);
+mean_ds(isnan(mean_ds),1) = dcdt_1h(isnan(mean_ds),1);
+mean_ds(isnan(mean_ds),1) = dcdt_2h(isnan(mean_ds),1);
+
+figure(41);
+plot(mean_ds,'r')
+
+%%% Fill small gaps by linear interpolation??:
+
+NEE_raw = FC + mean_ds;
+figure(102); clf;
+plot(NEE_raw,'k');
+% 
+

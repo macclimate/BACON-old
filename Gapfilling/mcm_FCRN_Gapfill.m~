@@ -1,0 +1,363 @@
+function [sums] = mcm_FCRN_Gapfill(site, year_start, year_end, Ustar_th, fp_options)
+%% mcm_FCRN_Gapfill.m
+%%% This function fills NEE data using the fluxnet-canada (CCP) standard
+%%% protocols, using a logistic RE-Ts function, and a Michaelis-Menten
+%%% GEP-PAR function.  Both models are adjusted for bias offset by use of
+%%% a time-varying-parameter.
+%%% Created in its current form by JJB, March 8, 2010.
+%%% usage: mcm_FCRN_Gapfill(site, year_start, year_end, Ustar_th)
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Revision History
+% Aug 1, 2010, JJB: Changed the format of the output file.  Instead of
+% using a single structure file with all variables as branches, I've
+% changed the output to a struct variable (master) with the following variables:
+% 1. master.data - matrix of all saved data
+% 2. master.labels - cell array with labels corresponding to columns in the
+% master.data matrix.
+%
+%
+%
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%% Footprint options for gap-filling:
+% All options are contained inside the variable fp_options
+% fp_options.footprint_flag: 0 (turns off footprint filtering)
+% or 1(turns it on)
+% fp_options.fpname: 'Scheupp' or 'Hsieh' - determines the footprint model
+% used
+% fp_options.XCrit: proportion of flux that must come from within footprint
+% to be used in gapfilling (e.g: 0.6, 0.7, 0.8)
+% fp_options.addtoname: a suffix that can be added to the end of the saved
+% data file to distinguish it from results of other runs.  If other options
+% are set within this program, addtoname is automatically derived, based on
+% the footprint model type and XCrit value
+
+if nargin == 4 
+    fp_options.footprint_flag = 0;
+    fp_options.addtoname = ''; % an extra part to put on the filename the data is saved under:
+elseif nargin == 5
+    if isfield(fp_options,'fpname')==1 && isfield(fp_options,'XCrit')==1 
+                fp_options.footprint_flag = 1;
+        fp_options.addtoname = [fp_options.fpname num2str(fp_options.XCrit*100)];
+
+    else
+        resp_fp = input('Do you want to apply a footprint filtering? <y/n>: ','s');
+        if strcmp(resp_fp,'y')==1
+            fp_resp = input('Footprint Model Type - (<1> for Schuepp, 2 for Hsieh): ');
+            switch  fp_resp
+                case 1
+                    fp_options.fpname = 'Schuepp';
+                case 2
+                    fp_options.fpname = 'Hsieh';
+            end
+            fp_options.XCrit = input('Enter Critical value (e.g. 0.7, 0.8) for cumulative flux withing footprint: ');
+            fp_options.footprint_flag = 1;
+            fp_options.addtoname = [fp_options.fpname num2str(fp_options.XCrit*100)];
+            
+        else
+            fp_options.footprint_flag = 0;
+            fp_options.addtoname = '';
+            
+        end
+    end
+end
+
+
+%% Make the model flexible to different amount of input information
+%%% Set Ustar threshold and years (if empty)
+if nargin == 1
+Ustar_th = input('Enter u* threshold: ');    
+year_start = input('Enter start year: ');
+year_end = input('Enter end year: ');
+end
+
+%%% Set Ustar threshold (if empty)
+if nargin == 3 || isempty(Ustar_th)
+Ustar_th = input('Enter u* threshold: ');
+end
+
+%%% Set years (if empty)
+if isempty(year_start)
+    year_start = input('Enter start year: ');
+end
+if isempty(year_end)
+    year_end = input('Enter end year: ');
+end
+
+%% Pre-defined variables, mostly for plotting:
+test_Ts = (-10:2:26)';
+test_PAR = (0:200:2400)';
+clrs = [1 0 0; 0.5 0 0; 0 1 0; 0.8 0.5 0.7; 0 0 1; 0.2 0.1 0.1; ...
+    1 1 0; 0.4 0.5 0.1; 1 0 1; 0.9 0.9 0.4; 0 1 1; 0.4 0.8 0.1];
+test_VPD = (0:0.2:3)';
+test_SM = (0.045:0.005:0.10)';
+
+%% Paths:
+ls = addpath_loadstart;
+load_path = [ls 'Matlab/Data/Master_Files/' site '/'];
+save_path = [ls 'Matlab/Data/Flux/CPEC/' site '/Final_Calculated/'];
+footprint_path = [ls 'Matlab/Data/Flux/Footprint/'];
+%% Load gapfilling file and make appropriate adjustments:
+load([load_path site '_gapfill_data_in.mat']);
+% data.site = site;
+%%% trim data to fit with the years selected:
+data = trim_data_files(data,year_start, year_end);
+%%% Calculate VPD from RH and Ta:
+data.VPD = VPD_calc(data.RH, data.Ta);
+[~, data.GDD] = GDD_calc(data.Ta,10,48,year_start:1:year_end);
+%%% Make a single SM index from a and b pits - use Pit A first, since at 
+%%% all sites it is the more dependable pit:
+% SM(1:length(data.SM_a),1) = NaN;
+% SM(isnan(SM),1) = data.SM_a(isnan(SM),1);
+% SM(isnan(SM),1) = data.SM_b(isnan(SM),1);
+data.SM = data.SM_a_filled;
+%%% Add a tag for the site name:
+data.site = site;
+
+%% Run Footprint Cleaning (if activated);
+if fp_options.footprint_flag == 1;
+    % Load the footprint flag file:
+    load([footprint_path site '_footprint_flag.mat'])
+    eval(['tmp_flag = footprint_flag.' fp_options.addtoname ';']);
+    data.fp_flag = tmp_flag(tmp_flag(:,1) >= year_start & tmp_flag(:,1) <= year_end,2);
+%%% Remove NEE values when outside of footprint:
+    data.NEE = data.NEE.*data.fp_flag;
+end
+
+
+%% Site- and Year-specific fixes to the data:
+
+% %%% For TP02 in 2008, incorporate the OPEC data:
+% switch site 
+%     case 'TP02'
+%         try
+%           ind = find(data.Year == 2008);
+%           if ~isempty(ind)
+%               data.NEE(data.Year == 2008 & isnan(data.NEE) & data.dt < 190) = data.NEE_OPEC(data.Year == 2008 & isnan(data.NEE) & data.dt < 190);
+%               data.Ustar(data.Year == 2008 & isnan(data.Ustar) & data.dt < 190) = data.Ustar_OPEC(data.Year == 2008 & isnan(data.Ustar) & data.dt < 190);
+%           end
+%         catch
+%         end
+% end
+
+%%% Estimate std associated with each measurement of NEE:
+data.NEEstd = NEE_random_error_estimator_v2(data, [], Ustar_th);
+close all;
+
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%% Part 1: Respiration %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% resp_day_constraints = [0 367];
+ % Calculate Rraw:
+ Rraw(1:length(data.NEE),1) = NaN;
+ RE_model(1:length(data.NEE),1) = NaN;
+
+ind_Rraw = find((data.Ustar >= Ustar_th & ~isnan(data.NEE) & data.PAR < 15) |... % growing season
+     (data.Ustar >= Ustar_th & ~isnan(data.NEE) & ((data.dt < 85 | data.dt > 335) & data.Ts5 < 0.2)) );                             % non-growing season
+Rraw(ind_Rraw) = data.NEE(ind_Rraw);
+
+ %%% Run through Ts_RE_logistic function:
+ ctr = 1;
+for year = year_start:1:year_end
+ind_param(ctr).RE = find((data.Year == year &data.Ustar >= Ustar_th & ~isnan(data.Ts5) & ~isnan(data.NEE) & data.PAR < 15) |... % growing season
+     (data.Year == year & data.Ustar >= Ustar_th & ~isnan(data.NEE) & data.Ts5 < -1  ) );                                   % non-growing season
+% Run Minimization:
+options.costfun ='WSS'; options.min_method ='NM'; 
+[c_hat(ctr).RE, y_hat(ctr).RE, y_pred(ctr).RE, stats(ctr).RE, sigma(ctr).RE, err(ctr).RE, exitflag(ctr).RE, num_iter(ctr).RE] = ...
+    fitresp([8 0.2 12], 'fitresp_2A', data.Ts5(ind_param(ctr).RE), data.NEE(ind_param(ctr).RE), data.Ts5(data.Year == year), data.NEEstd(ind_param(ctr).RE), options);
+RE_model(data.Year == year,1) = y_pred(ctr).RE;
+ctr = ctr+1;
+end
+%%% Calculate Time-varying-parameter:
+rw = jjb_AB_gapfill(RE_model, Rraw, [],200, 10, 'off', [], [], 'rw');
+%%% Adjust modeled RE by TVP:
+RE_tvp_adj = RE_model.*rw(:,2);
+
+%%% Plot the relationships for RE-Ts for each year:
+figure('Name', 'Annual REvsTs');clf;
+ctr = 1;
+for year = year_start:1:year_end
+test_Ts_y =    (c_hat(ctr).RE(1))./(1 + exp(c_hat(ctr).RE(2).*(c_hat(ctr).RE(3)-test_Ts)));
+    plot(test_Ts, test_Ts_y,'-','Color', clrs(ctr,:)); hold on;
+    ctr = ctr+1; 
+end
+legend(num2str((year_start:1:year_end)'));
+
+
+%%% Plot estimates with raw data:
+figure('Name','RE - raw vs. modeled');clf;
+plot(Rraw,'k');hold on;
+plot(RE_model,'b');
+plot(RE_tvp_adj,'r')
+legend('raw','model', 'adjusted')
+
+%%% Calculate stats for each:
+[RE_stats(1,1) RE_stats(1,2) RE_stats(1,3) RE_stats(1,4)] = model_stats(RE_model, Rraw,'off');
+[RE_stats(2,1) RE_stats(2,2) RE_stats(2,3) RE_stats(2,4)] = model_stats(RE_tvp_adj, Rraw,'off');
+%%% display stats on screen:
+disp('Stats for Each RE Model:');
+disp('              RMSE    |    rRMSE |     MAE     |   BE ');
+disp(['modeled:      ' num2str(RE_stats(1,:))]);
+disp(['tvp-adjusted: ' num2str(RE_stats(2,:))]);
+
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%% PHOTOSYNTHESIS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+GEPraw = RE_tvp_adj - data.NEE;
+GEPraw(data.PAR < 15) = NaN;
+GEP_model = zeros(length(GEPraw),1);
+GEP_pred = NaN.*ones(length(GEPraw),1);
+
+figure('Name','GEP-PAR relationship');clf
+ctr = 1;
+for year = year_start:1:year_end
+    %%% Index of good data to use for model parameterization:
+    ind_param(ctr).GEP = find(data.Ts5 > 2 & data.Ta > 2 & data.PAR > 15 & ~isnan(GEPraw) & data.Year == year & ~isnan(data.NEEstd));
+    %%% use M-M function to get coefficients for GEP-PAR relationship:
+options.costfun ='WSS'; options.min_method ='NM'; 
+    [c_hat(ctr).GEP, y_hat(ctr).GEP, y_pred(ctr).GEP, stats(ctr).GEP, sigma(ctr).GEP, err(ctr).GEP, exitflag(ctr).GEP, num_iter(ctr).GEP] = ...
+    fitGEP([0.1 40], 'fitGEP_1H1', data.PAR(ind_param(ctr).GEP),GEPraw(ind_param(ctr).GEP),  data.PAR(data.Year == year), data.NEEstd(ind_param(ctr).GEP), options);    
+% [GEP_coeff(ctr,:) GEP_pred GEP_r2 GEP_sigma] = hypmain1([0.01 10 0.1], 'fit_hyp1', data.PAR(ind_param_GEP), GEPraw(ind_param_GEP), data.NEEstd(ind_param_GEP));
+    %%% Estimate GEP for the given year:
+GEP_pred(data.Year == year) = y_pred(ctr).GEP;
+
+%GEP_coeff(ctr,1).*data.PAR(data.Year==year,1).*GEP_coeff(ctr,2)./...
+%    (GEP_coeff(ctr,1).*data.PAR(data.Year==year,1) + GEP_coeff(ctr,2));
+    %%% GEP relationship for plotting:
+    test_PAR_y = c_hat(ctr).GEP(1).*test_PAR.*c_hat(ctr).GEP(2)./...
+    (c_hat(ctr).GEP(1).*test_PAR + c_hat(ctr).GEP(2));
+    %%% Plot relationships:
+    plot(test_PAR, test_PAR_y,'-','Color', clrs(ctr,:)); hold on;
+    
+    clear GEP_r2 GEP_sigma test_PAR_y;
+    ctr = ctr+1;
+end
+legend(num2str((year_start:1:year_end)'));
+
+%%% Clean up any problems that may exist in the data:
+ind_GEP = find(data.PAR >= 15 & ((data.dt > 85 & data.dt < 330 & (data.GDD > 8 | data.Ts5 >= 1 & data.Ta > 2)) ...
+                | data.dt > 330 & data.Ts5 >= 1.25 & data.Ta > 2));
+GEP_model(ind_GEP) = GEP_pred(ind_GEP);
+
+%%% Calculate Time-varying-parameter:
+pw = jjb_AB_gapfill(GEP_model, GEPraw, [],200, 10, 'off', [], [], 'rw');
+%%% Adjust modeled GEP by TVP:
+GEP_tvp_adj = GEP_model.*pw(:,2);
+
+%%% Plot estimates with raw data:
+figure('Name','GEP - raw vs. modeled');clf;
+plot(GEPraw,'k');hold on;
+plot(GEP_pred,'c');
+plot(GEP_model,'b');
+plot(GEP_tvp_adj,'r')
+legend('raw','pred','modeled (cleaned)', 'adjusted')
+
+%%% Calculate stats for each:
+[GEP_stats(1,1) GEP_stats(1,2) GEP_stats(1,3) GEP_stats(1,4)] = model_stats(GEP_model, GEPraw,'off');
+[GEP_stats(2,1) GEP_stats(2,2) GEP_stats(2,3) GEP_stats(2,4)] = model_stats(GEP_tvp_adj, GEPraw,'off');
+%%% display stats on screen:
+disp('Stats for Each GEP Model:');
+disp('             RMSE    |    rRMSE  |  MAE     |    BE ');
+disp(['modeled:      ' num2str(GEP_stats(1,:))]);
+disp(['tvp-adjusted: ' num2str(GEP_stats(2,:))]);
+
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%  Final Filling & Output  %%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%% Clean NEE (ustar filtering):
+NEE_raw = data.NEE;
+NEE_clean = NEE_raw;
+NEE_clean(data.PAR < 15 & data.Ustar < Ustar_th,1) = NaN;
+
+%%% Fill RE - Use raw data when Ustar > threshold; otherwise, use model+tvp
+RE_filled(1:length(Rraw),1) = RE_tvp_adj;
+%%%% Uncomment this:
+% RE_filled(~isnan(Rraw) & data.Ustar > Ustar_th,1) = Rraw(~isnan(Rraw) & data.Ustar > Ustar_th,1);
+
+%%% Fill GEP:
+GEP_filled = zeros(length(GEPraw),1);
+% fill any nans in GEPraw with GEP_model:
+GEPraw(isnan(GEPraw) | GEPraw < 0,1) = GEP_tvp_adj(isnan(GEPraw) | GEPraw < 0,1);
+% Now, substitute GEPraw into GEP_filled when applicable (set by ind_GEP)
+ind_GEP = find(data.PAR >= 15 & ((data.dt > 85 & data.dt < 330 & (data.GDD > 8 | data.Ts5 >= 1 & data.Ta > 2)) ...
+                | data.dt > 330 & data.Ts5 >= 1.25 & data.Ta > 2));
+
+GEP_filled(ind_GEP) = GEPraw(ind_GEP);
+
+% GEP_filled = GEPraw;
+% GEP_filled(data.PAR < 15 | data.Ts5 < 0.5 | GEP_filled < 0) = NaN; 
+% GEP_filled(isnan(GEP_filled),1) = GEP_tvp_adj(isnan(GEP_filled),1);
+
+%%% Fill NEE:
+NEE_filled = NEE_clean;
+NEE_filled(isnan(NEE_filled),1) = RE_filled(isnan(NEE_filled),1) - GEP_filled(isnan(NEE_filled),1);
+
+%% Plot filled data:
+figure('Name', 'Final Filled Data');clf
+plot(NEE_filled)
+hold on;
+plot(RE_filled,'r')
+plot(-1.*GEP_filled,'g')
+%% The final loop to calculate annual sums and check for holes remaining in data:
+ctr = 1;
+for yr_ctr = year_start:1:year_end
+    holes(ctr,1) = yr_ctr;
+    try
+        %%% Special fix for 2003 -- we lost 8 datapoints due to UTC timeshift:
+        if yr_ctr == 2002;
+            NEE_filled(1:8,1) = NEE_filled(9,1);
+            RE_filled(1:8,1) = RE_filled(9,1);
+            GEP_filled(1:8,1) = GEP_filled(9,1);
+        end
+
+        NEE_sum(ctr,1) = sum(NEE_filled(data.Year== yr_ctr,1)).*0.0216  ; % sums is annual sum
+        GEP_sum(ctr,1) = sum(GEP_filled(data.Year== yr_ctr,1)).*0.0216  ;
+        RE_sum(ctr,1) = sum(RE_filled(data.Year== yr_ctr,1)).*0.0216  ;       
+        holes(ctr,2:4) = [length(find(isnan(NEE_filled(data.Year == yr_ctr,1)))) ...
+                        length(find(isnan(RE_filled(data.Year == yr_ctr,1)))) ... 
+                        length(find(isnan(GEP_filled(data.Year == yr_ctr,1))))] ;
+    catch
+        disp(['something went wrong calculating sums, year: ' num2str(yr_ctr)]);
+        NEE_sum(ctr,1) = NaN;
+        GEP_sum(ctr,1) =  NaN;
+        RE_sum(ctr,1) =  NaN;
+        holes(ctr,1:3) = NaN;
+    end
+
+ctr = ctr+1;
+end
+
+sums = [holes(:,1) NEE_sum(:,1) RE_sum(:,1) GEP_sum(:,1)];
+disp('Number of NaNs outstanding in data: Year | NEE | RE | GEP ');
+disp(holes);
+disp('Annual Totals: Year | NEE | RE | GEP ');
+disp(sums)
+
+%% Compile data and save:
+master.data = [data.Year NEE_raw NEE_clean NEE_filled GEP_filled RE_filled RE_tvp_adj GEP_tvp_adj];
+master.sums = sums;
+master.labels = {'Year'; 'NEE_raw'; 'NEE_clean'; 'NEE_filled'; 'GEP_filled'; 'RE_filled'; 'RE_model'; 'GEP_model'};
+
+% 
+% master.data.Year = data.Year(:,1);
+% master.data.NEE_raw = NEE_raw(:,1);
+% master.data.NEE_clean = NEE_clean(:,1);
+% master.data.NEE_filled = NEE_filled(:,1);
+% master.data.GEP_filled = GEP_filled(:,1);
+% master.data.RE_filled = RE_filled(:,1);
+% 
+% master.data.RE_model = RE_tvp_adj;  
+% master.data.GEP_model = GEP_tvp_adj;  
+% master.data.sums = sums;
+
+
+if ~isempty(fp_options.addtoname)
+    fp_options.addtoname = ['_' fp_options.addtoname];
+end
+
+
+save([save_path site '_FCRN_GapFilled_' num2str(year_start) '_' num2str(year_end) '_ust_th = ' num2str(Ustar_th)  fp_options.addtoname '.mat'],'master');
+disp('done!');

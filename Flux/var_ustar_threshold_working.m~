@@ -1,0 +1,23 @@
+Ts = data.Ts5(data.Year == 2006);
+Ustar = data.Ustar(data.Year == 2006);
+
+[Ts_sort ix] = sort(Ts);
+
+
+divs = round(linspace(1,length(Ts)+1,7))';
+
+ind_bins = [divs(1:6,1) divs(2:7,1)-1];
+for k = 1:1:size(ind_bins,1)
+    bin(k).Ts = Ts(ix(ind_bins(k,1):ind_bins(k,2)));
+    bin(k).ind = ix(ind_bins(k,1):ind_bins(k,2));
+
+end
+
+
+Ts_bins = [Ts_sort(divs(1:6,1),1) Ts_sort(divs(2:7,1)-1,1)];
+
+% Plot the CDF:
+figure(1);clf;
+x = linspace(0,1,17520)';
+plot(x,Ts_sort,'b.');
+

@@ -1,0 +1,54 @@
+function[loadstart] = addpath_loadstart()
+
+if exist(loadstart)==7
+else
+disp('1 = Linux - School');
+disp('2 = Windows - School');
+disp('3 = Linux - Home');
+disp('4 = Windows - Home');
+disp('5 = Windows - Laptop');
+disp('8 = Linux -- Run From portable drive');
+disp('9 = Windows -- Run From portable drive');
+resp = input('Enter a number to select the setup you wish to run: ');
+
+
+switch resp 
+    case 1
+       loadstart = '/home/brodeujj/'; 
+    case 2
+       loadstart = 'D:/home/';  
+    case 3
+       loadstart = '/home/jayb/';  
+    case 4
+       loadstart = 'D:/home/'; 
+    case 5 
+       loadstart = 'C:/home/'; 
+    case 8
+       loadstart = '/media/160GBLACIE/home/brodeujj/'; 
+    case 9
+        loadstart = 'E:/home/brodeujj/';
+end
+assignin('base', 'loadstart', loadstart)
+end
+
+    disp(['loadstart = ' loadstart]);
+    
+    
+% 
+% if ispc == 1
+%     if exist('D:/home/') == 7;
+%     loadstart = 'D:/home/';
+%     else
+%             loadstart = 'C:/HOME/';
+%     end
+% else
+%     if exist('/home/brodeujj/') == 7;
+%     loadstart = '/home/brodeujj/';
+%     elseif exist('/home/jayb/') == 7
+%     loadstart = '/home/jayb/';
+%     elseif exist('/media/storage/home/');
+%         loadstart = '/media/storage/home/';
+%     end
+% end
+% 
+% assignin('base', 'loadstart', loadstart)

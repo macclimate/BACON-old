@@ -1,0 +1,29 @@
+function [year_start year_end] = jjb_checkyear(year)
+
+%%% First, check if 'year' is a string.  If so, try and convert to number;
+if ischar(year)==1
+    try
+    year = eval(year);
+    catch
+        year = eval(
+end
+
+%%% Check if 'year' is empty (or NaN) -- if so, prompt for input:
+while isempty(year)==1 | isnan(year) == 1
+    year = input('Enter year(s) to process; single or sequence (e.g. [2007:2010]): >');
+    if ischar(year)==1
+        year = eval(year);
+    end
+end
+
+%%% Set year_start and year_end values (same if only for 1 year):
+if numel(year)>1
+        year_start = min(year);
+        year_end = max(year);
+else
+    year_start = year;
+    year_end = year;
+end
+
+
+end

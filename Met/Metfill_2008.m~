@@ -1,0 +1,86 @@
+%% Metfill_2008
+% This script fills all holes in 2008 data:
+clear all
+loadstart = addpath_loadstart;
+
+%Load Pressure
+TP74_p = load([loadstart 'Matlab/Data/Met/Organized2/TP74/Column/30min/TP74_2008.009']);
+TP39_p = load([loadstart 'Matlab/Data/Met/Organized2/TP39/Column/30min/TP39_2008.084']);
+
+TP74_PAR = load([loadstart 'Matlab/Data/Met/Organized2/TP74/Column/30min/TP74_2008.013']);
+TP39_PAR = load([loadstart 'Matlab/Data/Met/Organized2/TP39/Column/30min/TP39_2008.015']);
+
+TP74_Ta = load([loadstart 'Matlab/Data/Met/Organized2/TP74/Column/30min/TP74_2008.007']);
+TP39_Ta = load([loadstart 'Matlab/Data/Met/Organized2/TP39/Column/30min/TP39_2008.007']);
+
+
+
+% From this, we see the shift in data is 8 hhours (datapoints);
+figure(1); clf;
+plot(TP39_p); hold on;
+plot(TP74_p,'r');
+axis([0 17568 97 104]);
+
+%Move the pressure data back 8 datapoints from point758 onwards
+TP74_p(750:17560,1) = TP74_p(758:17568,1); TP74_p(17560:17568,1) = NaN;
+
+% Clean up TP39 data
+TP39_p(TP39_p < 96.5,1) = NaN;
+TP39_p(12380:13120,1) = NaN;
+TP39_p(13980:14480,1) = NaN;
+TP39_p(isnan(TP39_p) & ~isnan(TP74_p),1) = TP74_p(isnan(TP39_p) & ~isnan(TP74_p),1);
+
+
+% From this, we see the shift in data is 8 hhours (datapoints);
+figure(1); clf;
+plot(TP39_p); hold on;
+plot(TP74_p,'r');
+axis([0 17568 97 104]);
+
+%Move the pressure data back 8 datapoints from point758 onwards
+TP74_p(750:17560,1) = TP74_p(758:17568,1); TP74_p(17560:17568,1) = NaN;
+
+% Clean up TP39 data
+TP39_p(TP39_p < 96.5,1) = NaN;
+TP39_p(12380:13120,1) = NaN;
+TP39_p(13980:14480,1) = NaN;
+TP39_p(isnan(TP39_p) & ~isnan(TP74_p),1) = TP74_p(isnan(TP39_p) & ~isnan(TP74_p),1);
+
+%% Air Temperature:
+% From this, we see the shift in data is 8 hhours (datapoints);
+%Move the pressure data back 8 datapoints from point758 onwards
+TP74_Ta(750:17560,1) = TP74_Ta(758:17568,1); TP74_Ta(17560:17568,1) = NaN;
+TP74_Ta(11355:12468,1) = NaN; % broken sensor time:
+
+
+
+figure(2); clf;
+plot(TP39_Ta); hold on;
+plot(TP74_Ta,'r');
+axis([0 17568 -25 35]);
+
+
+% Clean up TP39 data
+
+TP39_Ta(isnan(TP39_Ta) & ~isnan(TP74_Ta),1) = TP74_Ta(isnan(TP39_Ta) & ~isnan(TP74_Ta),1);
+TP39_Ta =  jjb_interp_gap(TP39_Ta, (1:1:17568)', 3);
+
+
+% From this, we see the shift in data is 8 hhours (datapoints);
+figure(1); clf;
+plot(TP39_p); hold on;
+plot(TP74_p,'r');
+axis([0 17568 97 104]);
+
+%Move the pressure data back 8 datapoints from point758 onwards
+TP74_p(750:17560,1) = TP74_p(758:17568,1); TP74_p(17560:17568,1) = NaN;
+
+% Clean up TP39 data
+TP39_p(TP39_p < 96.5,1) = NaN;
+TP39_p(12380:13120,1) = NaN;
+TP39_p(13980:14480,1) = NaN;
+TP39_p(isnan(TP39_p) & ~isnan(TP74_p),1) = TP74_p(isnan(TP39_p) & ~isnan(TP74_p),1);
+
+
+metprep_manual(datenum(2008,01,01),datenum(2008,12,31),TP39_p, TP39_Ta, 'TP39', 2008)
+% (start_datenum, end_datenum, Pres, T_air, site, year)

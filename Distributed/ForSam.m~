@@ -1,0 +1,667 @@
+%% Script for calculating NEP for Sam.
+%%% Here's the order of things that are done in this script to get
+%%% gap-filled values for NEP:
+% 1. Load variables, calculate averages if needed, fill gaps if needed
+%   - NEE is calculated as FC(raw) + dcdt (storage)
+% 2. Calculate Ts vs Re relationship for each year separately
+%   - using a u* threshold and no u* threshold 
+%   - bin averaging and not bin-averaging data
+% 2a. Ts vs Re also calculated for all years combined
+%   - bin avg vs non-bin avg
+%  **** I've been using the bin-avg data with ustar = 0.25 for Met 1
+% 3. raw GEP = Resp - NEE
+%   a) Plot GEP vs. different environment variables (Ts, VPD, SM, etc)
+%4. CREATE GEP MODEL
+%    a) filter data for ideal conditions for photosynthesis(growing season,
+%    high ustar, high soil moisture, high temp, etc etc) -- use the
+%    relationship between PAR and GEP to get max GEP equations for each
+%    year
+%   b) Create logistic function to model the influence of soil temperature
+%   on GEP (get a 0 to 1 scaling factor).. Multiply scaling factor by the
+%   max GEP to model GEP based on soil temperature influence
+%   c) remove influence of soil temperature on raw GEP by dividing by the
+%   scaling factor for each data point -- Use this GEP to regress against
+%   VPD using a logistic equation -- results in another scaling factor
+%   (less than or equal to 1).  Multiply this into the modeled GEP to
+%   reduce it further
+%   d) remove VPD influence from raw GEP and regress against Soil Moisture
+%   -- get a hyperbolic relationship to use as another scaling factor
+%   (less than or equal to 1).  Multiply this onto modeled GEP.
+% 5. Clean raw NEE -- remove spikes, obvious outliers  
+% 6. Clean raw GEP 
+% 7. Fill gaps in raw GEP with modeled GEP,
+% 8. Clean respiration data and fill with modeled respiration
+% 9. Fill NEE by using modeled GEP and R
+% 10. Calculate Final numbers
+% 11. See if these numbers match what you think should be the case.  If so,
+% publish.  If not, go back and fiddle with the program until you get the
+% numbers you want.  (This one is meant as a joke.. ok.. sort of.)
+
+%% Specify paths and options
+clear all
+close all
+st_yr = 2003;
+end_yr = 2005;
+n_yrs = end_yr - st_yr +1;
+model_type = 1;  
+% 1 specifies models for each separate year, 
+% 2 specifies average resp model and yearly GEP, and 
+% 3 specifies average models for both
+% 4 specifies each seperate year, using Ta > 8
+% 5 specifies avg resp eqn, using Ta > 8
+
+path = 'C:\HOME\MATLAB\Data\SAM_CR\';
+
+% [T_air1 PAR1 Ts1 Ts51 SM1 NEE1 ustar1 dt1 year1 WS1 Wdir1 VPD1]
+
+if exist([path 'CR_Fluxdata.dat']) == 2;
+all_vars = load([path 'CR_Fluxdata.dat']);
+T_air1 = all_vars(:,1);
+PAR1 = all_vars(:,2);
+Ts2 = all_vars(:,3);
+Ts5 = all_vars(:,4);
+SM1 = all_vars(:,5);
+NEE1 = all_vars(:,6); %NEE1(NEE1 > 35 | NEE1 < -35) = NaN;
+ustar1 = all_vars(:,7);
+dt1 = all_vars(:,8);
+year1 = all_vars(:,9);
+WS1 = all_vars(:,10);
+Wdir1 = all_vars(:,11);
+VPD1 = all_vars(:,12);
+else 
+    disp('Where is the data?')
+end
+
+%% For the time being.... use 5cm soil temp as the main one:
+
+Ts1 = Ts5;
+
+%% Establish Ts vs Re relationship:
+
+Ts_test = (-4:2:26)';
+plot_color = [1 0 0 0.5 0 0; 0 1 0 0.8 0.5 0.7 ; 0 0 1 0.2 0.1 0.1; 1 1 0 0.4 0.5 0.1; 1 0 1 0.9 0.9 0.4; 0 1 1 0.4 0.8 0.1];
+counter = 1;
+for jj = st_yr:1:end_yr
+    
+%%% Select needed data for ustar-delimited and non-ustar delimited:
+    ind_regress = find(Ts1 > -4 & PAR1 < 10 & ~isnan(Ts1) & ~isnan(NEE1) & year1 == jj & ustar1 > 0.25);%
+    
+%%% Step 1: Block average Ts and NEE
+Resp(counter).bavg = blockavg(Ts1(ind_regress), NEE1(ind_regress), 0.5,60, -25);  
+%%% Step 2: Make sure we don't use any values with NaN;
+ind_okdata = find(~isnan(Resp(counter).bavg(:,1).*Resp(counter).bavg(:,2)));
+%%% Step 3: Use logistic function to regress respiration with Ts for bin-avg data with ustar threshold
+[Resp(counter).coeff,Resp(counter).y,Resp(counter).r2,Resp(counter).sigma] = fitmain([5 .1 .1], 'fitlogi5', Resp(counter).bavg(ind_okdata,1), Resp(counter).bavg(ind_okdata,2));
+
+%%% Step 4: Estimate Respiration Function using logistic function:
+Resp(counter).est_R = Resp(counter).coeff(1) ./(1 + exp(Resp(counter).coeff(2).*(Resp(counter).coeff(3)-Ts_test)));
+
+%%% Plot this stuff:
+figure(2)
+ subplot(3,2,counter);
+plot (Ts1(ind_regress),NEE1(ind_regress),'k.');
+    hold on;
+    plot(Ts_test, Resp(counter).est_R,'r-');
+    
+figure(1)
+plot(Ts_test, Resp(counter).est_R,'Color',plot_color(counter,1:3));
+hold on;
+%%% Count the number of data points in the year for which Respiration will
+%%% be modeled:
+    ind_yr = find(year1==jj);
+%     used_data = length(find(~isnan(Ts1(ind_yr))==1));
+    
+%%% Estimate Respiration for the whole year, based on Ts data:
+    Resp(counter).resp = Resp(counter).coeff(1)./(1+exp(Resp(counter).coeff(2)*(Resp(counter).coeff(3)-Ts1(ind_yr))));
+
+clear  ind_regress ind_yr used_data;    
+counter = counter+1;
+
+end
+
+%% Put all years together to make one column vector with all Resp data: 
+Resp1 = [Resp(1).resp ;NaN*ones(48,1); Resp(2).resp; Resp(3).resp; NaN*ones(48,1)];
+%%%% NOTE: The reason that 48 NaNs are added at the end of 2003 and 2005 is
+%%%% to make the length of all years = 17568, to make for easy comparison
+%%%% with the rest of the met data, which is in the same format...
+
+%% Create GEP:
+GEP1 = Resp1 - NEE1;
+
+%% Plot GEP vs. PAR relationship for each year (using all available data):
+PAR_test = (0:200:2200);
+figure(3); clf;
+counter_3 = 1;
+for jk = st_yr:1:end_yr
+  
+
+%%% Find times when GEP would be positive (growing periods)
+ind_ok_GEP = find(Ts1 > 0 & T_air1 > -5 & PAR1 > 20 & ~isnan(Ts1) ...
+    & ~isnan(GEP1) & dt1 > 95 & dt1 < 330 & year1 == jk);
+
+GEP_PAR(counter_3).GEP = GEP1(ind_ok_GEP);
+GEP_PAR(counter_3).PAR = PAR1(ind_ok_GEP);
+
+%%% Block average data for each year
+GEP_PAR(counter_3).bavg = blockavg(GEP_PAR(counter_3).PAR, GEP_PAR(counter_3).GEP, 100, 70, -25);
+ok_compare = find(~isnan(GEP_PAR(counter_3).bavg(:,1) .* GEP_PAR(counter_3).bavg(:,2)));
+
+%%% Use rectangular hyperbolic function to model GEP based on PAR
+[GEP_PAR(counter_3).coeff GEP_PAR(counter_3).y GEP_PAR(counter_3).r2 GEP_PAR(counter_3).sigma] = hypmain1([0.01 10 0.1], 'fit_hyp1', GEP_PAR(counter_3).bavg(ok_compare,1), GEP_PAR(counter_3).bavg(ok_compare,2));
+
+%%% Model GEP for test PAR numbers:
+GEP_PAR(counter_3).pred = GEP_PAR(counter_3).coeff(1).*PAR_test.*GEP_PAR(counter_3).coeff(2)./(GEP_PAR(counter_3).coeff(1).*PAR_test + GEP_PAR(counter_3).coeff(2));
+GEP_PAR(counter_3).PAR_test = PAR_test;
+
+%%% Plot relationships for each year
+figure(3)
+subplot(3,2,counter_3)
+plot(GEP_PAR(counter_3).bavg(ok_compare,1),GEP_PAR(counter_3).bavg(ok_compare,2),'k.')
+hold on;
+plot(GEP_PAR(counter_3).PAR_test, GEP_PAR(counter_3).pred,'r-')
+
+clear ok_compare;
+counter_3 = counter_3+1;
+end
+
+%% Look for general relationships between env. variables and GEP (richardson)
+% Plot some figures to look at relationships:
+
+ind_good_GEP = find(Ts1 > -5 & T_air1 > -5 & PAR1 > 20 & ~isnan(Ts1) ...
+    & ~isnan(T_air1) & ~isnan(GEP1) & ~isnan(SM1) & dt1 > 80 & dt1 < 345 ...
+    ); %& stdev1 ~=0 & ~isnan(stdev1));
+
+figure(6)
+clf;
+subplot(3,2,1); plot(Ts1(ind_good_GEP), GEP1(ind_good_GEP), 'b.'); title('Ts vs. GEP'); hold on;
+subplot(3,2,2); plot(T_air1(ind_good_GEP), GEP1(ind_good_GEP), 'b.'); title('T_{air} vs. GEP'); hold on;
+subplot(3,2,3); plot(PAR1(ind_good_GEP), GEP1(ind_good_GEP), 'b.'); title('PAR vs. GEP'); hold on;
+subplot(3,2,4); plot(Wdir1(ind_good_GEP), GEP1(ind_good_GEP), 'b.'); title('Wind dir. vs. GEP'); hold on;
+subplot(3,2,5); plot(VPD1(ind_good_GEP), GEP1(ind_good_GEP), 'b.'); title('VPD. vs. GEP'); hold on;
+subplot(3,2,6); plot(SM1(ind_good_GEP), GEP1(ind_good_GEP), 'b.'); title('SM. vs. GEP'); hold on;
+
+% Block average data to see average trends
+b_avg_Ts = blockavg(Ts1(ind_good_GEP), GEP1(ind_good_GEP),      0.50, 80, -30);
+b_avg_T_air = blockavg(T_air1(ind_good_GEP), GEP1(ind_good_GEP),0.50, 80, -30);
+b_avg_PAR = blockavg(PAR1(ind_good_GEP), GEP1(ind_good_GEP),    100, 80, -30);
+b_avg_Wdir = blockavg(Wdir1(ind_good_GEP), GEP1(ind_good_GEP),  10, 80, -30);
+b_avg_VPD = blockavg(VPD1(ind_good_GEP), GEP1(ind_good_GEP),    0.1, 80, -30);
+b_avg_SM = blockavg(SM1(ind_good_GEP), GEP1(ind_good_GEP),      0.0025, 80, -30);
+
+figure(6)
+subplot(3,2,1); plot(b_avg_Ts(:,1), b_avg_Ts(:,2), 'ro');
+subplot(3,2,2); plot(b_avg_T_air(:,1), b_avg_T_air(:,2), 'ro');
+subplot(3,2,3); plot(b_avg_PAR(:,1), b_avg_PAR(:,2), 'ro');
+subplot(3,2,4); plot(b_avg_Wdir(:,1), b_avg_Wdir(:,2), 'ro');
+subplot(3,2,5); plot(b_avg_VPD(:,1), b_avg_VPD(:,2), 'ro');
+subplot(3,2,6); plot(b_avg_SM(:,1), b_avg_SM(:,2), 'ro');
+
+
+%% STEP 1. Establish max GEP equation -- for each season:
+PAR_test = (0:200:2200);
+GEP_max(1:length(GEP1),1) = NaN;
+
+figure(5)
+clf;
+
+figure(4)
+clf;
+
+ctr_year = 1;
+for mm = st_yr:1:end_yr
+
+%%% Finding times when GEP should be unrestricted by met. factors: 
+%%% These have to be adjusted according to data set:
+ideal_GEP = find(Ts1 > 10 & T_air1 > 10  & year1 == mm... %% & VPD1 < 1.3& Ts1 < 20 & T_air1 < 26& PAR1 < 1700 
+    & ~isnan(GEP1) & dt1 > 110 & dt1 < 280 ...
+    & VPD1 > 0 & SM1 > 0.10  & GEP1 > -40 & PAR1 > 20 & ustar1 > 0.10); % & (year1 == 2003 | year1 == 2006) ); % 
+
+figure(4)
+hold on;
+subplot(3,2,ctr_year)
+plot(PAR1(ideal_GEP),GEP1(ideal_GEP),'k.')
+
+% Blockaverage GEP data into PAR bins:
+% if mm == 2007
+% b_avg_ideal = blockavg(PAR1(ideal_GEP), GEP1(ideal_GEP), 200, 70, -25);
+% else
+b_avg_ideal = blockavg(PAR1(ideal_GEP), GEP1(ideal_GEP), 100, 70, -25);
+% end
+
+%%% Plot bin averaged data for each year:
+figure(4)
+subplot(3,2,ctr_year); hold on;
+plot(b_avg_ideal(:,1), b_avg_ideal(:,2),'ro');
+
+%%% The bin-averaged values used for each year need to be manually adjusted
+switch mm
+    case 2003
+ideal_x = [0; b_avg_ideal(1:18,1)];
+ideal_y = [0; b_avg_ideal(1:18,2) ];
+    case 2004
+ideal_x = [0; b_avg_ideal(1:18,1)];
+ideal_y = [0; b_avg_ideal(1:18,2)];       
+    case 2005
+ideal_x = [0; b_avg_ideal(1:15,1)];
+ideal_y = [0; b_avg_ideal(1:15,2)];             
+%     case 2006
+% ideal_x = [0; b_avg_ideal(1:19,1); b_avg_ideal(21,1)];
+% ideal_y = [0; b_avg_ideal(1:19,2); b_avg_ideal(21,2)];      
+%     case 2007
+% ideal_x = [0; b_avg_ideal(1:8,1)];
+% ideal_y = [0; b_avg_ideal(1:8,2)];   
+ end
+
+%%% Fit ideal data with hyperbolic curve
+[coeff_ideal2 y_ideal2 r2_ideal2 sigma_ideal2] = hypmain1([0.01 10 0.1], 'fit_hyp1', ideal_x, ideal_y);
+%%% Model relationship between PAR and GEP:
+P_ideal2 = coeff_ideal2(1).*PAR_test.*coeff_ideal2(2)./(coeff_ideal2(1).*PAR_test + coeff_ideal2(2));
+
+%%% Plot modeled curve for Max GEP
+figure(4)
+subplot(3,2,ctr_year)
+plot(PAR_test,P_ideal2,'r','LineWidth',2);
+
+
+figure(5)
+plot(PAR_test,P_ideal2,'Color',plot_color(ctr_year,1:3),'LineWidth',2); hold on;
+
+%%% Calculate estimated max GEP for all 3 years based on relationship with
+%%% PAR
+GEP_max(year1==mm,1) = coeff_ideal2(1).*PAR1(year1==mm).*coeff_ideal2(2)./(coeff_ideal2(1).*PAR1(year1==mm) + coeff_ideal2(2));
+
+clear ideal_x ideal_y b_avg_ideal P_ideal2 ideal_GEP coeff_ideal2 y_ideal2 r2_ideal2 sigma_ideal2  ;
+
+ctr_year = ctr_year+1;
+end
+
+clear mm ctr_year
+
+%% STEP 2. Soil Temperature Logistic Function:
+%%% Look at the variable - b_avg_Ts to assess the Max value of Ts
+Ts_test = (-2:1:28)';
+% Value for using non bin avged, u* threshold data
+% max_Tsy = 13.5;
+% Value for using non bin avged, NON - u* threshold data
+% if model_type == 2 || model_type ==3;
+% max_Tsy = 12.5;
+% Ts_x = [-5; -3; -2; b_avg_Ts(2:49,1); 24.5; 25.5;  26.5 ];
+% Ts_y = [ 0;  0;  0; b_avg_Ts(2:49,2); max_Tsy; max_Tsy; max_Tsy];
+% elseif model_type == 4
+% max_Tsy = 12.5;
+% Ts_x = [-5; -3; -2; b_avg_Ts(2:49,1); 24.5; 25.5;  26.5 ];
+% Ts_y = [ 0;  0;  0; b_avg_Ts(2:49,2); max_Tsy; max_Tsy; max_Tsy];
+% elseif model_type == 5
+% max_Tsy = 13;
+% Ts_x = [-5; -3; -2; b_avg_Ts(2:49,1); 24.5; 25.5;  26.5 ];
+% Ts_y = [ 0;  0;  0; b_avg_Ts(2:49,2); max_Tsy; max_Tsy; max_Tsy];
+% else
+%%% Ignore the above script.. These will have to be adjusted, based on the
+%%% value of b_avg_Ts
+max_Tsy = 22.5;
+Ts_x = [-5; -3; -2; b_avg_Ts(2:34,1); 20.5; 21.5;  22.5 ];
+Ts_y = [ 0;  0;  0; b_avg_Ts(2:34,2); max_Tsy; max_Tsy; max_Tsy];
+% end 
+
+%%% Normalize values (to make function from 0 to 1)
+Ts_y = Ts_y./max_Tsy;
+
+%%% Fit these data with the logistic model:
+[b_Ts,y_Ts,stats_Ts,sigma_Ts] = fitmain([1 1 1], 'fitlogi5', Ts_x, Ts_y);
+    p_Ts = (b_Ts(1).*max_Tsy)./(1+exp(b_Ts(2).*(b_Ts(3)-Ts_x)));
+    p_n_Ts = b_Ts(1)./(1+exp(b_Ts(2).*(b_Ts(3)-Ts_x)));
+
+    figure(6)
+    clf;
+    plot(Ts_x, Ts_y,'bx-');
+    hold on;
+    plot(Ts_x, p_n_Ts, 'rv-');
+    
+%%% Create GEP scaling factor from the developed logistic equation:    
+GEP_Ts_sf = b_Ts(1)./(1+exp(b_Ts(2).*(b_Ts(3)-Ts1)));
+GEP_Ts_sf(GEP_Ts_sf > 1) = 1;
+GEP_Ts_sf(Ts1 < 0) = 0;
+
+%%% Reduce the modeled MAX GEP by the Ts scaling factor
+GEP_Ts_red = GEP_max .* GEP_Ts_sf;
+
+%%% Remove the influence of Ts on measured GEP by dividing GEP by the
+%%% scaling factor:
+GEP_Ts_adj = GEP1 ./ GEP_Ts_sf;
+
+%% STEP 3. VPD logistic function:
+
+clear kk ss vpd;
+%%% Divide the day into 3 separate times, based on PAR values:
+PAR_bottoms = [0 500  1200]';
+PAR_tops =  [500 1200 2200]';
+
+figure(7)
+clf;
+
+for kk = 1:1:length(PAR_bottoms)
+   %%% These values should be adjusted according to site characteristics:
+    vpd_ind = find(Ts1 > 4  & T_air1 > 4 & PAR1 > 20 & ~isnan(VPD1) ...
+    & ~isnan(GEP1) & dt1 > 90 & dt1 < 330  ...
+    & PAR1 > PAR_bottoms(kk) & PAR1 <= PAR_tops(kk) & SM1 > 0.08);
+    
+    %%% Plot raw data points
+    figure(7)
+    subplot(2,2,kk)
+    plot(VPD1(vpd_ind,1),GEP_Ts_adj(vpd_ind,1),'b.')
+    title([num2str(PAR_tops(kk)) ' > PAR > ' num2str(PAR_bottoms(kk))]);
+    
+    % Bin-average data:
+    vpd(kk).bavg = blockavg(VPD1(vpd_ind,1),GEP_Ts_adj(vpd_ind,1), 0.2, 40, 0);
+    
+    %%% Plot bin-averaged data
+    figure(7)
+    subplot(2,2,kk)
+    hold on;
+    plot(vpd(kk).bavg(:,1), vpd(kk).bavg(:,2), 'ro')
+    axis([0 3 0 30])
+    clear vpd_ind;
+end
+%%% Depending on the similarity of each curve, may have to use different
+%%% curve for each, however, curves are fairly similar for TP site, so use
+%%% the PAR 1200 - 2200 dataset as the model
+vpd_bavg = vpd(3).bavg;
+VPD_test = (0:0.25:3);
+
+% if model_type == 2 || model_type == 3;
+% max_VPD = 21;
+% min_VPD = 12.5;
+% VPD_x = [-0.15; 0; 0.15; vpd(3).bavg(6:19,1); 3.2; 3.5;  3.9 ];
+% VPD_y = [max_VPD; max_VPD; max_VPD;  vpd(3).bavg(6:19,2); min_VPD; min_VPD; min_VPD];
+% elseif model_type == 4;
+% max_VPD = 21;
+% min_VPD = 12.5;
+% VPD_x = [-0.15; 0; 0.15; vpd(3).bavg(6:19,1); 3.2; 3.5;  3.9 ];
+% VPD_y = [max_VPD; max_VPD; max_VPD;  vpd(3).bavg(6:19,2); min_VPD; min_VPD; min_VPD];
+% elseif model_type == 5;
+% max_VPD = 21;
+% min_VPD = 12;
+% VPD_x = [-0.15; 0; 0.15; vpd(3).bavg(6:19,1); 3.2; 3.5;  3.9 ];
+% VPD_y = [max_VPD; max_VPD; max_VPD;  vpd(3).bavg(6:19,2); min_VPD; min_VPD; min_VPD];
+%     
+% else 
+%%% These must be adjusted to fit the data, by looking at values in vpd(3).bavg
+max_VPD = 21;
+min_VPD = 12.5;
+VPD_x = [-0.15; 0; 0.15; vpd(3).bavg(6:19,1); 3.2; 3.5;  3.9 ];
+VPD_y = [max_VPD; max_VPD; max_VPD;  vpd(3).bavg(6:19,2); min_VPD; min_VPD; min_VPD];
+% end  
+
+%%% Normalize values:
+VPD_y = (VPD_y - min_VPD)./(max_VPD-min_VPD);
+
+%%% Fit these data with a logistic model:
+[b_VPD,y_VPD,stats_VPD,sigma_VPD] = fitmain([1 1 1], 'fitlogi5', VPD_x, VPD_y);
+        p_VPD = (b_VPD(1).*(max_VPD-min_VPD))./(1+exp(b_VPD(2).*(b_VPD(3)-VPD_x))) + min_VPD;
+    p_n_VPD = b_VPD(1)./(1+exp(b_VPD(2).*(b_VPD(3)-VPD_x)));
+
+%%% Plot the VPD reduction factor (0 to 1) for influence on GEP
+figure(8)
+clf;
+plot(VPD_x, VPD_y, 'b.')
+hold on;
+plot(VPD_x, p_n_VPD,'r')
+
+%%% Create GEP scaling factor for VPD     
+GEP_VPD_sf = ((b_VPD(1).*(max_VPD-min_VPD))./(1+exp(b_VPD(2).*(b_VPD(3)-VPD1))) + min_VPD)./max_VPD;
+GEP_VPD_sf(GEP_VPD_sf > 1) = 1;
+
+%%% Reduce MAX GEP according to VPD relationship:
+GEP_TsVPD_red = GEP_Ts_red .* GEP_VPD_sf; % modeled GEP with soil temperature influence included
+  
+%%% New adjusted GEP (removing effects of soil temperature and VPD)
+GEP_TsVPD_adj = GEP_Ts_adj ./ GEP_VPD_sf;
+
+%% Step 4. Hyperbolic (or logistic) SM function to control GEP at low soil moistures
+%%% NOTE that at some sites, this effect may have no influence on GEP, and
+%%% it usually only has an effect at really low SM values.. In the
+%%% relationship, you may also see a reduction in GEP at high SM values,
+%%% but this is due to correlation between early/late growing season and
+%%% higher SM values -- which typically have lower GEPs.
+
+%%% Again, this will have to be adjusted depending on conditions at each
+%%% site
+    SM_ind = find(Ts1 > 4 & T_air1 > 4 & PAR1 > 20 & PAR1 < 2200 & ~isnan(SM1) ...
+    & ~isnan(GEP1) & dt1 > 90 & dt1 < 330  ...
+    & SM1 > 0.04 & SM1 <= 0.1 ); %& VPD1 < 1.0
+
+%%% Plot all data:
+figure(9)
+clf;
+plot(SM1(SM_ind),GEP_TsVPD_adj(SM_ind),'b.'); %GEP_TsVPD_adj
+hold on;
+
+%%% Block average values
+SM_bavg = blockavg(SM1(SM_ind,1),GEP_TsVPD_adj(SM_ind,1), 0.0025, 40, 0);
+%%% Plot block averaged data:
+figure(9)
+plot(SM_bavg(:,1),SM_bavg(:,2),'ro');
+
+
+clear SM_ind
+
+% if model_type == 2 || model_type == 3;
+% min_SM = 10.239;
+% max_SM = 14.77;
+% SM_x = [SM_bavg(1:21,1); (0.10:0.01:0.25)' ]-0.05;
+% SM_y = [SM_bavg(1:21,2); max_SM.*ones(16,1) ];
+% elseif model_type == 4;
+% min_SM = 10.239;
+% max_SM = 14.77;
+% SM_x = [SM_bavg(1:21,1); (0.10:0.01:0.25)' ]-0.05;
+% SM_y = [SM_bavg(1:21,2); max_SM.*ones(16,1) ];
+% elseif model_type == 5;
+% min_SM = 11.6;
+% max_SM = 15;
+% SM_x = [SM_bavg(1:21,1); (0.10:0.01:0.25)' ]-0.05;
+% SM_y = [SM_bavg(1:21,2); max_SM.*ones(16,1) ];
+% else
+%%% Adjust these depending on SM_bavg results
+min_SM = 10.239;
+max_SM = 14.77;
+SM_x = [SM_bavg(1:21,1); (0.10:0.01:0.25)' ]-0.05; % 0.05 is subtracted to let the curve move down close to zero.. otherwise, it doesn't fit the data properly
+SM_y = [SM_bavg(1:21,2); max_SM.*ones(16,1) ];
+% end
+    
+%%% Normalize 
+SM_y = (SM_y )./(max_SM );
+
+%%% Fit hyperbolic function to data:
+[coeff_SM y_SM r2_SM sigma_SM] = hypmain1([1 1 1], 'fit_hyp1', SM_x, SM_y);
+
+%%% Predict the soil moisure influence on GEP
+P_SM = coeff_SM(1).*(SM_x).*coeff_SM(2)./(coeff_SM(1).*(SM_x) + coeff_SM(2));
+
+figure(10)
+clf;
+plot(SM_x, SM_y,'b.')
+hold on;
+plot(SM_x, P_SM, 'kx-', 'LineWidth', 2);
+
+%%% Scaling Factor for SM
+%%% This has some touchy inticacies to it.... Since you subtracted 0.05
+%%% from the data to make the model, you have to do it again when you model
+%%% the scaling factor.. However, if you get the SM too close to zero, the
+%%% function will dip down too low, too fast.. So, you have to adjust what
+%%% you subtract from the soil moisture until you get a result that at its
+%%% lowest, matches the reduction you saw in figure 9.. Ask me if you don't
+%%% understand what i'm doing.. and if it's too complicated, you can just
+%%% make the scaling factor 1 to basically remove the soil moisture
+%%% influence.
+
+% if model_type == 2 || model_type == 3;
+% GEP_SM_sf = coeff_SM(1).*(SM1-0.04475).*coeff_SM(2)./(coeff_SM(1).*(SM1-0.04475) + coeff_SM(2));
+% GEP_SM_sf(GEP_SM_sf > 1) = 1;
+% GEP_SM_sf(isnan(GEP_SM_sf)) = 1;
+% GEP_SM_sf(GEP_SM_sf < 0.69) = 0.69;
+% 
+% elseif model_type == 4
+% GEP_SM_sf = coeff_SM(1).*(SM1-0.04475).*coeff_SM(2)./(coeff_SM(1).*(SM1-0.04475) + coeff_SM(2));
+% GEP_SM_sf(GEP_SM_sf > 1) = 1;
+% GEP_SM_sf(isnan(GEP_SM_sf)) = 1;
+% GEP_SM_sf(GEP_SM_sf < 0.69) = 0.69;
+% 
+% elseif model_type == 5
+% GEP_SM_sf = coeff_SM(1).*(SM1-0.0425).*coeff_SM(2)./(coeff_SM(1).*(SM1-0.0425) + coeff_SM(2));
+% GEP_SM_sf(GEP_SM_sf > 1) = 1;
+% GEP_SM_sf(isnan(GEP_SM_sf)) = 1;
+% GEP_SM_sf(GEP_SM_sf < 0.7733) = 0.7733;
+% 
+% else
+%%% These must be adjusted to fit
+GEP_SM_sf = coeff_SM(1).*(SM1-0.04475).*coeff_SM(2)./(coeff_SM(1).*(SM1-0.04475) + coeff_SM(2));
+GEP_SM_sf(GEP_SM_sf > 1) = 1;
+GEP_SM_sf(isnan(GEP_SM_sf)) = 1;
+GEP_SM_sf(GEP_SM_sf < 0.69) = 0.69;
+% end
+
+%%% Plot the scaling factor for all years data to inspect
+figure(11)
+clf;
+plot(GEP_SM_sf)
+
+%%% Reduce MAX GEP by SM scaling factor:
+GEP_all_red = GEP_TsVPD_red .* GEP_SM_sf;
+
+%% Calculate annual Numbers (Almost done!!)
+%% Clean NEE
+NEE1(NEE1 < -35 | NEE1 > 20, 1) = NaN;
+NEE1(PAR1 <= 20 & NEE1 <= 0, 1) = NaN;     % no photosynthesis at dark
+NEE1(Ts1 <= 0 & NEE1 <= 0, 1) = NaN;    % no photosynthesis when soil is frozen
+NEE1(PAR1 <= 20 & Ts1 <= 5 & NEE1 >= 5, 1) = NaN;    % nighttime & low-temp respiration cap
+NEE1(PAR1 <= 20 & NEE1 >= 15, 1) = NaN;    % nighttime respiration cap
+
+% if model_type == 4 || model_type == 5;
+% NEE1(T_air1 < 8) = NaN;  
+% end
+
+%% Clean GEP
+clear GEP1;
+%%% Make new (good) GEP, using cleaned NEE numbers (couldn't before because
+%%% we were working on models)
+GEP1 = Resp1 - NEE1;
+
+%%% Make modeled GEP = 0 when not in growing season
+GEP_all_red(dt1< 85 | dt1 > 335) = 0;
+
+%%% Clean real GEP:
+GEP1(GEP1 < 0) = NaN;           % remove bad data
+GEP1(dt1 < 85 | dt1 > 335) = 0; % make GEP=0 out of season
+GEP1(PAR1 < 10) = 0;            % GEP = 0 at night
+
+%% Plot Measured vs. modeled GEP:
+%%% A Good check to see how well GEP model works
+%%% Agreement should be pretty good (1:1 line) until the high end of GEP
+
+% Block average data
+GEPa_bavg = blockavg(GEP1(:,1),GEP_all_red(:,1), 1, 50, 0);
+GEP2003_bavg = blockavg(GEP1(year1==2003,1),GEP_all_red(year1==2003,1), 1, 50, 0);
+GEP2004_bavg = blockavg(GEP1(year1==2004,1),GEP_all_red(year1==2004,1), 1, 50, 0);
+GEP2005_bavg = blockavg(GEP1(year1==2005,1),GEP_all_red(year1==2005,1), 1, 50, 0);
+% GEP2006_bavg = blockavg(GEP1(year1==2006,1),GEP_all_red(year1==2006,1), 1, 50, 0);
+% GEP2007_bavg = blockavg(GEP1(year1==2007,1),GEP_all_red(year1==2007,1), 1, 50, 0);
+
+%%% Plot Comparisons:
+figure(12)
+clf;
+subplot(2,2,1); plot(GEP1,GEP_all_red,'b.');title('all years'); line([0 30],[0 30],'Color',[1 0 0],'LineWidth',3);
+hold on; subplot(2,2,1); plot(GEPa_bavg(:,1),GEPa_bavg(:,2),'ro');
+subplot(2,2,2); plot(GEP1(year1==2003),GEP_all_red(year1==2003),'b.'); title('2003'); line([0 30],[0 30],'Color',[1 0 0],'LineWidth',3);
+hold on; subplot(2,2,2); plot(GEP2003_bavg(:,1),GEP2003_bavg(:,2),'ro');
+subplot(2,2,3); plot(GEP1(year1==2004),GEP_all_red(year1==2004),'b.'); title('2004'); line([0 30],[0 30],'Color',[1 0 0],'LineWidth',3);
+hold on; subplot(2,2,3); plot(GEP2004_bavg(:,1),GEP2004_bavg(:,2),'ro');
+subplot(2,2,4); plot(GEP1(year1==2005),GEP_all_red(year1==2005),'b.'); title('2005'); line([0 30],[0 30],'Color',[1 0 0],'LineWidth',3);
+hold on; subplot(2,2,4); plot(GEP2005_bavg(:,1),GEP2005_bavg(:,2),'ro');
+ylabel('modeled GEP'); xlabel('real GEP')
+
+% figure(47)
+% clf;
+% subplot(2,2,1); plot(GEP1(year1==2006),GEP_all_red(year1==2006),'b.'); title('2006'); line([0 30],[0 30],'Color',[1 0 0],'LineWidth',3);
+% hold on; subplot(2,2,1); plot(GEP2006_bavg(:,1),GEP2006_bavg(:,2),'ro');
+% subplot(2,2,2); plot(GEP1(year1==2007),GEP_all_red(year1==2007),'b.'); title('2007'); line([0 30],[0 30],'Color',[1 0 0],'LineWidth',3);
+% hold on; subplot(2,2,2); plot(GEP2007_bavg(:,1),GEP2007_bavg(:,2),'ro');
+% ylabel('modeled'); xlabel('real GEP')
+
+%% Fill empty GEPs with modeled GEP
+GEP1(isnan(GEP1)) = GEP_all_red(isnan(GEP1));
+
+%% Clean Respiration and fill in values from the night that are good:
+Resp_filled(1:length(dt1),1) = NaN;
+%%% Nighttime value filled by model
+Resp_filled(PAR1 < 10) = Resp1(PAR1 < 10);
+
+%%% Nighttime with ustar > critical overwritten with measured NEE
+Resp_filled(PAR1 < 10 & ustar1 >= 0.25 & ~isnan(NEE1)) = NEE1(PAR1 < 10 & ustar1 >= 0.25 & ~isnan(NEE1));
+
+%%% Fill Daytime Growing Season R with Model
+Resp_filled(PAR1 >= 10 & dt1 >= 85 & dt1 <= 335) = Resp1(PAR1 >= 10 & dt1 >= 85 & dt1 <= 335);
+%%%% Resp(PAR > 10 & dt >= gsstart & dt <= gsend) = 25;
+
+%%% All other times filled with model
+%%% Daytime Non - Growing Season R with Model
+Resp_filled(PAR1 >= 10 & (dt1 < 85 | dt1 > 335) & ~isnan(NEE1)) = NEE1(PAR1 >= 10 & (dt1 < 85 | dt1 > 335) & ~isnan(NEE1));
+
+%%% Remove where Resp < 0
+Resp_filled(Resp_filled < 0 | isnan(Resp_filled)) = Resp1(Resp_filled < 0 | isnan(Resp_filled));
+
+%% Fill NEE
+%%% Fill NEE values for night, where ustar is below critical value:
+ ind_bn_NEE = find(PAR1 < 10 & (isnan(NEE1) | ustar1 < 0.25));
+ NEE1(ind_bn_NEE) = Resp1(ind_bn_NEE);
+
+ %%% Fill in data for outside of G.S. during the day
+ind_nongs_NEE = find(PAR1 >= 10 & (isnan(NEE1) | ustar1 < 0.25) & (dt1 < 85 | dt1 > 335));
+ NEE1(ind_nongs_NEE) = Resp1(ind_nongs_NEE);
+ 
+ %%% Replace for day when values are missing
+ind_gs_NEE = find(PAR1 >= 10 & (isnan(NEE1) | ustar1 < 0.25) & dt1 >= 85 & dt1 <= 335);
+NEE1(ind_gs_NEE) = Resp1(ind_gs_NEE) - GEP_all_red(ind_gs_NEE);
+
+%% Calculate final numbers:
+Results(1:n_yrs,1:10) = NaN;
+for mm = st_yr:1:end_yr
+    ctr_year = 1;
+    
+NEE_yr = NEE1(year1==mm);
+Resp_filled_yr = Resp_filled(year1==mm);
+Resp_modeled_yr = Resp1(year1==mm);
+GEP_filled_yr = GEP1(year1==mm);
+GEP_modeled_yr = GEP_all_red(year1==mm);
+
+output = [dt1(year1 == mm) -1*NEE_yr Resp_filled_yr GEP_filled_yr T_air1(year1 == mm) Ts1(year1 == mm) SM1(year1 == mm) PAR1(year1 == mm)];
+
+% save([path 'M' site 'output_model1_' num2str(mm) '.dat'],'output','-ASCII');
+save([path 'CRoutput_model1_' num2str(mm) '.dat'],'output','-ASCII');
+clear output;
+
+
+sum_NEE = nansum(NEE_yr).*0.0216;
+sum_Resp_filled = nansum(Resp_filled_yr).*0.0216;
+sum_Resp_modeled = nansum(Resp_modeled_yr).*0.0216;
+sum_GEP_filled = nansum(GEP_filled_yr).*0.0216;
+sum_GEP_modeled = nansum(GEP_modeled_yr).*0.0216;
+
+   used_NEE = length(find(isnan(NEE_yr)==0));
+   used_Resp_filled = length(find(isnan(Resp_filled_yr)==0));
+   used_Resp_modeled = length(find(isnan(Resp_modeled_yr)==0));
+   used_GEP_filled = length(find(isnan(GEP_filled_yr)==0));
+   used_GEP_modeled = length(find(isnan(GEP_modeled_yr)==0));
+      
+Results(ctr_year,:) = [sum_NEE          used_NEE           sum_Resp_filled   used_Resp_filled ...
+                       sum_Resp_modeled used_Resp_modeled  sum_GEP_filled    used_GEP_filled ...
+                       sum_GEP_modeled  used_GEP_modeled];      
+   
+   
+   
+    clear NEE_yr Resp_filled_yr Resp_modeled_yr GEP_filled_yr GEP_modeled_yr;
+    clear used_NEE used_Resp_filled used_Resp_modeled used_GEP_filled used_GEP_modeled;
+    clear sum_NEE sum_Resp_filled sum_Resp_modeled sum_GEP_filled sum_GEP_modeled
+
+    ctr_year = ctr_year + 1;
+end
+

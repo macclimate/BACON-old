@@ -1,0 +1,69 @@
+ls = addpath_loadstart;
+
+%%%%%%%%%%%%%%%%%%% Load main (original) flux and met data:
+TP02.orig = load([loadstart 'Matlab/Data/Flux/OPEC/TP02_orig_flux.mat']);
+TP74.orig = load([loadstart 'Matlab/Data/Flux/OPEC/TP74_orig_flux.mat']);
+TP89.orig = load([loadstart 'Matlab/Data/Flux/OPEC/TP89_orig_flux.mat']);
+
+%%%%%%%%%%%%%%%%%%% Load OPEC (10-min) flux and met data:
+TP02.OPEC = load([loadstart 'Matlab/Data/Flux/OPEC/TP02_OPEC_flux.mat']);
+TP74.OPEC = load([loadstart 'Matlab/Data/Flux/OPEC/TP74_OPEC_flux.mat']);
+TP89.OPEC = load([loadstart 'Matlab/Data/Flux/OPEC/TP89_OPEC_flux.mat']);
+
+%%%%%%%%%%%%%%%%%%% Load EdiRe (HF) flux and met data:
+TP02.EdiRe = load([loadstart 'Matlab/Data/Flux/OPEC/EdiRe/TP02/Processed/TP02_EdiRe_flux.mat']);
+TP74.EdiRe = load([loadstart 'Matlab/Data/Flux/OPEC/EdiRe/TP74/Processed/TP74_EdiRe_flux.mat']);
+TP89.EdiRe = load([loadstart 'Matlab/Data/Flux/OPEC/EdiRe/TP89/Processed/TP89_EdiRe_flux.mat']);
+
+% Figure 1: Plot original data for all sites together:
+figure('Name','Original Data');clf
+subplot(3,1,1);
+plot(TP89.orig.flux_out.NEEraw,'b-'); hold on;
+plot(TP74.orig.flux_out.NEEraw,'g-'); hold on;
+plot(TP02.orig.flux_out.NEEraw,'r-'); hold on;
+axis([15000 130000 -50 30])
+legend('TP89','TP74','TP02',4)
+title('Original Data');
+
+subplot(3,1,2);
+plot(TP89.OPEC.OPEC_flux.NEEraw_rot,'b-'); hold on;
+plot(TP74.OPEC.OPEC_flux.NEEraw_rot,'g-'); hold on;
+plot(TP02.OPEC.OPEC_flux.NEEraw_rot,'r-'); hold on;
+axis([15000 130000 -50 30])
+legend('TP89','TP74','TP02',4)
+title('10 min data');
+
+subplot(3,1,3);
+plot(TP89.EdiRe.EdiRe_flux.NEE_rot_freq_WPL,'b-'); hold on;
+plot(TP74.EdiRe.EdiRe_flux.NEE_rot_freq_WPL,'g-'); hold on;
+plot(TP02.EdiRe.EdiRe_flux.NEE_rot_freq_WPL,'r-'); hold on;
+axis([15000 130000 -50 30])
+legend('TP89','TP74','TP02',4)
+title('EdiRe Data');
+
+%% Figure 2: Plot data for each site and all methods together:
+figure('Name','Compare Between Methods');clf
+subplot(3,1,1);
+plot(TP89.orig.flux_out.NEEraw,'b-'); hold on;
+plot(TP89.OPEC.OPEC_flux.NEEraw_rot,'g-'); hold on;
+plot(TP89.EdiRe.EdiRe_flux.NEE_rot_freq_WPL,'r-'); hold on;
+axis([15000 130000 -50 30])
+legend('Orig','OPEC','EdiRe',4)
+title('TP89');
+
+subplot(3,1,2);
+plot(TP74.orig.flux_out.NEEraw,'b-'); hold on;
+plot(TP74.OPEC.OPEC_flux.NEEraw_rot,'g-'); hold on;
+plot(TP74.EdiRe.EdiRe_flux.NEE_rot_freq_WPL,'r-'); hold on;
+axis([15000 130000 -50 30])
+legend('Orig','OPEC','EdiRe',4)
+title('TP74');
+
+subplot(3,1,3);
+plot(TP02.orig.flux_out.NEEraw,'b-'); hold on;
+plot(TP02.OPEC.OPEC_flux.NEEraw_rot,'g-'); hold on;
+plot(TP02.EdiRe.EdiRe_flux.NEE_rot_freq_WPL,'r-'); hold on;
+axis([15000 130000 -50 30])
+legend('Orig','OPEC','EdiRe',4)
+title('TP02');
+

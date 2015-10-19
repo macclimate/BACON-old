@@ -1,0 +1,183 @@
+function [pw_total] = jjb_AB_gapfill(x, y, dt2,win_size, increment, bin_avg, x_range, y_range,type)
+%% jjb_AB_gapfill.m
+%%% This script produces a time series of time-varying parameter.  The
+%%% modeled input data (x) is regressed linearly with measured input data 
+%%% (y) for a number windows of specified width.  Windows are moved through 
+%%% the time series at specified increments.  
+%%% The output variable has two columns: a time list (dt) and the
+%%% incremental time-varying parameter, which is filled between window
+%%% mid-points by linear interpolation.
+%%%
+%%%%% usage: [pw_total] = jjb_AB_gapfill(x,y,dt2,win_size,increment)
+%%%%%%%% runs script without bin averaging, where: 
+%%%%% x: modeled data
+%%%%% y: measured data
+%%%%% dt2: numbered sequence of all entered datapoints (i.e. for one complete
+%%% year of data dt2 can be (1:1:17520)').  It should be the same length as the input vectors.
+%%% dt2 can be left blank (e.g. []) for 1 year data and will automatically construct
+%%% itself.
+%%%%% win_size: window size in data points
+%%%%% increment: the number of data points in which each progressive window
+%%% moves from the previous.
+%%%%%%%% [pw_total] = jjb_AB_gapfill(x,y,dt2,win_size,increment,'on')
+%%%%%%%%%%% turns on bin averaging of data points within each regression
+%%%%%%%% [pw_total] = jjb_AB_gapfill(x,y,dt2,win_size,increment,[xmin xmax], [ymin ymax])
+%%%%%%%%%%% removes data points from regression that are above/below
+%%%%%%%%%%% specified thresholds.
+%%% type is either 'rw' or 'pw' depending on whether it is used to fill
+%%% respiration or photosynth data.
+%%% Created 10/06/2008 by JJB
+
+%%%% Fills in dt if left blank:
+if isempty(dt2)
+    dt2 = (1:1:length(x))';
+end
+
+if isempty(win_size)==1
+    win_size =100;
+end
+
+if isempty(increment)==1
+    increment =20;
+end
+
+if nargin == 5 || nargin == 7;
+    bin_avg = 'off';
+end
+
+if isempty(x_range) ;
+    x_range = [min(x) max(x)];
+end
+if isempty(y_range);
+    y_range = [min(y) max(y)];
+end
+
+if nargin == 8;
+    type = 'pw';
+end
+%% The Potatoes
+%%% Initial output data
+y_model(1:length(y),1) = NaN;
+y_filled(1:length(y),1) = y;
+
+%%% ind1 becomes data points used in regressions:
+if strcmp(type,'rw') == 1;
+ind1 = find(~isnan(x) & ~isnan(y) & x > 0 & y > 0); %% list of data points used for lin regression:
+elseif strcmp(type,'pw') == 1;
+    ind1 = find(~isnan(x) & ~isnan(y)); %% list of data points used for lin regression:
+end
+    
+%%% Catch if window size is too big:
+if win_size > length(ind1)
+    disp('Window size is too big for the dataset! ')
+end
+
+%%% Specify the end points for each loop:
+loop_ends(:,1) = win_size:increment:length(ind1);
+%% Include the last data point as an end if win size doesn't divide
+%%% evenly into the total data size:
+if mod(length(ind1),win_size) > 0
+    loop_ends(length(loop_ends),1) = length(ind1);
+end
+
+%% The Meat
+%%% pw will be final complete dataset of pw values for all points in a year:
+pw_total(1:length(dt2),1) = dt2;
+pw_total(1:length(dt2),2) = NaN;
+
+fig_ctr = 1;
+sp_ctr = 1;
+for k = 1:1:length(loop_ends)
+    y_temp(:,1) = y(ind1(loop_ends(k)-win_size+1:loop_ends(k)),1);
+    x_temp(:,1) = x(ind1(loop_ends(k)-win_size+1:loop_ends(k)),1);
+    dt2_temp(:,1) = dt2(ind1(loop_ends(k)-win_size+1:loop_ends(k)),1);
+    %% Finds the average time of the data looked at in the window
+    mean_dt2(k,1) = mean(dt2_temp);
+    %% Rounds the mean_dt into matchable increment of dt:
+    mean_dt_round(k,1) = round(mean_dt2(k,1)); % rounds to nearest data point
+
+
+
+    %%% Two ways of forcing the regression line through the origin
+    %% Method 1 - just use the slope (i.e. shift the data down by the
+    %% intersect)
+    %     p = polyfit(x_temp,y_temp,1);  pw(k,1) = p(1);
+
+    %% Method 2 -- force the line to go through the origin regardless of
+    %% fit to the data
+    p = mmpolyfit(x_temp,y_temp,1,'ZeroCoef',[0]); pw(k,1) = p(1);
+
+    x_test = (0:1:max(x_temp)+2)';
+    y_pred = polyval(p,x_test);
+
+    %%% Fill the pw value into the final dataset:
+    try
+        right_spot(k,1) = find(mean_dt_round(k,1) == pw_total(:,1));
+        pw_total(right_spot(k,1),2) = pw(k,1);
+
+    catch
+        disp(['failed entry for dt = ' num2str(mean_dt2(k,1))]);
+        right_spot(k,1) = NaN;
+    end
+    %%%%%%% Plot the relationship -- testing only - can be turned off %%%%%%%%%%
+%     figure(fig_ctr); subplot(3,2,sp_ctr)
+%     plot(x_temp,y_temp,'k.')
+%     hold on;
+%     plot(x_test, y_pred,'r--','LineWidth',3)
+%     
+%     %%% Advances the figure and subplot
+%     if sp_ctr == 6;
+%         sp_ctr = 1;
+%         fig_ctr = fig_ctr+1;
+%     else
+%         sp_ctr = sp_ctr+1;
+%     end
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    clear dt_temp x_temp y_temp x_test y_pred p
+end
+%% Loop to interpolate pw between point estimates of pw
+
+%%% Row locations for calculated pw values
+pw_list = find(~isnan(pw_total(:,2)));
+
+for j = 1:1:length(pw_list)-1
+    %%% The num of data points between estimates of pw in the real data set
+
+    try
+        x_incr(j) = (pw_total(pw_list(j+1),1) - pw_total(pw_list(j),1));
+        %%% The incremental change between estimates of pw
+        y_incr(j) = (pw_total(pw_list(j+1),2) - pw_total(pw_list(j),2))./x_incr(j);
+
+        
+        %%% Fill between points with line
+        if y_incr(j) == 0;
+        pw_total(pw_list(j):pw_list(j+1),2) = pw_total(pw_list(j),2);
+        else
+
+        pw_total(pw_list(j):pw_list(j+1),2) = pw_total(pw_list(j),2):y_incr(j):pw_total(pw_list(j+1),2);
+        end
+    catch
+        disp(['problem at window number: ' num2str(j)]);
+       
+%         %%% Fill between points with line
+%         pw_total(pw_list(j):pw_list(j+1),2) = pw_total(pw_list(j),2):y_incr(j):pw_total(pw_list(j+1),2);
+
+        
+    end
+end
+
+%%% Fill in the area before the first point and after the last point
+change = 0;
+for i = pw_list(1):-1:1
+    pw_total(i,2) = pw_total(pw_list(1),2)+change;
+    change = change + (y_incr(1).*-1);
+end
+
+%%% Fill in the area after the last data point:
+change = 0;
+for ii = pw_list(end):1:length(pw_total)
+    pw_total(ii,2) = pw_total(pw_list(end),2) + change;
+    change = change + (y_incr(end));
+end
+

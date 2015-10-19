@@ -1,0 +1,110 @@
+% function [] = mcm_PPT_fixer(year)
+
+clear all;
+close all;
+year = 2008;
+%% We will have this function load data from:
+% This function will currently work for data 2008 onwards.
+% 1: TP_PPT Geonor
+% 2: TP_PPT Tx_Inst Tipping Bucket
+% 3: TP02: RMY Tipping Bucket
+% 4: TP39: CS Tipping Bucket
+
+%%
+if ischar(year)
+    yr_str = year;
+    year = str2num(year);
+else
+    yr_str = num2str(year);
+end
+
+loadstart = addpath_loadstart;
+
+
+%%
+if year >= 2008
+%%% Header Path for Cleaned data -- 2008 onwards:
+hdr_path = [loadstart 'Matlab/Data/Met/Raw1/Docs/'];
+hdr_name = '_OutputTemplate.csv';
+hdr_cols = 3;
+load_dir = 'Matlab/Data/Met/Final_Cleaned/'
+else
+hdr_path = [loadstart 'Matlab/Data/Met/Final_Cleaned/CCP/Headers/'];
+hdr_name = '_CCP_Names.csv';
+hdr_cols = 2;
+load_dir = 'Matlab/Data/Met/Final_Cleaned/CCP/'
+end
+
+save_path = [loadstart 'Matlab/Data/Met/Final_Filled/TP_PPT/'];
+
+TP02_hdr = jjb_hdr_read([hdr_path 'TP02' hdr_name], ',', hdr_cols);
+TP39_hdr = jjb_hdr_read([hdr_path 'TP39' hdr_name], ',', hdr_cols);
+
+TP02_PPT = jjb_load_var(TP02_hdr, [loadstart load_dir 'TP02/TP02_' num2str(year) '.'], 'Rain',2);
+TP39_PPT = jjb_load_var(TP39_hdr, [loadstart load_dir 'TP39/TP39_' num2str(year) '.'], 'CS_Rain',2);
+%%% Also load PAR so we can see if some PPT events are erroneous:
+TP39_PAR = jjb_load_var(TP39_hdr, [loadstart load_dir 'TP39/TP39_' num2str(year) '.'], 'DownPAR_AbvCnpy',2);
+
+Geo_PPT = load([loadstart 'Matlab/Data/Met/Cleaned3/TP_PPT/GN_Precip_' num2str(year) '.dat']);
+Tx_PPT = load([loadstart 'Matlab/Data/Met/Cleaned3/TP_PPT/TX_Rain_' num2str(year) '.dat']);
+
+%% Shift TP02_PPT into EST (from UTC) for 2008 and do other changes:
+switch year
+    case 2008
+   tmp = [TP02_PPT(9:end); NaN.*ones(8,1)];
+   clear TP02_PPT; TP02_PPT = tmp; clear tmp;
+        
+   Geo_PPT_shift = [Geo_PPT(1:9000); Geo_PPT(9002:end); NaN];
+   Geo_PPT = Geo_PPT_shift;
+   clear Geo_PPT_shift;
+   
+   Geo_PPT([(1:172)'; 938]) = NaN;
+end
+
+
+
+figure(1); clf;
+ind_ppt = find(Geo_PPT > 0 & Tx_PPT > 0 & TP39_PPT > 0 & TP02_PPT > 0);
+
+subplot(2,2,1); plot(Geo_PPT(ind_ppt),Tx_PPT(ind_ppt),'b.'); ylabel('Tx'); xlabel('Geo');
+subplot(2,2,2); plot(Geo_PPT(ind_ppt),TP39_PPT(ind_ppt),'b.'); ylabel('TP39'); xlabel('Geo');
+subplot(2,2,3); plot(Geo_PPT(ind_ppt),TP02_PPT(ind_ppt),'b.'); ylabel('TP02'); xlabel('Geo');
+subplot(2,2,4); plot(TP39_PPT(ind_ppt),TP02_PPT(ind_ppt),'b.'); ylabel('TP02'); xlabel('TP39');
+
+figure(2);clf;
+plot(TP39_PPT,'g');hold on;
+plot(TP02_PPT,'c');
+plot(Geo_PPT,'b');
+plot(Tx_PPT,'r');
+legend('TP39','TP02', 'Geo','Tx')
+
+%    p = mmpolyfit(TP39_PPT(TP39_PPT> 0 & Geo_PPT > 0), Geo_PPT(TP39_PPT> 0 & Geo_PPT > 0),1,'ZeroCoef',[0]); 
+%    p2 = mmpolyfit(TP39_PPT(TP39_PPT> 0 & Geo_PPT_shift > 0), Geo_PPT_shift(TP39_PPT> 0 & Geo_PPT_shift > 0),1,'ZeroCoef',[0]); 
+%    
+%    
+%    TP39_Geo_pred = TP39_PPT(:,1)./p(1);
+%   
+%    rsq_Geo = rsquared(TP39_PPT(TP39_PPT> 0 & Geo_PPT > 0), Geo_PPT(TP39_PPT> 0 & Geo_PPT > 0))
+%    rsq_Geo_shift = rsquared(TP39_PPT(TP39_PPT> 0 & Geo_PPT_shift > 0), Geo_PPT_shift(TP39_PPT> 0 & Geo_PPT_shift > 0))
+   
+hh_counter = (1:1:length(TP39_PPT))';
+
+% Fill from TP39 when there's little chance of frozen precip, and freezing
+% on the guage.. otherwise, fill from TP02
+Geo_PPT(isnan(Geo_PPT) & (hh_counter > 4500),1) = TP39_PPT(isnan(Geo_PPT) & (hh_counter > 4500),1);
+Geo_PPT(isnan(Geo_PPT),1) = TP02_PPT(isnan(Geo_PPT),1);
+
+   figure(5); clf
+plot(TP39_PPT,'b.-')
+hold on
+
+plot(TP39_PAR./200,'k');
+ plot(TP02_PPT,'g.-');
+ plot(Geo_PPT,'r.-');
+legend('TP39','PAR', 'TP02','Geo')
+
+%% Export the final Precipitation:
+save([save_path 'TP_PPT_' num2str(year) '.dat'],'Geo_PPT','-ASCII');
+%%% We'll also export it in UTC
+TP_PPT_UTC = [zeros(8,1); Geo_PPT(1:end-8)];
+save([save_path 'TP_PPT_' num2str(year) '_UTC.dat'],'TP_PPT_UTC','-ASCII');

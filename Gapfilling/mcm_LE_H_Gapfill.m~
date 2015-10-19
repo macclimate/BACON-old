@@ -1,0 +1,160 @@
+function [] = mcm_LE_H_Gapfill(site, year_start, year_end, Ustar_th)
+% mcm_LE_H_Gapfill.m
+% usage: [] = mcm_LE_H_Gapfill(site, year_start, year_end, Ustar_th)
+%%% This function is the main function used to gapfill LE and H data from
+%%% flux towers. This will run on all sites, and for any given years and
+%%% OPEC or CPEC data.  
+%%% Gap-filling is accomplished in 2 different means:
+%%% 1. A neural network (NN) is used, where met data and raw flux (LE, H)
+%%% are used to train the neural network.  Met data is then fed into the NN
+%%% to predict fluxes for the given years.   Gaps in fluxes are then filled
+%%% with NN predictions.  If NaNs exist in the input data, then there may
+%%% still possibly be gaps in the filled flux data.
+%%% 2. Following this, any small gaps that may still exist are filled by
+%%% using either a windowed linear regression, or a moving-window MDV
+%%% approach.  These filling methods are executed via
+%%% mcm_LE_H_WLR_MDV_Gapfill.m
+%%% Created Aug 1, 2010 by JJB.
+
+%%% Revision History:
+%
+%
+%
+%
+%
+%
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Sort out options, Declare Paths:
+if nargin == 3 
+Ustar_th = input('Enter u* threshold: ');
+end
+
+if nargin == 1
+Ustar_th = input('Enter u* threshold: ');    
+year_start = input('Enter start year: ');
+year_end = input('Enter end year: ');
+end
+
+if isempty(year_start)
+    year_start = input('Enter start year: ');
+end
+if isempty(year_end)
+    year_end = input('Enter end year: ');
+end
+
+if isempty(Ustar_th)
+  Ustar_th = input('Enter u* threshold: ');
+end
+%%% Declare Paths 
+ls = addpath_loadstart;
+load_path = [ls 'Matlab/Data/Master_Files/' site '/'];
+save_path = [ls 'Matlab/Data/Flux/CPEC/' site '/Final_Calculated/'];
+% info_path = [ls 'Matlab/Data/Flux/Gapfilling_Docs/'];
+load([load_path site '_gapfill_data_in.mat']);
+data = trim_data_files(data,year_start,year_end);
+data.site = site;
+data.VPD = VPD_calc(data.RH, data.Ta); %calculate VPD:
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Fill LE:
+disp('running NN for LE');
+%%% Step 1: Train the NN: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Index of data for NN training (no NaNs in met or flux data):
+ind_use = find(~isnan(data.Ts5.*data.WS.*data.LE.*data.Rn.*data.SM_a_filled.*data.VPD));
+% Input and target data for training:
+nn_inputs = [data.Rn(ind_use) data.WS(ind_use) data.Ts5(ind_use) data.SM_a_filled(ind_use) data.VPD(ind_use)];
+nn_target = data.LE(ind_use);
+% Run training:
+net = newfit(nn_inputs',nn_target',30);
+net=train(net,nn_inputs',nn_target');
+
+%%% Step 2: Use trained NN for prediction purposes:
+% Index for prediction -- find where no NaNs in met data:
+ind_sim = find(~isnan(data.Ts5.*data.WS.*data.Rn.*data.SM_a_filled.*data.VPD));
+sim_inputs = [data.Rn(ind_sim) data.WS(ind_sim) data.Ts5(ind_sim) data.SM_a_filled(ind_sim) data.VPD(ind_sim)];
+% Run NN to predict LE
+[Y,Pf,Af,E,perf] = sim(net,sim_inputs');
+Y = Y';
+% Assign predicted data to proper row in ouput (makes rows of predicted
+% variable match the rows of the input LE file:
+NN_LE_est = NaN.*ones(length(data.LE),1);
+NN_LE_est(ind_sim) = Y;
+%%% Fill gaps in LE with predicted data:
+data.LE_filled = data.LE;
+data.LE_filled(isnan(data.LE_filled),1) = NN_LE_est(isnan(data.LE_filled),1);
+
+%%% Plot predicted vs observed:
+figure('Name','Measured and Modeled LE');clf;
+subplot(211);
+plot(data.LE,NN_LE_est,'k.'); hold on;
+ylabel('NN-Predicted LE')
+xlabel('Observed LE');
+
+%%% Check for NaNs in LE_filled data.  If they exist, run
+%%% mcm_LE_H_WLR_MDV_Gapfill.m to fill via MDV, WLR.
+if length(find(isnan(data.LE_filled)))>=1
+    [junk LE_filled] = mcm_LE_H_WLR_MDV_Gapfill(data, year_start, year_end, Ustar_th);
+    data.LE_filled(isnan(data.LE_filled),1) = LE_filled(isnan(data.LE_filled),1);
+end
+%%% Plot original and filled:
+figure(1)
+subplot(212);
+plot(data.LE_filled,'r'); hold on;
+plot(data.LE','b.');
+legend('filled LE','Orig LE');
+
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Fill H:
+disp('running NN for H');
+%%% Step 1: Train the NN: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Index of data for NN training (no NaNs in met or flux data):
+ind_use = find(~isnan(data.PAR.*data.Rn.*data.LE_filled.*data.Ta.*data.H));
+% Input and target data for training:
+nn_inputs = [data.Rn(ind_use) data.PAR(ind_use) data.Ta(ind_use) data.LE_filled(ind_use)];
+nn_target = data.H(ind_use);
+% Run training:
+net = newfit(nn_inputs',nn_target',30);
+net=train(net,nn_inputs',nn_target');
+
+%%% Step 2: Use trained NN for prediction purposes:
+% Index for prediction -- find where no NaNs in met data:
+ind_sim = find(~isnan(data.PAR.*data.LE_filled.*data.Rn.*data.Ta));
+sim_inputs = [data.Rn(ind_sim) data.PAR(ind_sim) data.Ta(ind_sim) data.LE_filled(ind_sim)];
+% Run NN to predict LE
+[Y,Pf,Af,E,perf] = sim(net,sim_inputs');
+Y = Y';
+% Assign predicted data to proper row in ouput (makes rows of predicted
+% variable match the rows of the input LE file:
+NN_H_est = NaN.*ones(length(data.H),1);
+NN_H_est(ind_sim) = Y;
+%%% Fill gaps in LE with predicted data:
+data.H_filled = data.H;
+data.H_filled(isnan(data.H_filled),1) = NN_H_est(isnan(data.H_filled),1);
+
+%%% Plot predicted vs observed:
+figure(2);clf;
+subplot(211)
+plot(data.H,NN_H_est,'k.'); hold on;
+ylabel('NN-Predicted H')
+xlabel('Observed H');
+
+%%% Check for NaNs in LE_filled data.  If they exist, run
+%%% mcm_LE_H_WLR_MDV_Gapfill.m to fill via MDV, WLR.
+if length(find(isnan(data.H_filled)))>=1
+    [H_filled junk] = mcm_CPEC_Gapfill_LE_H(data, year_start, year_end, Ustar_th);
+    data.H_filled(isnan(data.H_filled),1) = H_filled(isnan(data.H_filled),1);
+end
+%%% Plot original and filled:
+figure(2);
+subplot(212);
+plot(data.H_filled,'r'); hold on;
+plot(data.H','b.');
+legend('filled H','raw H');
+
+master.data = [data.Year data.LE_filled data.H_filled];
+master.labels = {'Year';'LE_filled'; 'H_filled'};
+
+save([save_path site '_H_LE_' num2str(year_start) '_' num2str(year_end) '.mat' ],'master');
+disp(['data is saved to ' save_path site '_H_LE_' num2str(year_start) '_' num2str(year_end) '.mat' ]);

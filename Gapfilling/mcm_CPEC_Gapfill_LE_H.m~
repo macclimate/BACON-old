@@ -1,0 +1,232 @@
+function [] = mcm_CPEC_Gapfill_LE_H(site, year_start, year_end, Ustar_th)
+close all;
+% site = 'TP02';
+%%% Start and End Year, u* threshold:
+
+if nargin == 3 
+Ustar_th = input('Enter u* threshold: ');
+end
+
+if nargin == 1
+Ustar_th = input('Enter u* threshold: ');    
+year_start = input('Enter start year: ');
+year_end = input('Enter end year: ');
+end
+
+if isempty(year_start)
+    year_start = input('Enter start year: ');
+end
+if isempty(year_end)
+    year_end = input('Enter end year: ');
+end
+
+if isempty(Ustar_th)
+  Ustar_th = input('Enter u* threshold: ');
+end
+
+%%% Declare Paths
+ls = addpath_loadstart;
+load_path = [ls 'Matlab/Data/Master_Files/' site '/'];
+save_path = [ls 'Matlab/Data/Flux/CPEC/' site '/Final_Calculated/'];
+info_path = [ls 'Matlab/Data/Flux/Gapfilling_Docs/'];
+
+
+%%% Load the gapfilling file:
+% All the variables are now in a structure called 'data', in the form:
+% data.Ts, data.NEE, etc., etc......
+
+load([load_path site '_gapfill_data_in.mat']);
+
+% % Calculate VPD from RH and Ta:
+% data.VPD = VPD_calc(data.RH, data.Ta);
+
+% %%% Make a single SM index from a and b pits:
+% SM(1:length(data.SM_a),1) = NaN;
+% SM(~isnan(data.SM_a.*data.SM_b),1) = (data.SM_a(~isnan(data.SM_a.*data.SM_b),1) + data.SM_b(~isnan(data.SM_a.*data.SM_b),1)) ./2;
+% SM(isnan(SM),1) = data.SM_a(isnan(SM),1);
+% SM(isnan(SM),1) = data.SM_b(isnan(SM),1);
+% data.SM = SM; clear SM;
+
+% %%% Plotting variables:
+% test_Ts = (-10:2:26)';
+% test_PAR = (0:200:2400)';
+% clrs = [1 0 0; 0.5 0 0; 0 1 0; 0.8 0.5 0.7; 0 0 1; 0.2 0.1 0.1; ...
+%     1 1 0; 0.4 0.5 0.1; 1 0 1; 0.9 0.9 0.4; 0 1 1; 0.4 0.8 0.1];
+% test_VPD = (0:0.2:3)';
+% test_SM = (0.045:0.005:0.10)';
+
+%%% Load the info_file:
+info_file = csvread([info_path site '_CPEC_H_LE_Gapfilling_info.csv']);
+[r c] = size(info_file);
+right_row = [];
+for j = 1:1:r
+    ind = find(info_file(j,1)== year_start & info_file(j,2)== year_end & info_file(j,3)== Ustar_th);
+    if ~isempty(ind)
+        right_row = j;
+    else
+        
+    end
+end
+
+if isempty(right_row)
+    disp('Creating new entry and using defaults');
+    right_row = r+1;
+    info_file(r+1,1) = year_start;
+info_file(r+1,2) = year_end;
+info_file(r+1,3) = Ustar_th;
+%     info_file(r+1,4) = input('Enter max_SM_R: ');
+% info_file(r+1,5) = input('Enter max_Ts: ');
+% info_file(r+1,6) = input('Enter max_VPD: ');
+% info_file(r+1,7) = input('Enter max_SM_P: ');
+csvwrite([info_path site '_CPEC_H_LE_Gapfilling_info.csv'],info_file);
+end
+% max_SM_R = info_file(right_row,4)
+% max_Ts = info_file(right_row,5)
+% max_VPD = info_file(right_row,6)
+% max_SM_P = info_file(right_row,7)
+
+%% trim data to fit with the years selected:
+var_names = fieldnames(data);
+tmp_data = struct;
+% tmp_year = data.Year;
+yr_list = find(data.Year >= year_start & data.Year <= year_end);
+
+
+for i = 1:1:length(var_names)
+   eval(['tmp_data.' char(var_names(i)) ' = data.' char(var_names(i)) '(yr_list,:);']);
+end
+
+clear data;
+data = tmp_data;
+
+%%% For TP02 in 2008, incorporate the OPEC data:
+
+switch site 
+    case 'TP02'
+        try
+          ind = find(data.Year == 2008);
+          if ~isempty(ind)
+              data.LE(data.Year == 2008 & isnan(data.LE) & data.dt < 190) = data.LE_OPEC(data.Year == 2008 & isnan(data.LE) & data.dt < 190);
+              data.H(data.Year == 2008 & isnan(data.H) & data.dt < 190) = data.H_OPEC(data.Year == 2008 & isnan(data.H) & data.dt < 190);        
+              data.Ustar(data.Year == 2008 & isnan(data.Ustar) & data.dt < 190) = data.Ustar_OPEC(data.Year == 2008 & isnan(data.Ustar) & data.dt < 190);
+     
+          end
+        catch
+        end
+end
+
+%%% Look for growing season starts and ends:
+% ctr = 1;
+% for i = year_start:1:year_end
+%     figure(1);clf;
+%     plot(data.dt(data.Year==i),data.NEE(data.Year==i));
+%     gs_start
+%     
+%     
+%     
+%     ctr = ctr+1;
+% end
+
+
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%% FILL GAPS IN H %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+H_raw = NaN.*ones(length(data.Year),1);
+H_raw(data.Ustar > Ustar_th) = data.H(data.Ustar > Ustar_th);
+H_filled = H_raw;
+
+%% Fill Gaps in H 
+x_var1 = data.Rn-data.SHF+data.Jt; %%% Jt is backwards in sign -- -'ve during day, +'ve at night
+
+%%% Model H based on incoming energy for 5-day average window
+[H1_fill, H1_model_5]= jjb_WLR_gapfill(x_var1, H_raw, 240,'on'); 
+%%% Fill all possible gaps:
+H_filled(isnan(H_filled)) = H1_model_5(isnan(H_filled));
+
+%%% Model H based on incoming energy for 10-day average window
+[H1_fill, H1_model_10] = jjb_WLR_gapfill(x_var1, H_raw, 480,'on'); 
+%%% Fill all possible gaps:
+H_filled(isnan(H_filled)) = H1_model_10(isnan(H_filled));
+
+%%% Model H based on incoming energy for 15-day average window
+[H1_fill, H1_model_15]= jjb_WLR_gapfill(x_var1, H_raw, 720,'on'); 
+%%% Fill all possible gaps:
+H_filled(isnan(H_filled)) = H1_model_15(isnan(H_filled));
+
+%%% Model H based on incoming energy for 20-day average window
+[H1_fill, H1_model_20]= jjb_WLR_gapfill(x_var1, H_raw, 960,'on'); 
+%%% Fill all possible gaps:
+H_filled(isnan(H_filled)) = H1_model_20(isnan(H_filled));
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% %%%%%%%%%%%%%%%%%%% Fill LE Gaps %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+x_var2 = x_var1 - H_filled;
+LE_raw = NaN.*ones(length(data.Year),1);
+LE_raw(data.Ustar > Ustar_th) = data.LE(data.Ustar > Ustar_th);
+LE_filled = LE_raw;
+%%% Step 1 - make LE gaps 0 if at night
+LE_filled(isnan(LE_filled) & data.PAR <= 20) = 0;
+
+%%% Step 2 - Growing-season daytime LE filling method
+%%% Use a moving window approach; the same method as H
+% [LE_fill1 LE1_model_5] = jjb_WLR_gapfill(x_var2, LE_raw, 240,'on'); 
+% %%% Fill gaps:
+% LE_filled(isnan(LE_filled) & data.PAR > 20 & ((data.dt >= 90 & data.dt <= 330) | data.Ts5 > 2)  ) = LE1_model_5(isnan(LE_filled) & data.PAR > 20 & ((data.dt >= 90 & data.dt <= 330) | data.Ts5 > 2)  );
+
+%%% 10-day window
+[LE_fill2 LE1_model_10] = jjb_WLR_gapfill(x_var2, LE_raw, 480,'on'); 
+%%% Fill gaps:
+LE_filled(isnan(LE_filled) & data.PAR > 20 & ((data.dt >= 90 & data.dt <= 330) | data.Ts5 > 2)  ) = LE1_model_10(isnan(LE_filled) & data.PAR > 20 & ((data.dt >= 90 & data.dt <= 330) | data.Ts5 > 2)  );
+
+%%% 15-day window
+[LE_fill3 LE1_model_15] = jjb_WLR_gapfill(x_var2, LE_raw, 720,'on'); 
+%%% Fill gaps:
+LE_filled(isnan(LE_filled) & data.PAR > 20 & ((data.dt >= 90 & data.dt <= 330) | data.Ts5 > 2)  ) = LE1_model_15(isnan(LE_filled) & data.PAR > 20 & ((data.dt >= 90 & data.dt <= 330) | data.Ts5 > 2)  );
+
+%%% Step 3 - Non Growing Season daytime LE filling method
+%%% Use average 1/2hr value for period five days before to five days after.
+LE_fill_MDV = jjb_MDV_gapfill(LE_raw, 10, 48);
+
+LE_filled(isnan(LE_filled) & data.PAR > 20 & (data.dt < 90 | data.dt > 330) & data.Ts5 < 2) = LE_fill_MDV(isnan(LE_filled) & data.PAR > 20 & (data.dt < 90 | data.dt > 330) & data.Ts5 < 2);
+
+%%% Fill in any remaining gaps with MDV
+LE_filled(isnan(LE_filled)) = LE_fill_MDV(isnan(LE_filled));
+
+%% Plot H and LE:
+figure('Name', 'filled H and LE');clf
+subplot(2,1,1)
+plot(H_filled,'r');hold on;
+plot(H_raw,'b');
+legend('filled','raw');
+title('H');
+subplot(2,1,2)
+plot(LE_filled,'r');hold on;
+plot(LE_raw,'b');
+legend('filled','raw');
+title('LE');
+%% Calculate Annual Evapotranspiration
+%%% Convert LE in W/m^2 to mm/hhour 
+%%% by using either (LE/lambda(T_air).*1800) --- What is Lambda?????
+%%% or LE/343
+    
+LE_mm = (LE_filled./lambda(data.Ta)).*1800;
+LE_mm(isnan(LE_mm),1) = LE_filled(isnan(LE_mm))./1372;
+  ctr = 1;
+  
+for jj = year_start:1:year_end
+ET(ctr).cumsum = nancumsum(LE_mm(data.Year==jj));
+ET(ctr).sum = ET(ctr).cumsum(end);  
+% ET(ctr).cumsum = nancumsum(LE_filled(year1==jj)./1372);
+% ET(ctr).sum = ET(ctr).cumsum(end);
+% output = [LE_filled(year1==jj) H_filled(year1==jj)];
+% save([path 'M' site '_ETEB_output_' num2str(jj) '.dat'],'output', '-ASCII')
+disp(['year = ' num2str(jj) ': ET = ' num2str(ET(ctr).sum) ])
+ctr = ctr +1;
+end
+
+master.data.Year = data.Year;
+master.data.LE_filled = LE_filled;
+master.data.H_filled = H_filled;
+
+save([save_path site '_GapFilled_LE_H_' num2str(year_start) '_' num2str(year_end) '_ustar = ' num2str(Ustar_th) '.mat'],'master');
+disp('done!');

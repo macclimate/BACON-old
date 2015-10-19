@@ -1,0 +1,30 @@
+function [] = jjb_play_sounds(sound_type)
+
+addpath = addpath_loadstart;
+selectn = 0;
+r = rand(100,1);
+
+if ispc ~= 1
+    try
+        switch sound_type
+            case 'done'
+                while selectn < 3
+                d = dir([addpath '/Matlab/Other/Sounds/']);
+                
+                
+                [status, result] = unix(['mplayer ' addpath '/Matlab/Other/Sounds/wooho.wav']);
+
+            case 'error'
+                [status, result] = unix(['mplayer ' addpath '/Matlab/Other/homcra.wav']);
+
+        end
+
+
+    catch
+        disp('To play sounds you need to install mplayer, or install the data files');
+        disp('use <sudo apt-get install mplayer-nogui> in terminal');
+
+    end
+
+
+end

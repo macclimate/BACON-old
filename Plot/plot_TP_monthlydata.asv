@@ -1,0 +1,493 @@
+%% jjb_plot_fluxdata:
+%% This script is designed to plot calculated, averaged TP flux data
+
+clear all 
+close all
+
+site = 2; sitestr = num2str(site);
+model = 1; modelstr = num2str(model);
+day_avg_length = 1; dstr = num2str(day_avg_length);
+
+load_path = ['C:\HOME\MATLAB\Data\Data_Analysis\M' sitestr '_allyears\Means\M' sitestr '_'];
+fig_path = ['C:\HOME\MATLAB\Data\Data_Analysis\AGU_Poster_Figs\Met' sitestr '\'];
+vars(1,1) = cellstr('NEP'); vars(2,1) = cellstr('GEP'); vars(3,1) = cellstr('R');
+vars(4,1) = cellstr('Ta'); vars(5,1) = cellstr('Ts'); vars(6,1) = cellstr('SM');
+vars(7,1) = cellstr('PAR');
+
+
+%% COLORS!
+yel = [199 157 14]./255;
+dblue = [26 16 139]./255;
+mar = [188 26 11]./255;
+lblue = [71 213 228]./255;
+
+
+% %% plot daily averages:
+%  if site == 1;
+%         year_end = 2007;
+%     else 
+%         year_end = 2006;
+%     end
+% 
+% 
+% % 
+% interval = day_avg_length.*1440;
+% % 
+% % for j = 1:1:length(vars)
+% %     figure(j)
+% %     
+% % for year = 2003:year_end   
+% %     % establish decimal datevector
+%    [junk(:,1) junk(:,2) junk(:,3) dt]  = jjb_makedate(str2double(year),interval);
+% %     
+% %     % Load variable:
+% %     temp_var = load([load_path char(vars(j,1)) '_' num2str(year) '_model' modelstr '_' dstr 'dayavg.dat'])
+% %     
+% %     figure(j)
+% %     plot(dt,temp_var,
+% %     
+% %     
+% %     clear temp_var
+% % end
+
+%% load monthly data and plot;
+for year = 2003:2006
+NEP_mon_sum(1:12,year-2002) = load([load_path char(vars(1,1)) '_' num2str(year) '_model' modelstr '_monsum.dat']);
+Ta_mon_mean(1:12,year-2002) = load([load_path char(vars(4,1)) '_' num2str(year) '_model' modelstr '_monmean.dat']);
+PPT(1:12,year-2002) = load(['C:\HOME\MATLAB\Data\Data_Analysis\Precip_data\PPT' num2str(year) '_mon_sum.dat']);
+GEP_mon_sum(1:12,year-2002) = load([load_path char(vars(2,1)) '_' num2str(year) '_model' modelstr '_monsum.dat']);
+R_mon_sum(1:12,year-2002) = load([load_path char(vars(3,1)) '_' num2str(year) '_model' modelstr '_monsum.dat']);
+
+end
+
+NEP_msum = reshape(NEP_mon_sum,[],1);
+
+
+Ta_mean= reshape(Ta_mon_mean,[],1);
+
+
+PPT_msum = reshape(PPT,[],1);
+
+
+dt2 = 1:1:length(PPT_msum);
+% xtick = [1:2:11 13:2:23 25:2:35 37:2:47];
+% monstr = ['J';'F';'M';'A';'M';'J';'J';'A';'S';'O';'N';'D'];
+% xlabels = [monstr(1:2:11,1); monstr(1:2:11,1); monstr(1:2:11,1); monstr(1:2:11,1)];
+monxtick = (1:1:12)';
+% monstr = ['J';'MAY';'AUG';'NOV'];
+monxlabels = ['J';'F';'M';'A';'M';'J';'J';'A';'S';'O';'N';'D'];
+
+% figure(1)
+% clf
+% subplot(3,1,1)
+% plot(dt2,Ta_mean,'k');
+% axis([1 48 -15 30]);
+% grid on;
+% set(gca,'XTick',xtick);
+% set(gca,'XTickLabel',xlabels);
+% 
+% subplot(3,1,2)
+% bar(dt2,PPT_msum,'k');
+% axis([1 48 0 200]);
+% set(gca,'XTick',xtick);
+% set(gca,'XTickLabel',xlabels);
+% 
+% subplot(3,1,3)
+% plot(dt2,NEP_msum,'k');
+% axis([1 48 -50 100]);
+% grid on;
+% set(gca,'XTick',xtick);
+% set(gca,'XTickLabel',xlabels);
+
+%% MONTHLY AIR TEMP FOR 2002-2006
+figure(2)
+clf;
+
+plot(Ta_mon_mean(1:12,1),'-','LineWidth',1.7,'Color',dblue)
+hold on; plot(Ta_mon_mean(1:12,2),'-','LineWidth',1.7,'Color',lblue)
+plot(Ta_mon_mean(1:12,3),'-','LineWidth',1.7,'Color',yel)
+plot(Ta_mon_mean(1:12,4),'-','LineWidth',1.7,'Color',mar)
+axis([1 12 -10 25]);
+ylabel('T_{air} (^{o}C)','FontSize',14)
+set(gca,'XTick',monxtick);
+set(gca,'XTickLabel',monxlabels,'FontSize',14);
+legend('2003','2004','2005','2006',2)
+print('-dbmp',[fig_path 'Tavg_mon'])
+print('-dmeta',[fig_path 'Tavg_mon'])
+% 
+% figure(22)
+% subplot(2,1,1)
+% plot(PPT(1:12,1),'g')
+% hold on; plot(PPT(1:12,2),'r')
+% plot(PPT(1:12,3),'k')
+% plot(PPT(1:12,4),'b')
+% 
+% 
+figure(32)
+plot(NEP_mon_sum(1:12,1),'-','LineWidth',1.7,'Color',dblue)
+hold on; plot(NEP_mon_sum(1:12,2),'-','LineWidth',1.7,'Color',lblue)
+plot(NEP_mon_sum(1:12,3),'-','LineWidth',1.7,'Color',yel)
+plot(NEP_mon_sum(1:12,4),'-','LineWidth',1.7,'Color',mar)
+axis([1 12 -40 100]);
+ylabel('NEP (g C m^{-2})','FontSize',14)
+set(gca,'XTick',monxtick);
+set(gca,'XTickLabel',monxlabels,'FontSize',14);
+legend('2003','2004','2005','2006',2)
+print('-dbmp',[fig_path 'NEP_mon'])
+print('-dmeta',[fig_path 'NEP_mon'])
+
+
+%% Open daily sums for 2003 & 2005 to show cumulative NEPs and soil moisture
+PPT_d_sum = dlmread('C:\HOME\MATLAB\Data\Ancillary Data\Delhi_Day_Precip_2002_2007.csv');
+
+NEP_d_sum(1:366,1:4) = NaN;
+GEP_d_sum(1:366,1:4) = NaN;
+R_d_sum(1:366,1:4) = NaN;
+SM_d_mean(1:366,1:4) = NaN;
+Ta_d_mean(1:366,1:4) = NaN;
+PAR_d_sum(1:366,1:4) = NaN;
+Ts_d_mean(1:366,1:4) = NaN;
+
+
+
+for year = 2003:1:2006
+    NEP_d_mean(:,1) = load([load_path char(vars(1,1)) '_' num2str(year) '_model' modelstr '_' dstr 'dayavg.dat']);
+    NEP_d_sum(1:length(NEP_d_mean),year-2002) = NEP_d_mean(:,1).*48;
+
+    SM_d_mean(1:length(NEP_d_mean),year-2002) = load([load_path char(vars(6,1)) '_' num2str(year) '_model' modelstr '_' dstr 'dayavg.dat']);
+    
+    Ta_d_mean(1:length(NEP_d_mean),year-2002) = load([load_path char(vars(4,1)) '_' num2str(year) '_model' modelstr '_' dstr 'dayavg.dat']);
+      Ts_d_mean(1:length(NEP_d_mean),year-2002) = load([load_path char(vars(5,1)) '_' num2str(year) '_model' modelstr '_' dstr 'dayavg.dat']);
+    
+      GEP_d_mean(:,1) = load([load_path char(vars(2,1)) '_' num2str(year) '_model' modelstr '_' dstr 'dayavg.dat']);
+    GEP_d_sum(1:length(GEP_d_mean),year-2002) = GEP_d_mean(:,1).*48;
+     
+    R_d_mean(:,1) = load([load_path char(vars(3,1)) '_' num2str(year) '_model' modelstr '_' dstr 'dayavg.dat']);
+    R_d_sum(1:length(R_d_mean),year-2002) = R_d_mean(:,1).*48;
+    
+    
+    
+    clear NEP_d_mean GEP_d_mean R_d_mean;
+end
+%%% PPT cumulative sum
+MJ_cum_PPT2004 = cumsum(PPT_d_sum(121:181,3));
+MJ_cum_PPT2005 = cumsum(PPT_d_sum(121:181,4));
+MJ_cum_PPT2006 = cumsum(PPT_d_sum(121:181,5));
+%%% NEP cumulative sum
+MJ_cum_NEP2004 = cumsum(NEP_d_sum(121:181,2));
+MJ_cum_NEP2005 = cumsum(NEP_d_sum(121:181,3));
+MJ_cum_NEP2006 = cumsum(NEP_d_sum(121:181,4));
+%%% SM
+MJ_SM2004 = SM_d_mean(121:181,2);
+MJ_SM2005 = SM_d_mean(121:181,3);
+MJ_SM2006 = SM_d_mean(121:181,4);
+%%% Ta
+MJ_Ta2004 = Ta_d_mean(121:181,2);
+MJ_Ta2005 = Ta_d_mean(121:181,3);
+MJ_Ta2006 = Ta_d_mean(121:181,4);
+
+% figure(2)
+
+% clf;
+% subplot(4,1,1); plot(MJ_cum_NEP2005,'k--');
+% hold on;        plot(MJ_cum_NEP2006,'k-');
+%                 plot(MJ_cum_NEP2004,'k-.');
+% axis([0 61 0 200])                
+%                 
+% subplot(4,1,2); plot(MJ_cum_PPT2005,'k--');
+% hold on;        plot(MJ_cum_PPT2006,'k-');
+%                 plot(MJ_cum_PPT2004,'k-.');
+% axis([0 61 0 220])                
+%                 
+% subplot(4,1,3); plot(MJ_SM2005,'k--');
+% hold on;        plot(MJ_SM2006,'k-');
+%                 plot(MJ_SM2004,'k-.');
+% axis([0 61 0 0.2])                   
+%                 
+% subplot(4,1,4); plot(MJ_Ta2005,'k--');
+% hold on;        plot(MJ_Ta2006,'k-');
+%                 plot(MJ_Ta2004,'k-.');                
+% axis([0 61 0 30])                   
+
+%% Investigate cumulative differences in NEP for different times of year
+bot = [60  61  121 181 241 301]';
+top = [120 180 180 240 300 365]';
+
+for kk = 1:1:length(bot)
+MJ_cum_PPT2004 = cumsum(PPT_d_sum(bot(kk):top(kk),3));    
+MJ_cum_PPT2005 = cumsum(PPT_d_sum(bot(kk):top(kk),4));  
+MJ_cum_PPT2006 = cumsum(PPT_d_sum(bot(kk):top(kk),5)); 
+
+MJ_cum_NEP2004 = cumsum(NEP_d_sum(bot(kk):top(kk),2));
+MJ_cum_NEP2005 = cumsum(NEP_d_sum(bot(kk):top(kk),3));
+MJ_cum_NEP2006 = cumsum(NEP_d_sum(bot(kk):top(kk),4));
+
+MJ_SM2004 = SM_d_mean(bot(kk):top(kk),2);
+MJ_SM2005 = SM_d_mean(bot(kk):top(kk),3);
+MJ_SM2006 = SM_d_mean(bot(kk):top(kk),4);
+
+MJ_Ta2004 = Ta_d_mean(bot(kk):top(kk),2);
+MJ_Ta2005 = Ta_d_mean(bot(kk):top(kk),3);
+MJ_Ta2006 = Ta_d_mean(bot(kk):top(kk),4);
+
+figure(kk+2)
+clf;
+subplot(4,1,1); plot(MJ_cum_NEP2005,'k');
+hold on;        plot(MJ_cum_NEP2006,'b');
+                plot(MJ_cum_NEP2004,'r');
+axis([0 (top(kk)-bot(kk)) -100 200]); grid on;                
+                
+subplot(4,1,2); plot(MJ_cum_PPT2005,'k');
+hold on;        plot(MJ_cum_PPT2006,'b');
+                plot(MJ_cum_PPT2004,'r');
+axis([0 (top(kk)-bot(kk)) 0 400])                
+                
+subplot(4,1,3); plot(MJ_SM2005,'k');
+hold on;        plot(MJ_SM2006,'b');
+                plot(MJ_SM2004,'r');
+axis([0 (top(kk)-bot(kk)) 0 0.3])                   
+                
+subplot(4,1,4); plot(MJ_Ta2005,'k');
+hold on;        plot(MJ_Ta2006,'b');
+                plot(MJ_Ta2004,'r');                
+axis([0 (top(kk)-bot(kk)) -20 30])                   
+
+clear MJ_cum_PPT2004 MJ_cum_PPT2005 MJ_cum_PPT2006 MJ_cum_NEP2004 MJ_cum_NEP2005
+clear MJ_cum_NEP2006 MJ_SM2004 MJ_SM2005 MJ_SM2006 MJ_Ta2004 MJ_Ta2005 MJ_Ta2006
+
+end
+    
+% figure(2)
+% clf;
+% 
+% plot(Ta_mon_mean(1:12,1),'-','LineWidth',1.7,'Color',dblue)
+% hold on; plot(Ta_mon_mean(1:12,2),'-','LineWidth',1.7,'Color',lblue)
+% plot(Ta_mon_mean(1:12,3),'-','LineWidth',1.7,'Color',yel)
+% plot(Ta_mon_mean(1:12,4),'-','LineWidth',1.7,'Color',mar)
+% axis([1 12 -10 25]);
+% ylabel('T_{air}','FontSize',14)
+% set(gca,'XTick',monxtick);
+% set(gca,'XTickLabel',monxlabels,'FontSize',14);
+% print('-dbmp',[fig_path 'Tavg_mon'])
+
+%% PPT BAR
+figure(9)
+bar(PPT);
+legend('2003','2004','2005','2006',2);
+ylabel('Precipitation (mm)','FontSize',14)
+set(gca,'XTick',monxtick);
+set(gca,'XTickLabel',monxlabels,'FontSize',14);
+axis([0 13 0 200])
+print('-dbmp',[fig_path 'PPT_bar'])
+print('-dmeta',[fig_path 'PPT_bar'])
+%% TAIR BAR
+figure(10)
+bar(Ta_mon_mean)
+legend('2003','2004','2005','2006',2)
+ylabel('T_{air} (^{o}C)','FontSize',14)
+set(gca,'XTick',monxtick);
+set(gca,'XTickLabel',monxlabels,'FontSize',14);
+axis([0 13 -10 25])
+print('-dbmp',[fig_path 'Tair_bar'])
+print('-dmeta',[fig_path 'Tair_bar'])
+%% NEP BAR
+figure(11)
+bar(NEP_mon_sum)
+legend('2003','2004','2005','2006',2)
+ylabel('NEP (g C m^{-2})','FontSize',14)
+set(gca,'XTick',monxtick);
+set(gca,'XTickLabel',monxlabels,'FontSize',14);
+axis([0 13 -40 100])
+print('-dbmp',[fig_path 'NEP_bar'])
+print('-dmeta',[fig_path 'NEP_bar'])
+
+%% NEP DAILY
+figure(12)
+clf
+plot(NEP_d_sum(:,1),'.','MarkerEdgeColor', dblue, 'MarkerFaceColor',dblue,'MarkerSize',8)
+hold on
+plot(NEP_d_sum(:,2),'.','MarkerEdgeColor', lblue, 'MarkerFaceColor',lblue,'MarkerSize',8)
+plot(NEP_d_sum(:,3),'o','MarkerEdgeColor', [0 0 0], 'MarkerFaceColor',yel,'MarkerSize',3)
+plot(NEP_d_sum(:,4),'.','MarkerEdgeColor', mar, 'MarkerFaceColor',mar,'MarkerSize',8)
+
+xlabel('Day of Year','FontSize',14);
+ylabel('NEP (g C m^{-2})','FontSize',14)
+set(gca,'FontSize',14);
+axis([0 366 -6 8])
+legend('2003','2004','2005','2006',2)
+print('-dbmp',[fig_path 'NEP_daily'])
+print('-dmeta',[fig_path 'NEP_daily'])
+
+
+%% Cumulative NEP
+figure(13)
+NEP_d_sum(isnan(NEP_d_sum)) = 0;
+clf;
+plot(cumsum(NEP_d_sum(:,1)),'-','LineWidth',1.5,'Color',dblue)
+hold on;
+plot(cumsum(NEP_d_sum(:,2)),'-','LineWidth',1.5,'Color',lblue)
+plot(cumsum(NEP_d_sum(:,3)),'-','LineWidth',1.5,'Color',yel)
+plot(cumsum(NEP_d_sum(:,4)),'-','LineWidth',1.5,'Color',mar)
+ylabel('Cumulative NEP (g C m^{-2})','FontSize',14)
+xlabel('Day of Year','FontSize',14);
+set(gca,'FontSize',14);
+legend('2003','2004','2005','2006',2)
+axis([0 366 -100 600])
+print('-dbmp',[fig_path 'NEP_cum_daily'])
+print('-dmeta',[fig_path 'NEP_cum_daily'])
+
+%% Cumulative PPT
+figure(14)
+clf;
+plot(cumsum(PPT_d_sum(:,2)),'-','LineWidth',1.5,'Color',dblue)
+hold on;
+plot(cumsum(PPT_d_sum(:,3)),'-','LineWidth',1.5,'Color',lblue)
+plot(cumsum(PPT_d_sum(:,4)),'-','LineWidth',1.5,'Color',yel)
+plot(cumsum(PPT_d_sum(:,5)),'-','LineWidth',1.5,'Color',mar)
+legend('2003','2004','2005','2006',2)
+ylabel('Cumulative PPT (mm)','FontSize',14)
+xlabel('Day of Year','FontSize',14);
+set(gca,'FontSize',14);
+axis([0 366 0 1200])
+print('-dbmp',[fig_path 'PPT_cum_daily'])
+print('-dmeta',[fig_path 'PPT_cum_daily'])
+
+%% Cumulative PPT -- May & June
+figure(33)
+clf;
+plot(cumsum(PPT_d_sum(121:181,2)),'-','LineWidth',1.5,'Color',dblue)
+hold on;
+plot(cumsum(PPT_d_sum(121:181,3)),'-','LineWidth',1.5,'Color',lblue)
+plot(cumsum(PPT_d_sum(121:181,4)),'-','LineWidth',1.5,'Color',yel)
+plot(cumsum(PPT_d_sum(121:181,5)),'-','LineWidth',1.5,'Color',mar)
+legend('2003','2004','2005','2006',2)
+ylabel('Cumulative PPT (mm)','FontSize',14)
+% xlabel('Day of Year','FontSize',14);
+axis([1 61 0 250])
+set(gca,'XTick',[1 10 20 32 41 51 61],'FontSize',14);
+set(gca,'XTickLabel',['01-May'; '10-May'; '20-May'; '01-Jun'; '10-Jun'; '20-Jun'; '30-Jun'],'FontSize',14);
+ print('-dbmp',[fig_path 'PPT-MJ_cum_daily'])
+ print('-dmeta',[fig_path 'PPT-MJ_cum_daily'])
+%% Daily mean temperature
+figure(15)
+clf;
+plot(Ta_d_mean(:,1),'.','LineWidth',1.5,'Color',dblue,'MarkerSize',6)
+hold on;
+plot(Ta_d_mean(:,2),'.','LineWidth',1.5,'Color',lblue,'MarkerSize',6)
+plot(Ta_d_mean(:,3),'o','MarkerEdgeColor', [0 0 0], 'MarkerFaceColor',yel,'MarkerSize',3)
+plot(Ta_d_mean(:,4),'.','LineWidth',1.5,'Color',mar,'MarkerSize',6)
+axis([0 366 -20 30])
+set(gca,'FontSize',14);
+ylabel('T_{air} (^{o}C)','FontSize',14)
+legend('2003','2004','2005','2006',2)
+xlabel('Day of Year','FontSize',14);
+print('-dbmp',[fig_path 'Tair_daily'])
+print('-dmeta',[fig_path 'Tair_daily'])
+%% GEP BAR
+figure(16)
+bar(GEP_mon_sum)
+legend('2003','2004','2005','2006',2)
+set(gca,'FontSize',14);
+axis([0 13 0 300])
+set(gca,'XTick',monxtick);
+set(gca,'XTickLabel',monxlabels,'FontSize',14);
+ylabel('GEP (g C m^{-2})','FontSize',14)
+print('-dbmp',[fig_path 'GEP_bar'])
+print('-dmeta',[fig_path 'GEP_bar'])
+%% RESP BAR
+figure(17)
+bar(R_mon_sum)
+legend('2003','2004','2005','2006',2)
+set(gca,'FontSize',14);
+axis([0 13 0 300])
+set(gca,'XTick',monxtick);
+set(gca,'XTickLabel',monxlabels,'FontSize',14);
+ylabel('R_{E} (g C m^{-2})','FontSize',14)
+print('-dbmp',[fig_path 'Resp_bar'])
+print('-dmeta',[fig_path 'Resp_bar'])
+
+%% Daily SM
+figure(18)
+clf;
+plot(SM_d_mean(:,1),'.','LineWidth',1.5,'Color',dblue)
+hold on;
+plot(SM_d_mean(:,2),'.','LineWidth',1.5,'Color',lblue)
+plot(SM_d_mean(:,3),'.-','LineWidth',1.5,'Color',yel)
+plot(SM_d_mean(:,4),'.','LineWidth',1.5,'Color',mar)
+legend('2003','2004','2005','2006',2)
+set(gca,'FontSize',14);
+axis([0 366 0.04 0.25])
+ylabel('Soil \theta_{v} (cm^{3} cm^{-3})')
+print('-dbmp',[fig_path 'SM_daily'])
+print('-dmeta',[fig_path 'SM_daily'])
+
+%% Daily Ts
+figure(19)
+clf;
+plot(Ts_d_mean(:,1),'.','LineWidth',1.5,'Color',dblue)
+hold on;
+plot(Ts_d_mean(:,2),'.','LineWidth',1.5,'Color',lblue)
+plot(Ts_d_mean(:,3),'.-','LineWidth',1.5,'Color',yel)
+plot(Ts_d_mean(:,4),'.','LineWidth',1.5,'Color',mar)
+legend('2003','2004','2005','2006',2)
+set(gca,'FontSize',14);
+axis([0 366 -5 25])
+ylabel('T_{s}(^{o}C)')
+print('-dbmp',[fig_path 'Ts_daily'])
+print('-dmeta',[fig_path 'Ts_daily'])
+
+GEP_d_sum(isnan(GEP_d_sum)) = 0;
+figure(20)
+clf;
+plot(cumsum(GEP_d_sum(:,1)),'g-','LineWidth',1.5,'Color',dblue)
+hold on;
+plot(cumsum(GEP_d_sum(:,2)),'r-','LineWidth',1.5,'Color',lblue)
+plot(cumsum(GEP_d_sum(:,3)),'b-','LineWidth',1.5,'Color',yel)
+plot(cumsum(GEP_d_sum(:,4)),'c-','LineWidth',1.5,'Color',mar)
+legend('2003','2004','2005','2006',2)
+set(gca,'FontSize',14);
+axis([0 366 0 1500])
+ylabel('Cumulative GEP (g C m^{-2})')
+print('-dbmp',[fig_path 'GEPcum_daily'])
+print('-dmeta',[fig_path 'GEPcum_daily'])
+
+figure(21)
+clf;
+plot(cumsum(R_d_sum(:,1)),'g-','LineWidth',1.5,'Color',dblue)
+hold on;
+plot(cumsum(R_d_sum(:,2)),'r-','LineWidth',1.5,'Color',lblue)
+plot(cumsum(R_d_sum(:,3)),'b-','LineWidth',1.5,'Color',yel)
+plot(cumsum(R_d_sum(:,4)),'c-','LineWidth',1.5,'Color',mar)
+legend('2003','2004','2005','2006',2)
+set(gca,'FontSize',14);
+axis([0 366 0 1500])
+ylabel('Cumulative R_{E} (g C m^{-2})')
+print('-dbmp',[fig_path 'Respcum_daily'])
+print('-dmeta',[fig_path 'Respcum_daily'])
+
+
+% plot(results,'p')
+
+M1r = [68 162; 68 114; 68 5; 68 104];
+M2r = [33 509; 33 315; 33 357; 33 504];
+M3r = [18 696; 18 447; 18 783; 18 434];
+M4r = [5 -46; 5 204; 5 -139; 5 -29];
+
+x = (0:1:80);
+y(1:length(x)) = 0;
+
+figure(23)
+clf
+plot(M1r(:,1),M1r(:,2),'kv','MarkerFaceColor',[0.8 0.5 0.4],'MarkerSize',11)
+hold on;
+plot(M2r(:,1),M2r(:,2),'ks','MarkerFaceColor',[0.1 0.6 0.7],'MarkerSize',11)
+plot(M3r(:,1),M3r(:,2),'ko','MarkerFaceColor',[0.2 0.5 0.1],'MarkerSize',11)
+plot(M4r(:,1),M4r(:,2),'kd','MarkerFaceColor',[0.7 0.1 0.6],'MarkerSize',11)
+plot(x,y,'k--')
+axis([0 80 -200 1000]);
+set(gca,'FontSize',14);
+xlabel('Stand Age (years)','Fontsize',14)
+ylabel('NEP (g C m^{-2})','Fontsize',14)
+legend('68-year', '33-year', '18-year', '5-year',1);
+print('-dbmp',[fig_path 'Results'])
+print('-dmeta',[fig_path 'Results'])

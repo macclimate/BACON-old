@@ -1,0 +1,77 @@
+function [] = get_GOES_kml()
+% get_wx_kmz.m
+%%% This function downloads GOES satellite imagery kmls files from noaa,
+%
+%
+% Created Nov 13, 2011 by JJB
+
+%%% Set Paths:
+ls = addpath_loadstart;
+% ls = '/media/fielddata/'; % For Jay's Testing Purposes.
+savepath = [ls 'Matlab/Data/wx_kmz/GOES/'];
+start_URL = 'http://goes.gsfc.nasa.gov/goescolor/';
+logpath = [savepath 'GOES_extraction_log.txt'];
+
+%%% Open the log file:
+f1 = fopen(logpath,'a');
+
+%%% Variables that we will be saving:
+files_to_get = {'goeseast/hurricane2/geo/latest.kml','East'; ...
+    'goeswest/pacific2/geo/latest.kml','West'};
+%%% Get the time stamp into the (UTC) format we want:
+%t_now = datestr(now+4/24,30);
+%t_now = t_now(1:end-2);
+%t_now = strrep(t_now,'T','-');
+% Changed 20-Dec-2012 by JJB:
+[stat t_now] = unix('date -u "+%Y%m%d%H%M"');
+t_now = t_now(1:end-1);
+
+% Saves the data only every 6 hours:
+hr = str2double(t_now(end-3:end));
+hr_round = floor(hr/100).*100;
+
+switch hr_round
+    case {0,100,600,700,1200,1300,1800,1900}
+        %%% Sequentially extract and save the kml files:
+        for i = 1:1:size(files_to_get,1)
+            fname{i,1} = ['GOES-' files_to_get{i,2} '_' t_now '.kml'];
+            [filestr, status] = urlwrite([start_URL files_to_get{i,1}],[savepath fname{i,1}]);
+            if status == 1
+                fprintf(f1,'%s\n',[files_to_get{i,2} ' saved for ' t_now '.']);
+                save_flag(i,1) = 1;
+            else
+                fprintf(f1,'%s\n',['Error saving ' files_to_get{i,2} 'for ' t_now '.']);
+                save_flag(i,1) = 0;
+            end
+        end
+        
+        %% Step 2: Let's also get the tif files, since I am not 100%
+        % Convinced that the tif locations (in the kmls) will stay good forever:
+        for i = 1:1:size(files_to_get,1)
+            % Open and read the kml file:
+            fid = fopen([savepath fname{i,1}]);
+            %fname{i,2} = ['GOES-' files_to_get{i,2} '_' t_now '.tif'];
+            eofstat = 0;
+            while eofstat ~=1
+                tline = fgets(fid);
+                checkline = strfind(tline,'http://goes.gsfc');
+                if ~isempty(checkline)==1
+                    endofstring = strfind(tline,'</href>');
+                    tif_URL = tline(checkline:endofstring-1);
+                    fname{i,2} = ['GOES-' files_to_get{i,2} '_' tif_URL(end-13:end)];
+                    [filestr, status] = urlwrite(tif_URL,[savepath fname{i,2}]);
+                end
+                clear tline checkline endofstring tif_URL
+                eofstat = feof(fid);
+            end
+            fclose(fid);
+        end
+        %%
+        
+        %%% Close the log file:
+        fclose(f1);
+    otherwise
+end
+
+%%% Exit MATLAB
+exit;

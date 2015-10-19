@@ -1,0 +1,31 @@
+function [] = jjb_master2col(out_path, year, site, type)
+%% jjb_master2col.m
+% This script is used to create single column vectors for flux and
+% meteorological data from a master yearly column.
+% The outgoing path should include up to the final destination folder with
+% a forward switch at the end '\'
+% Created July 31, 2007 by JJB
+
+
+%% Make Sure site and year are in string format
+if ischar(site) == false
+    site = num2str(site);
+end
+if ischar(year) == false
+    year = num2str(year);
+end
+%%
+m_path = 
+%% Processing
+if type == 'csv'
+
+    a = dlmread([master_path 'M' site '_' year '_Master.csv' ],',');
+
+    for j = 1:length(master)
+        bv = a(:,j);
+        ext = create_label(j,3);
+        save ([outpath 'Met' site '_' year '.' ext], 'bv','-ASCII');
+        clear bv ext;
+    end
+
+end

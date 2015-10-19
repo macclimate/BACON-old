@@ -1,0 +1,187 @@
+function [output] = SiteSpec_RE(data)
+% Options:
+% Requires all additional variables (e.g. VPD, GDD, NEE_std) to be pre-calculated
+% and included in the data structure variable, before use.
+% Options passed to program: 
+% options.costfun = {'WSS';'OLS';'MAWE'};
+% options.min_method = {'NM';'LM'};
+% %%% Respiration Options:
+% options.RE.model = {'fitresp_1A'; 'fitresp_1B'; 'fitresp_2A'; 'fitresp_2B'; ...
+%     'fitresp_3A'; 'fitresp_3B'; 'fitresp_3C'; 'fitresp_7A'};
+% %%% GEP Options:
+% options.GEP.model = {'PAR_tvp';'all_tvp'; 'all'};
+% %%% Footprint Options:
+% options.FP.model = {'Schuepp'; 'Hseih'};
+% options.FP.XCrit = {'0.6'; '0.7'; '0.8'};
+% %%% Data Aggregation Options:
+% options.param = {'all_yrs'; 'indiv_yrs'};
+
+%%% Check to see if the selected RE model uses Soil Moisture.  If it does,
+%%% we need to designate a backup function (using Ts only), to fill in any
+%%% small holes that might exist in the RE data modeled using SM, as a result
+%%% occasional 
+SM_models = {'fitresp_1B'; 'fitresp_2B'; 'fitresp_3B'; 'fitresp_3C'; 'fitresp_7A'};
+if ~isempty(find(strcmp(SM_models,options.RE.model)==1))
+   if strcmp(options.RE.model, 'fitresp_7A')==1
+       options.RE.model2 = 'fitresp_2A';
+   else
+       options.RE.model2 = [options.RE.model(1,1:end-1) 'A'];
+   end
+   model2_flag = 1;
+else
+    model2_flag = 0;
+end
+    
+    
+
+%%% In the case of TP39, Take nighttime data at any time of year, and
+%%% day+night data during the non-growing season:
+if strcmp(site,'TP39') == 1;
+    ind_param(1).RE_all = find((data.Ustar >= Ustar_th & ~isnan(data.Ts5) & ~isnan(data.SM) & ~isnan(data.NEE) & data.PAR < 15) |... % growing season
+        (data.Ustar >= Ustar_th & ~isnan(data.NEE) & ~isnan(data.SM) & ((data.dt < 85 | data.dt > 335) & data.Ts5 < 0.2)  ) );                                   % non-growing season
+    
+    %%% For the other sites, use the same approach, but for years when the
+    %%% OPEC system would have been used, we have to filter out any periods
+    %%% when air temperature was low enough that the "winter-uptake" problem
+    %%% will skew gapfilling results.  We will keep this threshold at 5 right now, since
+    %%% we are using all years of data - should be able to get enough data
+    %%% to make it work.
+else
+    ind_param(1).RE_all = find((data.Ustar >= Ustar_th & ~isnan(data.Ts5) & ~isnan(data.SM) & ~isnan(data.NEE) & data.PAR < 15 & ((data.Year <= 2007 & data.Ta > 5) | (data.Year >= 2008 & data.Ta > -30)) ) |... % growing season
+        (data.Ustar >= Ustar_th & ~isnan(data.NEE) & ~isnan(data.SM) & ((data.dt < 85 | data.dt > 335) & data.Ts5 < 0.2) & ((data.Year <= 2007 & data.Ta > 5) | (data.Year >= 2008 & data.Ta > -30)))   );                                   % non-growing season
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Set options and run the parameterization for Respiration models:
+% Model types:
+% 1A - L&T (Ts); 1B - L&T (Ts, SM); 
+% 2A - Logi (Ts); 2B - Logi (Ts, SM); 
+% 3A - Q10 (Ts); 3B - Q10 (Ts, SM-logistic); 3C - Q10 (Ts, SM-hyperbolic1); 3D - Q10 (Ts, SM-hyperbolic2)
+% 4A - Exp (Ts); 4B - Exp (Ts, SM)
+% 7  - Saiz(Ts, SM)
+
+%%% Run the Q10 model, with Ts + SM parameterization:
+options.costfun ='WSS'; options.min_method ='NM';
+[c_hat(1).RE1all, y_hat(1).RE1all, y_pred(1).RE1all, stats(1).RE1all, sigma(1).RE1all, err(1).RE1all, exitflag(1).RE1all, num_iter(1).RE1all] = ...
+    fitresp([2 3 8 180], 'options.RE.model', [data.Ts5(ind_param(1).RE_all) data.SM(ind_param(1).RE_all)] , data.NEE(ind_param(1).RE_all), [data.Ts5 data.SM], data.NEEstd(ind_param(1).RE_all), options);
+%%% Run the Q10 model, parameterizing only with Ts
+options.costfun ='WSS'; options.min_method ='NM'; options.f_coeff = [NaN NaN];
+[c_hat(1).RE1all_Tsonly, y_hat(1).RE1all_Tsonly, y_pred(1).RE1all_Tsonly, stats(1).RE1all_Tsonly, sigma(1).RE1all_Tsonly, err(1).RE1all_Tsonly, exitflag(1).RE1all_Tsonly, num_iter(1).RE1all_Tsonly] = ...
+    fitresp([2 3], 'fitresp_3A', [data.Ts5(ind_param(1).RE_all)] , data.NEE(ind_param(1).RE_all), [data.Ts5], data.NEEstd(ind_param(1).RE_all), options);
+
+%%% For TP39, we will fix the SM coefficients -- keeps the response to SM
+%%% constant
+if strcmp(site, 'TP39') == 1
+    fixed_RE_SM_coeffs = [NaN NaN c_hat(1).RE1all(3:4)];
+    starting_coeffs = [2 3];
+
+%%% For all other sites, we will fix the SM coefficients, as well as the
+%%% second Ts-response coefficient -- Adds stability to the year-to-year
+%%% parameterization
+else
+    fixed_RE_SM_coeffs = [NaN c_hat(1).RE1all(2:4)]; % changed this from 3:4 to 2:4 so that Q10 is fixed for all years.
+    starting_coeffs = [2];
+    
+end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Output variables: 
+%%% 1. Raw RE data (during useable periods of NEE [u* OK])
+%%% 2,3. Modeled RE data for both the Ts+SM and Ts_only models:
+Rraw(1:length(data.NEE),1) = NaN;
+RE_model(1:length(data.NEE),1) = NaN;
+RE_model_Tsonly(1:length(data.NEE),1) = NaN;
+
+%%% Find periods when measured NEE is acceptable to use as raw RE:
+if strcmp(site,'TP39')==1
+    ind_Rraw = find((data.Ustar >= Ustar_th & ~isnan(data.NEE) & data.PAR < 15 ) |... % growing season
+        (data.Ustar >= Ustar_th & ~isnan(data.NEE) & ((data.dt < 85 | data.dt > 335) & data.Ts5 < 0.2)) );                             % non-growing season
+else
+    ind_Rraw = find((data.Ustar >= Ustar_th & ~isnan(data.NEE) & data.PAR < 15 & ((data.Year <= 2007 & data.Ta > 5) | (data.Year >= 2008 & data.Ta > -30))) |... % growing season
+        (data.Ustar >= Ustar_th & ~isnan(data.NEE) & ((data.dt < 85 | data.dt > 335) & data.Ts5 < 0.2) & ((data.Year <= 2007 & data.Ta > 5) | (data.Year >= 2008 & data.Ta > -20))) );                             % non-growing season
+end
+Rraw(ind_Rraw) = data.NEE(ind_Rraw);
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Run through each year, finding suitable data for parameterization in
+%%% given year:
+ctr = 1;
+for year = year_start:1:year_end
+    if strcmp(site, 'TP39') == 1
+        ind_param(ctr).RE = find((data.Year == year &data.Ustar >= Ustar_th & ~isnan(data.Ts5) & ~isnan(data.SM) & ~isnan(data.NEE) & data.PAR < 15 ) |... % growing season
+            (data.Year == year & data.Ustar >= Ustar_th & ~isnan(data.NEE) & ~isnan(data.SM) & ((data.dt < 85 | data.dt > 335) & data.Ts5 < 0.2)  ) );                                   % non-growing season
+    else
+        ind_param(ctr).RE = find((data.Year == year &data.Ustar >= Ustar_th & ~isnan(data.Ts5) & ~isnan(data.SM) & ~isnan(data.NEE) & data.PAR < 15 &( (data.Year <= 2007 & data.Ta > 3) | (data.Year >= 2008 & data.Ta > -20) ) ) |... % growing season
+            (data.Year == year & data.Ustar >= Ustar_th & ~isnan(data.NEE) & ~isnan(data.SM) & ((data.dt < 85 | data.dt > 335) & data.Ts5 < 0.2) & ( (data.Year <= 2007 & data.Ta > 3) | (data.Year >= 2008 & data.Ta > -20) ) ) );                                   % non-growing season
+    end
+    
+    % Run Minimization:
+    
+%     %%% Run the Logi model, with Ts + SM parameterization:
+    % [c_hat(ctr).RE, y_hat(ctr).RE, y_pred(ctr).RE, stats(ctr).RE, sigma(ctr).RE, err(ctr).RE, exitflag(ctr).RE, num_iter(ctr).RE] = ...
+    %     fitresp([8 0.2 12], 'fitresp_2A', data.Ts5(ind_param(ctr).RE), data.NEE(ind_param(ctr).RE), data.Ts5(data.Year == year), data.NEEstd(ind_param(ctr).RE), 'WSS', 'NM');
+%     %%% Run the Logi model, with Ts only parameterization:
+    % options.costfun ='WSS'; options.min_method ='NM'; options.f_coeff = [NaN NaN NaN NaN]
+    % [c_hat(ctr).RE1, y_hat(ctr).RE1, y_pred(ctr).RE1, stats(ctr).RE1, sigma(ctr).RE1, err(ctr).RE1, exitflag(ctr).RE1, num_iter(ctr).RE1] = ...
+    %     fitresp([2 3 8 180], 'fitresp_3B', [data.Ts5(ind_param(ctr).RE) data.SM(ind_param(ctr).RE)] , data.NEE(ind_param(ctr).RE), [data.Ts5(data.Year == year) data.SM(data.Year == year)], data.NEEstd(ind_param(ctr).RE), options);
+    
+    %%% Run the Q10 model, with Ts + SM parameterization:
+    options.costfun ='WSS'; options.min_method ='NM'; options.f_coeff = fixed_RE_SM_coeffs;
+    [c_hat(ctr).RE, y_hat(ctr).RE, y_pred(ctr).RE, stats(ctr).RE, sigma(ctr).RE, err(ctr).RE, exitflag(ctr).RE, num_iter(ctr).RE] = ...
+        fitresp(starting_coeffs, 'fitresp_3B', [data.Ts5(ind_param(ctr).RE) data.SM(ind_param(ctr).RE)] , data.NEE(ind_param(ctr).RE), [data.Ts5(data.Year == year) data.SM(data.Year == year)], data.NEEstd(ind_param(ctr).RE), options);
+        %%% Run the Q10 model, with Ts-only parameterization:
+    options.costfun ='WSS'; options.min_method ='NM';options.f_coeff = [NaN NaN];
+    [c_hat(ctr).RE_Tsonly, y_hat(ctr).RE_Tsonly, y_pred(ctr).RE_Tsonly, stats(ctr).RE_Tsonly, sigma(ctr).RE_Tsonly, err(ctr).RE_Tsonly, exitflag(ctr).RE_Tsonly, num_iter(ctr).RE_Tsonly] = ...
+        fitresp([2 3], 'fitresp_3A', [data.Ts5(ind_param(ctr).RE) data.SM(ind_param(ctr).RE)] , data.NEE(ind_param(ctr).RE), [data.Ts5(data.Year == year) data.SM(data.Year == year)], data.NEEstd(ind_param(ctr).RE), options);
+    
+    %%% Fill the modeled RE data with predicted values:
+    RE_model(data.Year == year,1) = y_pred(ctr).RE;
+    RE_model_Tsonly(data.Year == year, 1) = y_pred(ctr).RE_Tsonly;
+    % RE_model2(data.Year == year,1) = y_pred(ctr).RE2;
+    % RE_model3(data.Year == year,1) = y_pred(ctr).RE3;
+    ctr = ctr+1;
+end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%:
+%%% For cases where there are gaps in the Ts+SM model data: 
+%%% When gaps exist in the Ts + SM model output, we have to use the Ts-only
+%%% model data.  There may be offsets in the output of these two models.
+%%% To avoid this, we'll use the Alan Barr windowed gapfilling method to get a
+%%% time-varying parameter that allows us to adjust the Ts-only model to remove
+%%% biases between it and the Ts+SM model:
+rw = jjb_AB_gapfill(RE_model_Tsonly, RE_model,  [],200, 10, 'off', [], [], 'rw');
+%%% Adjust Ts-only modeled RE by TVP:
+RE_model_Tsonly = RE_model_Tsonly.*rw(:,2);
+%%% Fill gaps in Ts+SM model by the Ts-only model output:
+RE_model(isnan(RE_model),1) = RE_model_Tsonly(isnan(RE_model),1);
+
+%%% Plot the relationships for RE-Ts for each year:
+figure('Name', 'Annual REvsTs');clf;
+ctr = 1;
+for year = year_start:1:year_end
+    f_handle = 'fitresp_3B';
+    test_Ts_y =    feval(f_handle,c_hat(ctr).RE,[test_Ts ones(length(test_Ts))]);
+    % (c_hat(ctr).RE(1))./(1 + exp(c_hat(ctr).RE(2).*(c_hat(ctr).RE(3)-test_Ts)));
+    plot(test_Ts, test_Ts_y,'-','Color', clrs(ctr,:)); hold on;
+    ctr = ctr+1;
+end
+legend(num2str((year_start:1:year_end)'));
+
+%%% Plot estimates with raw data:
+figure('Name','RE - raw vs. modeled');clf;
+plot(Rraw,'k');hold on;
+plot(RE_model_Tsonly,'b');
+plot(RE_model,'r')
+legend('raw','model-Tsonly', 'model-Ts+SM')
+
+%%% Calculate stats for each:
+[RE_stats(1,1) RE_stats(1,2) RE_stats(1,3) RE_stats(1,4)] = model_stats(RE_model_Tsonly, Rraw,'off');
+[RE_stats(2,1) RE_stats(2,2) RE_stats(2,3) RE_stats(2,4)] = model_stats(RE_model, Rraw,'off');
+%%% display stats on screen:
+disp('Stats for Each RE Model:');
+disp('              RMSE    |    rRMSE |     MAE     |   BE ');
+disp(['model-Tsonly: ' num2str(RE_stats(1,:))]);
+disp(['model-Ts+SM: ' num2str(RE_stats(2,:))]);
+
+
+
+
+
+end

@@ -1,0 +1,167 @@
+% function [] = OPEC_process_all(site)
+site = 'TP74';
+
+ls = addpath_loadstart;
+
+%%% Load Appropriate Header file:
+[hdr_names] = jjb_hdr_read([ls 'Matlab/Data/Flux/OPEC/Docs/OPEC_variable_sorter.csv'],',',4);
+
+% Checks if complete file exists -- if it does, it loads it.
+%%%% If not, it makes one from scratch:
+if exist([ls 'Matlab/Data/Flux/OPEC/Organized2/' site '/' site '_all.mat'])
+    load([ls 'Matlab/Data/Flux/OPEC/Organized2/' site '/' site '_all.mat']);
+else
+    OPEC_all = NaN.*ones(157776*3,97); % enough data for years 2002--2010;
+    TV_temp = [];
+    year_temp = [];
+    JD_temp = [];
+    HHMM_temp = [];
+
+    for i = 2002:1:2010
+        TV_temp = [TV_temp; make_tv(i,10)];
+        year_temp = [year_temp; i.*ones(yr_length(i).*3,1)];
+        [junk, JD, HHMM, junk2] = jjb_makedate(i, 10);
+        JD_temp = [JD_temp; JD];
+        HHMM_temp = [HHMM_temp; HHMM];
+
+        clear JD HHMM junk*;
+    end
+    OPEC_all(:,1) = TV_temp;
+    OPEC_all(:,2) = year_temp;
+    OPEC_all(:,3) = JD_temp;
+    OPEC_all(:,4) = HHMM_temp;
+
+    clear *_temp;
+end
+
+master_TV = (round(OPEC_all(:,1).*100000))./100000;
+
+
+
+
+% resp = input('Enter <1> to process single file, otherwise, hit enter',s);
+%
+% if strcmp(resp,'1')==1;
+%     [FileName,PathName,FilterIndex] = uigetfile('','Select File to Process',[ls 'Matlab/Data/Flux/OPEC/Raw1']);
+% fullpath = [PathName FileName];
+% else
+
+dir_path = uigetdir([ls 'Matlab/Data/Flux/OPEC/Raw1'],'Select Folder to Process');
+D = dir(dir_path);
+
+if length(D) > 2
+    for i = 3:length(D)
+        names{i-2,1} = D(i).name;
+    end
+    num_files = length(names);
+
+    for fnum = 1:1:num_files
+        [varnames, file_TV, data] = OPEC_load_all([dir_path '/' char(names{fnum,1})]);
+disp('now loading file ' num2str(fn
+
+        % Find intersection points between dates in input_data and TV:
+        [row_common row_file row_master] = intersect(file_TV(:,1), master_TV);
+
+        for vars = 1:1:length(varnames) % cycles through all columns in raw data file
+            name_row = find(strcmp(hdr_names(:,3),varnames{vars})==1); % finds row in namefile where variable name exists
+            if isempty(name_row)==1;
+                name_row = find(strcmp(hdr_names(:,4),varnames{vars})==1); % looks in the 4th row if it needs to.
+            else
+            end
+            right_name = char(hdr_names(name_row,2));
+
+
+
+            if isempty(right_name)
+                disp(['right_name is empty at ' num2str(vars)]);
+            else
+
+                try
+                    %                 right_name(right_name =='"') = '';
+                    %                 right_col = find(strcmp(hdr_names(:,2),right_name)==1);
+
+                    OPEC_all(row_master,name_row) = data(row_file,vars);
+                    %                 clear right_col
+                catch
+                    disp(['variable ' char(right_name) ' not processed.']);
+                end
+            end
+            clear name_row right_name timestamp input_date;
+
+        end
+        clear names timestamp
+        clear data file_TV varnames row_common row_file row_master;
+
+    end
+
+else
+    disp('no files in the directory. ');
+end
+
+
+
+% %% Subfunction to load and separate files:
+% function [hdr, file_TV, data] = OPEC_load_all(loadpath)
+% fid = fopen(loadpath);
+%
+% %%%%%%%%%%%% Gets Header and variable names
+% for i = 1:4
+%     clear tline;
+%   tline = fgets(fid);
+%   %%% This loop writes a header file into cell format from the original
+%   %%% data file
+%   if i == 2
+%     tline(tline == '"') = ''; % take out the quotation marks.
+%     coms = find(tline == ','); % find commas
+%     num_vars = length(coms) + 1;
+%
+%     coms = [0 coms length(tline)+1];
+%      hdr = cellstr(tline(1:coms(1)-1));
+%       for ctr = 1:1:length(coms)-1
+%           hdr(ctr,1) = cellstr(tline(coms(ctr)+1:coms(ctr+1)-1));
+%       end
+%   end
+% end
+%
+% %%% Make Format:
+% format_string = '%s';
+% for k = 2:1:num_vars
+%     format_string = [format_string ' %n'];
+% end
+%
+% eofstat = 0;
+% row_ctr = 1;
+% clear tmp_data;
+%
+% while eofstat == 0;
+%     try
+%         tmp_data = textscan(fid, format_string, 200, 'Delimiter',',','EmptyValue', NaN, 'CommentStyle', {'"N','N"'},{'-1.#','D'});
+%         rows_to_add = length(tmp_data{1,1});
+%         timestamp(row_ctr:row_ctr+rows_to_add-1,:) = char(tmp_data{1,1});
+%
+%         for k = 2:1:length(tmp_data)
+%             if length(tmp_data{1,k}) < rows_to_add
+%                 tmp_switch = tmp_data{1,k};
+%                 tmp_switch = [tmp_switch; NaN.*ones(rows_to_add - length(tmp_data{1,k}))];
+%                 tmp_data{1,k} = tmp_switch;
+%                 clear tmp_switch;
+%             end
+%
+%             data(row_ctr:row_ctr+rows_to_add-1,k) = tmp_data{1,k}; % we'll add the timevector back in later..
+%         end
+%         row_ctr = row_ctr+ rows_to_add;
+%         clear tmp_data rows_to_add;
+%
+%         eofstat = feof(fid);
+%     catch
+%         disp(row_ctr);
+%         s = input('error');
+%     end
+% end
+% fclose(fid);
+%
+%     %%% Convert time_stamp into a timevector
+%     file_TV(:,1) = JJB_DL2Datenum(str2num(timestamp(:,2:5)), str2num(timestamp(:,7:8)), ...
+%         str2num(timestamp(:,10:11)), str2num(timestamp(:,13:14)), str2num(timestamp(:,16:17)), 00);
+%
+%  file_TV = (round(file_TV.*100000))./100000;

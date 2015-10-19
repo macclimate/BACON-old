@@ -1,0 +1,517 @@
+function varargout = mcm_start_mgmt_new(varargin)
+% MCM_START_MGMT_NEW M-file for mcm_start_mgmt_new.fig
+%      
+%   mcm_start_mgmt_new is a function that calls up the data managment GUI for
+%   all TPFS data.  
+%
+%   In its current form, the GUI provides the capability for a number of
+%   operations:
+%   Option A: Data Extraction - select the proper directory where data is
+%   stored
+%
+%
+% SEE BELOW FOR DESCRIPTION OF GUI:
+%       MCM_START_MGMT_NEW, by itself, creates a new MCM_START_MGMT_NEW or raises the existing
+%      singleton*.
+%
+%      H = MCM_START_MGMT_NEW returns the handle to a new MCM_START_MGMT_NEW or the handle to
+%      the existing singleton*.
+%
+%      MCM_START_MGMT_NEW('CALLBACK',hObject,eventData,handles,...) calls the local
+%      function named CALLBACK in MCM_START_MGMT_NEW.M with the given input arguments.
+%
+%      MCM_START_MGMT_NEW('Property','Value',...) creates a new MCM_START_MGMT_NEW or raises the
+%      existing singleton*.  Starting from the left, property value pairs are
+%      applied to the GUI before mcm_start_mgmt_new_OpeningFcn gets called.  An
+%      unrecognized property name or invalid value makes property application
+%      stop.  All inputs are passed to mcm_start_mgmt_new_OpeningFcn via varargin.
+%
+%      *See GUI Options on GUIDE's Tools menu.  Choose "GUI allows only one
+%      instance to run (singleton)".
+%
+% See also: GUIDE, GUIDATA, GUIHANDLES
+
+
+
+
+
+% Edit the above text to modify the response to help mcm_start_mgmt_new
+
+% Last Modified by GUIDE v2.5 08-Dec-2010 15:42:24
+% Begin initialization code - DO NOT EDIT
+gui_Singleton = 1;
+gui_State = struct('gui_Name',       mfilename, ...
+                   'gui_Singleton',  gui_Singleton, ...
+                   'gui_OpeningFcn', @mcm_start_mgmt_new_OpeningFcn, ...
+                   'gui_OutputFcn',  @mcm_start_mgmt_new_OutputFcn, ...
+                   'gui_LayoutFcn',  [] , ...
+                   'gui_Callback',   []);
+if nargin && ischar(varargin{1})
+    gui_State.gui_Callback = str2func(varargin{1});
+end
+
+if nargout
+    [varargout{1:nargout}] = gui_mainfcn(gui_State, varargin{:});
+else
+    gui_mainfcn(gui_State, varargin{:});
+end
+% End initialization code - DO NOT EDIT
+
+
+% --- Executes just before mcm_start_mgmt_new is made visible.
+function mcm_start_mgmt_new_OpeningFcn(hObject, eventdata, handles, varargin)
+% This function has no output args, see OutputFcn.
+% hObject    handle to figure
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+% varargin   command line arguments to mcm_start_mgmt_new (see VARARGIN)
+
+% Choose default command line output for mcm_start_mgmt_new
+handles.output = hObject;
+
+% Update handles structure
+guidata(hObject, handles);
+
+% UIWAIT makes mcm_start_mgmt_new wait for user response (see UIRESUME)
+% uiwait(handles.figure1);
+
+
+% --- Outputs from this function are returned to the command line.
+function varargout = mcm_start_mgmt_new_OutputFcn(hObject, eventdata, handles) 
+% varargout  cell array for returning output args (see VARARGOUT);
+% hObject    handle to figure
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Get default command line output from handles structure
+varargout{1} = handles.output;
+% varargout{2} = handles.output2;
+
+% --- Executes on button press in pushbutton1.
+% function pushbutton1_Callback(hObject, eventdata, handles)
+% loadstart = addpath_loadstart;
+% % if ispc==1;
+% %     pth = 'D:/home/Matlab/Data/DUMP_Data/'; % Change this to different drive when partition made
+% % else
+% %     if exist('/media/Deskie/home/Matlab/Data/DUMP_Data/')==7;
+% %     pth = '/media/Deskie/home/Matlab/Data/DUMP_Data/'; % the path when using on my computer with ext harddrive
+% %     elseif exist('/home/brodeujj/Matlab/Data/') == 7;
+% %     pth = '/home/brodeujj/Matlab/Data/';  
+% %     elseif exist 
+% %         pth = '/media/storage/home/Matlab/Data/
+% %     end
+% % end
+% 
+% if ispc == 1;
+% %     if exist('G:/DUMP_Data/')==7;
+% %         load_path_start = 'G:/DUMP_Data/';
+% %     else
+% %         load_path_start = 'D:/DUMP_Data/';
+% %     end
+% else
+% 
+%         load_path_start = [addpath_loadstart 'DUMP_Data'];
+% end
+% load_path = uigetdir(load_path_start,'select load directory')
+% assignin('base', 'load_path', load_path)
+% handles.output2.load_path = load_path
+
+% hObject    handle to pushbutton1 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --- Executes on selection change in listbox1.
+function listbox1_Callback(hObject, eventdata, handles)
+% hObject    handle to listbox1 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+contents = get(hObject,'String'); % returns listbox1 contents as cell array
+        site = contents{get(hObject,'Value')}  % returns selected item from listbox1
+assignin('base', 'site', site)
+%         handles.output2.site = site
+
+% Hints: contents = get(hObject,'String') returns listbox1 contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from listbox1
+
+
+% --- Executes during object creation, after setting all properties.
+function listbox1_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to listbox1 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: listbox controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on selection change in listbox2.
+function listbox2_Callback(hObject, eventdata, handles)
+% hObject    handle to listbox2 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+contents2 = get(hObject,'String'); % returns listbox2 contents as cell array
+data_type = contents2{get(hObject,'Value')}  % returns selected item from listbox2
+assignin('base', 'data_type', data_type)
+% handles.output2.data_type = data_type
+% Hints: contents = get(hObject,'String') returns listbox2 contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from listbox2
+
+
+% --- Executes during object creation, after setting all properties.
+function listbox2_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to listbox2 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: listbox controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+% --- Executes on button press in pushbutton2.
+function pushbutton2_Callback(hObject, eventdata, handles)
+a = evalin('base','site');
+b = evalin('base','data_type');
+
+if strcmp(b,'chamber') == 1;
+    site = [a '_chamber'];
+    assignin('base', 'site', site)
+end
+
+a = evalin('base','site');
+b = evalin('base','data_type');
+% c = evalin('base','load_path');
+d = evalin('base','year');
+
+mcm_extract_main(a,b,d)
+disp('mcm_extract_main(site,data_type,yyear)')
+% hObject    handle to pushbutton2 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --- If Enable == 'on', executes on mouse press in 5 pixel border.
+% --- Otherwise, executes on mouse press in 5 pixel border or over pushbutton2.
+function pushbutton2_ButtonDownFcn(hObject, eventdata, handles)
+% hObject    handle to pushbutton2 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --- Executes on selection change in listbox3.
+function listbox3_Callback(hObject, eventdata, handles)
+% hObject    handle to listbox3 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+contents3 = get(hObject,'String'); % returns listbox2 contents as cell array
+year = contents3{get(hObject,'Value')}  % returns selected item from listbox2
+%%%%%%%%%%%%%%%%%%%
+% Added Oct 19, 2010 by JJB
+% Adding multiple-year functionality to GUI
+if strcmp(year, 'multiple') == 1
+    year = [];
+end
+%%%%%%%%%%%%%%%%%%
+assignin('base', 'year', year)
+% Hints: contents = get(hObject,'String') returns listbox3 contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from listbox3
+
+% --- Executes during object creation, after setting all properties.
+function listbox3_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to listbox3 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: listbox controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in mcm_checkbut.
+function mcm_checkbut_Callback(hObject, eventdata, handles)
+% hObject    handle to mcm_checkbut (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+a = evalin('base','site');
+b = evalin('base','data_type');
+
+if strcmp(b,'chamber') == 1;
+    site = [a '_chamber'];
+    assignin('base', 'site', site)
+end
+
+
+a = evalin('base','site');
+d = evalin('base','year');
+mcm_checkfiles(a,d);
+disp('mcm_checkfiles(site,year)')
+
+
+% --- Executes on button press in calc_fluxbut.
+function calc_fluxbut_Callback(hObject, eventdata, handles)
+% hObject    handle to calc_fluxbut (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+a = evalin('base','site');
+b = evalin('base','data_type');
+
+if strcmp(b,'chamber') == 1;
+    site = [a '_chamber'];
+    assignin('base', 'site', site)
+end
+
+
+a = evalin('base','site');
+b = evalin('base','data_type');
+% c = evalin('base','load_path');
+% d = evalin('base','year');
+
+mcm_calc_fluxes(a,b)
+disp('mcm_calc_fluxes(site,data_type)')
+
+% --- Executes on button press in mat2annual_button.
+function mat2annual_button_Callback(hObject, eventdata, handles)
+% hObject    handle to mat2annual_button (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+a = evalin('base','site');
+b = evalin('base','data_type');
+if strcmp(b,'chamber') == 1;
+    site = [a '_chamber'];
+    assignin('base', 'site', site)
+end
+
+a = evalin('base','site');
+b = evalin('base','data_type');
+d = evalin('base','year');
+% c = evalin('base','load_path');
+% d = evalin('base','year');
+
+mcm_mat2annual_main(d,a,b)
+disp('mcm_mat2annual_main(site,data_type,year)');
+
+
+% --- Executes on button press in Quickplot_button.
+function Quickplot_button_Callback(hObject, eventdata, handles)
+% hObject    handle to Quickplot_button (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+a = evalin('base','site');
+b = evalin('base','data_type');
+if strcmp(b,'chamber') == 1;
+    site = [a '_chamber'];
+    assignin('base', 'site', site)
+end
+
+a = evalin('base','site');
+b = evalin('base','data_type');
+d = evalin('base','year');
+
+mcm_quickplot_main(d,a,b)
+disp('mcm_quickplot_main(year, site, data_type)');
+
+
+% --- Executes on button press in metclean_button.
+function metclean_button_Callback(hObject, eventdata, handles)
+% hObject    handle to metclean_button (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+a = evalin('base','site');
+b = evalin('base','data_type');
+if strcmp(b,'sapflow') == 1 || strcmp(b,'trenched') == 1 || strcmp(b,'OTT') ==1;
+    site = [a '_' b];
+    assignin('base', 'site', site)
+end
+a = evalin('base','site');
+d = evalin('base','year');
+
+if strcmp(a,'TP_PPT')==1;
+mcm_PPTclean(d)
+disp('mcm_PPTclean(year)');
+else
+mcm_metclean(d,a)
+disp('mcm_metclean(year, site)');
+
+end
+
+% --- Executes on button press in metfixer_run_button.
+function metfixer_run_button_Callback(hObject, eventdata, handles)
+% hObject    handle to metfixer_run_button (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+a = evalin('base','site');
+b = evalin('base','data_type');
+d = evalin('base','year');
+
+if strcmp(a,'TP_PPT')==1;
+    mcm_PPTclean(d)
+else
+    if strcmp(b,'sapflow') == 1 || strcmp(b,'trenched') == 1 || strcmp(b,'OTT') ==1;
+        site = [a '_' b];
+        assignin('base', 'site', site)
+    end
+    a = evalin('base','site');
+    d = evalin('base','year');
+    disp(['mcm_metfixer(' d ',''' a ''');']);
+
+    mcm_metfixer(d,a)
+end
+% --- Executes on button press in metfixer_edit_button.
+function metfixer_edit_button_Callback(hObject, eventdata, handles)
+% hObject    handle to metfixer_edit_button (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+a = evalin('base','site');
+if strcmp(a,'TP_PPT')==1;
+eval('edit mcm_PPTclean.m');
+else
+eval('edit mcm_metfixer.m');
+end
+
+% --- Executes on button press in metfill_button.
+function metfill_button_Callback(hObject, eventdata, handles)
+% hObject    handle to metfill_button (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+a = evalin('base','site');
+d = evalin('base','year');
+
+if strcmp(a,'TP_PPT')==1;
+mcm_PPTfill(d);
+    disp('mcm_PPTfill(year)');
+else
+    mcm_metfill(d);
+    disp('mcm_metfill(year)');
+end
+
+% --- Executes on button press in met_SHF_button.
+function met_SHF_button_Callback(hObject, eventdata, handles)
+% hObject    handle to met_SHF_button (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+a = evalin('base','site');
+d = evalin('base','year');
+mcm_SHF(d,a)
+disp('mcm_SHF(year,site)');
+% --- Executes on button press in run_storage_button.
+function run_storage_button_Callback(hObject, eventdata, handles)
+% hObject    handle to run_storage_button (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+a = evalin('base','site');
+b = evalin('base','data_type');
+d = evalin('base','year');
+
+
+if strcmp(b,'OPEC') == 1;
+    disp('...Not yet implemented...')
+else
+    
+mcm_CPEC_storage(d, a);
+disp('mcm_CPEC_storage(year, site)');
+
+end
+
+% --- Executes on button press in NEE_gapfill_button.
+function NEE_gapfill_button_Callback(hObject, eventdata, handles)
+% hObject    handle to NEE_gapfill_button (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+a = evalin('base','site');
+
+% disp('running FCRN gapfilling');
+% mcm_FCRN_Gapfill(a,[],[],[],[]);
+% disp('running PI-pref gapfilling');
+% mcm_SiteSpec_Gapfill(a,[],[],[],[]);
+% --- Executes on button press in LE_Hs_gapfill_button.
+function LE_Hs_gapfill_button_Callback(hObject, eventdata, handles)
+% hObject    handle to LE_Hs_gapfill_button (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+a = evalin('base','site');
+mcm_LE_H_Gapfill(a,[],[],[]);
+
+% --- Executes on button press in compile_data_button.
+function compile_data_button_Callback(hObject, eventdata, handles)
+% hObject    handle to compile_data_button (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+a = evalin('base','site');
+mcm_data_compiler([],a);
+
+% --- Executes on button press in FH_output_button.
+function FH_output_button_Callback(hObject, eventdata, handles)
+% hObject    handle to FH_output_button (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+d = evalin('base','year');
+mcm_output_FHdata(d);
+
+
+% --- Executes on button press in cleanflux_button.
+function cleanflux_button_Callback(hObject, eventdata, handles)
+% hObject    handle to cleanflux_button (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+a = evalin('base','site');
+d = evalin('base','year');
+mcm_fluxclean(d,a);
+disp('mcm_fluxclean(year,site)');
+
+% --- Executes on button press in finalfluxclean_edit_button.
+function finalfluxclean_edit_button_Callback(hObject, eventdata, handles)
+% hObject    handle to finalfluxclean_edit_button (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+eval('edit mcm_fluxfixer.m');
+
+% --- Executes on button press in finalfluxclean_go_button.
+function finalfluxclean_go_button_Callback(hObject, eventdata, handles)
+% hObject    handle to finalfluxclean_go_button (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+a = evalin('base','site');
+d = evalin('base','year');
+mcm_fluxfixer(d,a);
+disp('mcm_fluxfixer(year,site)');
+
+% --- Executes on button press in button_4_MOE_WT.
+function button_4_MOE_WT_Callback(hObject, eventdata, handles)
+% hObject    handle to button_4_MOE_WT (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+mcm_read_MOE_WT_data();
+
+
+% --- Executes on button press in Footprint_button.
+function Footprint_button_Callback(hObject, eventdata, handles)
+% hObject    handle to Footprint_button (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+a = evalin('base','site');
+run_mcm_footprint(a);
+disp('run_mcm_footprint(site)');
+
+
+% --- Executes on button press in Compile1_button.
+function Compile1_button_Callback(hObject, eventdata, handles)
+% hObject    handle to Compile1_button (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+a = evalin('base','site');
+mcm_data_compiler([],a,1);
+
+% --- Executes on button press in Edit_NEE_Gapfilling_Defaults_button.
+function Edit_NEE_Gapfilling_Defaults_button_Callback(hObject, eventdata, handles)
+% hObject    handle to Edit_NEE_Gapfilling_Defaults_button (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+% a = evalin('base','site');
+edit mcm_Gapfill_NEE_default;

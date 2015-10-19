@@ -1,0 +1,273 @@
+%% This file was created to fill sapflow data:  Created by:  SLM June 10,
+%% 2010 -  STEP #4 in the SAPFLOW RUNNING PROGRAM
+% In order to fill data, two steps will be required.  1)  fixed sapflow
+% data will be loaded, and the data will first be linearly interpolated (to
+% a maximum of 3 points).  2)  The data will then be filled with the model
+% outputs from the Neural Network (NN).
+
+%% Step one:  Load the data (both modelled and fixed)
+
+load 'C:\MacKay\Masters\data\hhour\model\ET1_fixed_hh10.dat';
+load 'C:\MacKay\Masters\data\hhour\model\ET1_hh10_NN.dat';
+load 'C:\MacKay\Masters\data\hhour\model\ET2_fixed_hh10.dat';
+load 'C:\MacKay\Masters\data\hhour\model\ET2_hh10_NN.dat';
+load 'C:\MacKay\Masters\data\hhour\model\ET3_fixed_hh10.dat';
+load 'C:\MacKay\Masters\data\hhour\model\ET3_hh10_NN.dat';
+load 'C:\MacKay\Masters\data\hhour\model\ET4_fixed_hh10.dat';
+load 'C:\MacKay\Masters\data\hhour\model\ET4_hh10_NN.dat';
+load 'C:\MacKay\Masters\data\hhour\model\ET5_fixed_hh10.dat';
+load 'C:\MacKay\Masters\data\hhour\model\ET5_hh10_NN.dat';
+
+load 'C:\MacKay\Masters\data\hhour\model\ET6_fixed_hh10.dat';
+load 'C:\MacKay\Masters\data\hhour\model\ET6_hh10_NN.dat';
+load 'C:\MacKay\Masters\data\hhour\model\ET7_fixed_hh10.dat';
+load 'C:\MacKay\Masters\data\hhour\model\ET7_hh10_NN.dat';
+load 'C:\MacKay\Masters\data\hhour\model\ET8_fixed_hh10.dat';
+load 'C:\MacKay\Masters\data\hhour\model\ET8_hh10_NN.dat';
+load 'C:\MacKay\Masters\data\hhour\model\ET9_fixed_hh10.dat';
+load 'C:\MacKay\Masters\data\hhour\model\ET9_hh10_NN.dat';
+load 'C:\MacKay\Masters\data\hhour\model\ET10_fixed_hh10.dat';
+load 'C:\MacKay\Masters\data\hhour\model\ET10_hh10_NN.dat';
+load 'C:\MacKay\Masters\data\hhour\model\ET22_fixed_hh10.dat';
+load 'C:\MacKay\Masters\data\hhour\model\ET22_hh10_NN.dat';
+load 'C:\MacKay\Masters\data\hhour\model\ET23_fixed_hh10.dat';
+%load 'C:\MacKay\Masters\data\hhour\model\ET23_hh10_NN.dat';
+
+load 'C:\MacKay\Masters\data\hhour\model\ET11_fixed_hh10.dat';
+load 'C:\MacKay\Masters\data\hhour\model\ET11_hh10_NN.dat';
+load 'C:\MacKay\Masters\data\hhour\model\ET12_fixed_hh10.dat';
+load 'C:\MacKay\Masters\data\hhour\model\ET12_hh10_NN.dat';
+load 'C:\MacKay\Masters\data\hhour\model\ET13_fixed_hh10.dat';
+load 'C:\MacKay\Masters\data\hhour\model\ET13_hh10_NN.dat';
+load 'C:\MacKay\Masters\data\hhour\model\ET14_fixed_hh10.dat';
+load 'C:\MacKay\Masters\data\hhour\model\ET14_hh10_NN.dat';
+load 'C:\MacKay\Masters\data\hhour\model\ET15_fixed_hh10.dat';
+load 'C:\MacKay\Masters\data\hhour\model\ET15_hh10_NN.dat';
+
+load 'C:\MacKay\Masters\data\hhour\model\ET16_fixed_hh10.dat';
+load 'C:\MacKay\Masters\data\hhour\model\ET16_hh10_NN.dat';
+load 'C:\MacKay\Masters\data\hhour\model\ET17_fixed_hh10.dat';
+load 'C:\MacKay\Masters\data\hhour\model\ET17_hh10_NN.dat';
+load 'C:\MacKay\Masters\data\hhour\model\ET18_fixed_hh10.dat';
+load 'C:\MacKay\Masters\data\hhour\model\ET18_hh10_NN.dat';
+load 'C:\MacKay\Masters\data\hhour\model\ET19_fixed_hh10.dat';
+load 'C:\MacKay\Masters\data\hhour\model\ET19_hh10_NN.dat';
+load 'C:\MacKay\Masters\data\hhour\model\ET20_fixed_hh10.dat';
+load 'C:\MacKay\Masters\data\hhour\model\ET20_hh10_NN.dat';
+
+%%
+
+ET1_fixed_hh10 = ET1_fixed_hh10(1:length(ET1_hh10_NN),:);
+ET2_fixed_hh10 = ET2_fixed_hh10(1:length(ET1_hh10_NN),:);
+ET3_fixed_hh10 = ET3_fixed_hh10(1:length(ET1_hh10_NN),:);
+ET4_fixed_hh10 = ET4_fixed_hh10(1:length(ET1_hh10_NN),:);
+ET5_fixed_hh10 = ET5_fixed_hh10(1:length(ET1_hh10_NN),:);
+
+ET6_fixed_hh10 = ET6_fixed_hh10(1:length(ET1_hh10_NN),:);
+ET7_fixed_hh10 = ET7_fixed_hh10(1:length(ET1_hh10_NN),:);
+ET8_fixed_hh10 = ET8_fixed_hh10(1:16302,:);
+ET9_fixed_hh10 = ET9_fixed_hh10(1:16302,:);
+ET10_fixed_hh10 = ET10_fixed_hh10(1:16302,:);
+ET22_fixed_hh10 = ET22_fixed_hh10(1:16302,:);
+
+ET11_fixed_hh10 = ET11_fixed_hh10(1:16302,:);
+ET12_fixed_hh10 = ET12_fixed_hh10(1:16302,:);
+ET13_fixed_hh10 = ET13_fixed_hh10(1:16302,:);
+ET14_fixed_hh10 = ET14_fixed_hh10(1:16302,:);
+ET15_fixed_hh10 = ET15_fixed_hh10(1:16302,:);
+
+ET16_fixed_hh10 = ET16_fixed_hh10(1:16302,:);
+ET17_fixed_hh10 = ET17_fixed_hh10(1:16302,:);
+ET18_fixed_hh10 = ET18_fixed_hh10(1:16302,:);
+ET19_fixed_hh10 = ET19_fixed_hh10(1:16302,:);
+ET20_fixed_hh10 = ET20_fixed_hh10(1:16302,:);
+
+%% Step 2:  Linearly interpolate all the FIXED (not modelled) data
+
+[ET1_filled1_hh10] = jjb_interp_gap(ET1_fixed_hh10);
+[ET2_filled1_hh10] = jjb_interp_gap(ET2_fixed_hh10);
+[ET3_filled1_hh10] = jjb_interp_gap(ET3_fixed_hh10);
+[ET4_filled1_hh10] = jjb_interp_gap(ET4_fixed_hh10);
+[ET5_filled1_hh10] = jjb_interp_gap(ET5_fixed_hh10);
+
+[ET6_filled1_hh10] = jjb_interp_gap(ET6_fixed_hh10);
+[ET7_filled1_hh10] = jjb_interp_gap(ET7_fixed_hh10);
+[ET8_filled1_hh10] = jjb_interp_gap(ET8_fixed_hh10);
+[ET9_filled1_hh10] = jjb_interp_gap(ET9_fixed_hh10);
+[ET10_filled1_hh10] = jjb_interp_gap(ET10_fixed_hh10);
+[ET22_filled1_hh10] = jjb_interp_gap(ET22_fixed_hh10);
+[ET23_filled1_hh10] = jjb_interp_gap(ET23_fixed_hh10);
+
+[ET11_filled1_hh10] = jjb_interp_gap(ET11_fixed_hh10);
+[ET12_filled1_hh10] = jjb_interp_gap(ET12_fixed_hh10);
+[ET13_filled1_hh10] = jjb_interp_gap(ET13_fixed_hh10);
+[ET14_filled1_hh10] = jjb_interp_gap(ET14_fixed_hh10);
+[ET15_filled1_hh10] = jjb_interp_gap(ET15_fixed_hh10);
+
+[ET16_filled1_hh10] = jjb_interp_gap(ET16_fixed_hh10);
+[ET17_filled1_hh10] = jjb_interp_gap(ET17_fixed_hh10);
+[ET18_filled1_hh10] = jjb_interp_gap(ET18_fixed_hh10);
+[ET19_filled1_hh10] = jjb_interp_gap(ET19_fixed_hh10);
+[ET20_filled1_hh10] = jjb_interp_gap(ET20_fixed_hh10);
+
+%% Step 3:  Fill all filled1 data now with the NN model output
+%Find all the times when GEP is NOT NaN and fill the model with the real
+%data whenever the real data is not NaN
+
+ET1_filled1_hh10(isnan(ET1_filled1_hh10)) = ET1_hh10_NN(isnan(ET1_filled1_hh10)); 
+ind = find(ET1_filled1_hh10<0);
+ET1_filled1_hh10(ind) = NaN;
+[ET1_filled_hh10] = jjb_interp_gap(ET1_filled1_hh10);
+save 'C:\MacKay\Masters\data\hhour\filled\ET1_filled_hh10.dat'  ET1_filled_hh10   -ASCII
+
+clear ind;
+ET2_filled1_hh10(isnan(ET2_filled1_hh10)) = ET2_hh10_NN(isnan(ET2_filled1_hh10)); 
+ind = find(ET2_filled1_hh10<0);
+ET2_filled1_hh10(ind) = NaN;
+[ET2_filled_hh10] = jjb_interp_gap(ET2_filled1_hh10);
+save 'C:\MacKay\Masters\data\hhour\filled\ET2_filled_hh10.dat'  ET2_filled_hh10   -ASCII
+
+clear ind;
+ET3_filled1_hh10(isnan(ET3_filled1_hh10)) = ET3_hh10_NN(isnan(ET3_filled1_hh10)); 
+ind = find(ET3_filled1_hh10<0);
+ET3_filled1_hh10(ind) = NaN;
+[ET3_filled_hh10] = jjb_interp_gap(ET3_filled1_hh10);
+save 'C:\MacKay\Masters\data\hhour\filled\ET3_filled_hh10.dat'  ET3_filled_hh10   -ASCII
+
+clear ind;
+ET4_filled1_hh10(isnan(ET4_filled1_hh10)) = ET4_hh10_NN(isnan(ET4_filled1_hh10)); 
+ind = find(ET4_filled1_hh10<0);
+ET4_filled1_hh10(ind) = NaN;
+[ET4_filled_hh10] = jjb_interp_gap(ET4_filled1_hh10);
+save 'C:\MacKay\Masters\data\hhour\filled\ET4_filled_hh10.dat'  ET4_filled_hh10   -ASCII
+
+ET5_filled1_hh10(isnan(ET5_filled1_hh10)) = ET5_hh10_NN(isnan(ET5_filled1_hh10)); 
+clear ind;
+ind = find(ET5_filled1_hh10<0);
+ET5_filled1_hh10(ind) = NaN;
+[ET5_filled_hh10] = jjb_interp_gap(ET5_filled1_hh10);
+save 'C:\MacKay\Masters\data\hhour\filled\ET5_filled_hh10.dat'  ET5_filled_hh10   -ASCII
+
+ET6_filled1_hh10(isnan(ET6_filled1_hh10)) = ET6_hh10_NN(isnan(ET6_filled1_hh10)); 
+clear ind;
+ind = find(ET6_filled1_hh10<0);
+ET6_filled1_hh10(ind) = NaN;
+[ET6_filled_hh10] = jjb_interp_gap(ET6_filled1_hh10);
+save 'C:\MacKay\Masters\data\hhour\filled\ET6_filled_hh10.dat'  ET6_filled_hh10   -ASCII
+
+ET7_filled1_hh10(isnan(ET7_filled2_hh10)) = ET7_hh10_NN(isnan(ET7_filled1_hh10)); 
+clear ind;
+ind = find(ET7_filled1_hh10<0);
+ET7_filled1_hh10(ind) = NaN;
+[ET7_filled_hh10] = jjb_interp_gap(ET7_filled1_hh10);
+save 'C:\MacKay\Masters\data\hhour\filled\ET7_filled_hh10.dat'  ET7_filled_hh10   -ASCII
+
+ET8_filled1_hh10(isnan(ET8_filled3_hh10)) = ET8_hh10_NN(isnan(ET8_filled1_hh10)); 
+clear ind;
+ind = find(ET8_filled1_hh10<0);
+ET8_filled1_hh10(ind) = NaN;
+[ET8_filled_hh10] = jjb_interp_gap(ET8_filled1_hh10);
+save 'C:\MacKay\Masters\data\hhour\filled\ET8_filled_hh10.dat'  ET8_filled_hh10   -ASCII
+
+ET9_filled1_hh10(isnan(ET9_filled4_hh10)) = ET9_hh10_NN(isnan(ET9_filled1_hh10)); 
+clear ind;
+ind = find(ET9_filled1_hh10<0);
+ET9_filled1_hh10(ind) = NaN;
+[ET9_filled_hh10] = jjb_interp_gap(ET9_filled1_hh10);
+save 'C:\MacKay\Masters\data\hhour\filled\ET9_filled_hh10.dat'  ET9_filled_hh10   -ASCII
+
+ET10_filled1_hh10(isnan(ET10_filled5_hh10)) = ET10_hh10_NN(isnan(ET10_filled1_hh10));
+clear ind;
+ind = find(ET10_filled1_hh10<0);
+ET10_filled1_hh10(ind) = NaN;
+[ET10_filled_hh10] = jjb_interp_gap(ET10_filled1_hh10);
+save 'C:\MacKay\Masters\data\hhour\filled\ET10_filled_hh10.dat'  ET10_filled_hh10   -ASCII
+
+ET22_filled1_hh10(isnan(ET22_filled1_hh10)) = ET22_hh10_NN(isnan(ET22_filled1_hh10)); 
+clear ind;
+ind = find(ET22_filled1_hh10<0);
+ET22_filled1_hh10(ind) = NaN;
+[ET22_filled_hh10] = jjb_interp_gap(ET22_filled1_hh10);
+save 'C:\MacKay\Masters\data\hhour\filled\ET22_filled_hh10.dat'  ET22_filled_hh10   -ASCII
+
+ET23_filled1_hh10(isnan(ET23_filled1_hh10)) = ET23_hh10_NN(isnan(ET23_filled1_hh10));
+clear ind;
+ind = find(ET23_filled1_hh10<0);
+ET23_filled1_hh10(ind) = NaN;
+[ET23_filled_hh10] = jjb_interp_gap(ET23_filled1_hh10);
+save 'C:\MacKay\Masters\data\hhour\filled\ET23_filled_hh10.dat'  ET23_filled_hh10   -ASCII
+
+ET11_filled1_hh10(isnan(ET11_filled1_hh10)) = ET11_hh10_NN(isnan(ET11_filled1_hh10)); 
+clear ind;
+ind = find(ET11_filled1_hh10<0);
+ET11_filled1_hh10(ind) = NaN;
+[ET11_filled_hh10] = jjb_interp_gap(ET11_filled1_hh10);
+save 'C:\MacKay\Masters\data\hhour\filled\ET11_filled_hh10.dat'  ET11_filled_hh10   -ASCII
+
+ET12_filled1_hh10(isnan(ET12_filled1_hh10)) = ET12_hh10_NN(isnan(ET12_filled1_hh10)); 
+clear ind;
+ind = find(ET12_filled1_hh10<0);
+ET12_filled1_hh10(ind) = NaN;
+[ET12_filled_hh10] = jjb_interp_gap(ET12_filled1_hh10);
+save 'C:\MacKay\Masters\data\hhour\filled\ET12_filled_hh10.dat'  ET12_filled_hh10   -ASCII
+
+ET13_filled1_hh10(isnan(ET13_filled1_hh10)) = ET13_hh10_NN(isnan(ET13_filled1_hh10)); 
+clear ind;
+ind = find(ET13_filled1_hh10<0);
+ET13_filled1_hh10(ind) = NaN;
+[ET13_filled_hh10] = jjb_interp_gap(ET13_filled1_hh10);
+save 'C:\MacKay\Masters\data\hhour\filled\ET13_filled_hh10.dat'  ET13_filled_hh10   -ASCII
+
+ET14_filled1_hh10(isnan(ET14_filled1_hh10)) = ET14_hh10_NN(isnan(ET14_filled1_hh10)); 
+clear ind;
+ind = find(ET14_filled1_hh10<0);
+ET14_filled1_hh10(ind) = NaN;
+[ET14_filled_hh10] = jjb_interp_gap(ET14_filled1_hh10);
+save 'C:\MacKay\Masters\data\hhour\filled\ET14_filled_hh10.dat'  ET14_filled_hh10   -ASCII
+
+ET15_filled1_hh10(isnan(ET15_filled1_hh10)) = ET15_hh10_NN(isnan(ET15_filled1_hh10)); 
+clear ind;
+ind = find(ET15_filled1_hh10<0);
+ET15_filled1_hh10(ind) = NaN;
+[ET15_filled_hh10] = jjb_interp_gap(ET15_filled1_hh10);
+save 'C:\MacKay\Masters\data\hhour\filled\ET15_filled_hh10.dat'  ET15_filled_hh10   -ASCII
+
+ET16_filled1_hh10(isnan(ET16_filled1_hh10)) = ET16_hh10_NN(isnan(ET16_filled1_hh10)); 
+clear ind;
+ind = find(ET16_filled1_hh10<0);
+ET16_filled1_hh10(ind) = NaN;
+[ET16_filled_hh10] = jjb_interp_gap(ET16_filled1_hh10);
+save 'C:\MacKay\Masters\data\hhour\filled\ET16_filled_hh10.dat'  ET16_filled_hh10   -ASCII
+
+ET17_filled1_hh10(isnan(ET17_filled2_hh10)) = ET17_hh10_NN(isnan(ET17_filled1_hh10)); 
+clear ind;
+ind = find(ET17_filled1_hh10<0);
+ET17_filled1_hh10(ind) = NaN;
+[ET17_filled_hh10] = jjb_interp_gap(ET17_filled1_hh10);
+save 'C:\MacKay\Masters\data\hhour\filled\ET17_filled_hh10.dat'  ET17_filled_hh10   -ASCII
+
+ET18_filled1_hh10(isnan(ET18_filled3_hh10)) = ET18_hh10_NN(isnan(ET18_filled1_hh10));
+clear ind;
+ind = find(ET18_filled1_hh10<0);
+ET18_filled1_hh10(ind) = NaN;
+[ET18_filled_hh10] = jjb_interp_gap(ET18_filled1_hh10);
+save 'C:\MacKay\Masters\data\hhour\filled\ET18_filled_hh10.dat'  ET18_filled_hh10   -ASCII
+
+ET19_filled1_hh10(isnan(ET19_filled4_hh10)) = ET19_hh10_NN(isnan(ET19_filled1_hh10)); 
+clear ind;
+ind = find(ET19_filled1_hh10<0);
+ET19_filled1_hh10(ind) = NaN;
+[ET19_filled_hh10] = jjb_interp_gap(ET19_filled1_hh10);
+save 'C:\MacKay\Masters\data\hhour\filled\ET19_filled_hh10.dat'  ET19_filled_hh10   -ASCII
+
+ET20_filled1_hh10(isnan(ET20_filled5_hh10)) = ET20_hh10_NN(isnan(ET20_filled1_hh10));
+clear ind;
+ind = find(ET20_filled1_hh10<0);
+ET20_filled1_hh10(ind) = NaN;
+[ET20_filled_hh10] = jjb_interp_gap(ET20_filled1_hh10);
+save 'C:\MacKay\Masters\data\hhour\filled\ET20_filled_hh10.dat'  ET20_filled_hh10   -ASCII
+
+figure('Name','Test');clf;
+hold on;
+plot (ET6_filled_hh10,'b');
+plot (ET6_fixed_hh10, 'r.');

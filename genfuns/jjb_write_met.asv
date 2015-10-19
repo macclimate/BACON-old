@@ -1,0 +1,38 @@
+function [] = jjb_write_met(met_master, num_cols, start_end, time_tracker, title_tracker)
+
+exten = create_label([1:1:num_cols]',3);
+exten2 = create_label([1:1:num_cols]',3);
+
+% cnt_5 = find(time_tracker == 5);            %%% Finds columns to be saved that are 5min intervals
+% cnt_30 = find(time_tracker == 30);          %%% 30 min
+% cnt_1440 = find(time_tracker == 1440);      %%% 1440 min
+
+for abc = 1:length(start_end);
+    
+    if start_end(abc,3) == 5
+        indtime = ind5;
+    elseif start_end(abc,3) == 30
+        indtime = ind30;
+    elseif start_end(abc,3) == 1440
+        indtime = indday;
+    end
+    
+    for i =start_end(abc,1):1:start_end(abc,2)
+        outpath = (['C:\Home\Matlab\Data\Organized\Met' num2str(site) '\Column\' num2str(start_end(abc,3)) 'min\Met' num2str(site)];
+        fout=fopen([outpath '.' exten(i,:)],'w');
+        
+        a(1:(525600/start_end(abc,3)),1) = NaN;
+        fprintf (fout,'%f\r\n', a);  
+        fclose(fout);
+    end
+    
+    for j = start_end(abc,1):1:start_end(abc,2)
+        bv = load([outpath '.' exten2(j,:)]);
+        bv(:,1)=met_master(indtime,j);
+        save([outpath '.' exten2(j,:)],'bv','-ASCII');
+    end
+    
+    clear i j a bv indtime;
+    
+end
+end

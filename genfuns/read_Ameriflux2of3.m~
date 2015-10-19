@@ -1,0 +1,70 @@
+% testing readtext\
+clear all; 
+close all;
+ls = addpath_loadstart;
+data_path = [ls 'Matlab/Data/Ameriflux/flux/'];
+save_path = [ls 'Matlab/Data/Ameriflux/extracted/'];
+% data_path = [ls 'Matlab/Data/Ameriflux/flux/ARM_SGP_Main/with_gaps/AMF_USARM_2006_L2_WG_V003.csv'];
+% [data, result]= readtext(data_path, ',', '', '', '')
+
+d = dir(data_path);
+
+%%% What data columns do we want?
+% First 11 columns should do.
+% We need rows 21:end
+
+for k = 11:1:20%length(d)
+    tic;
+    tmp_name = d(k).name;
+    tmp_dir = [data_path tmp_name '/with_gaps/'];
+    tmp_data_out = [];
+    % Get directory of all files inside /with_gaps/ folder:
+    try
+        tmp_d = dir(tmp_dir);
+    catch
+        disp(['/with_gaps/ directory doesn''t exist for ' tmp_name '. Skipping.']);
+    end
+    
+    for i = 3:1:length(tmp_d)
+%         tic;
+        [pathstr, tmp_name2, tmp_ext, tmp_ver] = fileparts(tmp_d(i).name);
+        
+        % If it's a .csv file, we'll go to work on it:
+        if strcmp(tmp_ext,'.csv')==1
+            tmp_fullpath = [tmp_dir tmp_name2 tmp_ext];
+            %%%% try to extract the year from the filename %%%%%%%%%%%%%%%
+            tmp_uscr = strfind(tmp_name2,'_');
+            tmp_uscr = [0 tmp_uscr length(tmp_name2)];
+            tmp_diff = diff(tmp_uscr);
+            tmp_fives = find(tmp_diff==5);
+            
+            for j = 1:1:length(tmp_fives)
+                tmp_to_check = tmp_name2(tmp_uscr(tmp_fives(j))+1:(tmp_uscr(tmp_fives(j)+1))-1);
+                if strcmp(tmp_to_check(1:2),'19')==1 || strcmp(tmp_to_check(1:2),'20')==1
+                    tmp_yr = tmp_to_check;
+                end
+            end
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            [tmp_data, tmp_result] = readtext(tmp_fullpath, ',', '', '', '') ;
+            
+            if isempty(tmp_data_out)==1
+                tmp_labels = tmp_data(18,1:11)';
+            end
+            tmp_data_out = [tmp_data_out;  cell2mat(tmp_data(21:end,1:11))];
+            disp(['Successfully read ' tmp_name2 tmp_ext ]);
+        end
+        
+    end
+    t = toc;
+    if ~isempty(tmp_data_out)
+        % save the file:
+        master.data = tmp_data_out;
+        master.labels = tmp_labels;
+        save([save_path tmp_name '.mat']);
+        disp(['Finished site ' tmp_name ' in ' num2str(t) ' seconds.']);
+    else
+        disp(['Problem working on site ' tmp_name 'output file is empty.  Not saved.']);
+    end
+end
+
+

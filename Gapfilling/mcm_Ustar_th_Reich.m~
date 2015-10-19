@@ -1,0 +1,25 @@
+function [Ustar_th] = mcm_Ustar_th_Reich(data, plot_flag)
+
+if nargin == 1
+    plot_flag = 0
+end
+if isfield(data,'year_start'
+year_start = data.year_start;
+year_end = data.year_end;
+Ustar_th = NaN.*ones(length(data.Year),1);
+%% Part 1: Establish the appropriate u* threshold:
+%%% 1a: The Reichstein, 2005 approach:
+seasons = [1 3; 4 6; 7 9; 10 12]; % Starting and ending months for seasons
+ctr = 1;
+for year = year_start:1:year_end
+    for seas = 1:1:4
+        ind = find(data.Year == year & data.Month >= seasons(seas,1) & data.Month <= seasons(seas, 2));
+        [u_th_est seas_u_th(seas,ctr)] = Reichsten_uth(data.NEE(ind), data.Ts5(ind), data.Ustar(ind), data.RE_flag(ind));
+    end
+    %%% Select annual u*_th as the maximum of seasonal esimates
+    %%% (conservative)
+    %     Ustar_th(ctr,1) = nanmax(seas_u_th(:,ctr));
+    Ustar_th_med(ctr,1) = nanmedian(seas_u_th(:,ctr)); % Changed to median:
+    Ustar_th(data.Year == year,1) = Ustar_th_med(ctr,1);
+    ctr = ctr+1;
+end

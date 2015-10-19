@@ -1,0 +1,54 @@
+function out = fitGEP_Lasslop_noVPDall(c_hat,x)
+%%
+%%% fitGEP_Lasslop_noVPDall.m
+%%% This function estimates NEE (not GEP) using the MM rectangular
+%%% hyperbolic function and subtracting RE (using the L&T method, with 
+%%% two flexible parameters -- rb [a.k.a. Rref] and Eo).
+%%% The Eo parameter is derived from daytime data.
+%%% input: x (X) inputted as [PAR T]
+
+global X Y stdev objfun fixed_coeff coeffs_to_fix fix_flag;
+
+% if ~isempty(coeffs_to_fix)==1
+%     ctr = 1;
+%     for i = 1:1:length(fixed_coeff)
+%         if isnan(fixed_coeff(i))
+%             c_hat_tmp(i) = c_hat(ctr);
+%             ctr = ctr+1;
+%         else
+%             c_hat_tmp(i) = fixed_coeff(i);
+%         end
+%         
+%     end
+%     
+%     c_hat = c_hat_tmp;
+% end
+
+if fitflag == 1
+    c_hat(coeffs_to_fix
+
+if nargin > 1
+%        y_hat = ( (c_hat(1)*c_hat(2)*x(:,1))./(c_hat(1)*x(:,1) + c_hat(2)) ) + ...
+%            c_hat(3).*exp(c_hat(4).*( (1./(10-(-46.02))) - (1./(x(:,2)-(-46.02))) ));
+       y_hat = c_hat(3).*(exp(c_hat(4).*( (1./(10-(-46.02))) - (1./(x(:,2)-(-46.02)))) )) - ...
+           ( (c_hat(1).*c_hat(2).*x(:,1))./(c_hat(1).*x(:,1) + c_hat(2)));       
+       out = y_hat;
+else
+%        y_hat = ( (c_hat(1)*c_hat(2)*X(:,1))./(c_hat(1)*X(:,1) + c_hat(2)) ) + ...
+%            c_hat(3).*exp(c_hat(4).*( (1./(10-(-46.02))) - (1./(X(:,2)-(-46.02))) ));
+       y_hat = c_hat(3).*(exp(c_hat(4).*( (1./(10-(-46.02))) - (1./(X(:,2)-(-46.02)))) )) - ...
+           ( (c_hat(1).*c_hat(2).*X(:,1))./(c_hat(1).*X(:,1) + c_hat(2)) );
+
+switch objfun
+    case 'OLS'
+        err = sum((y_hat - Y).^2);
+    case 'WSS'
+        err = sum(((y_hat - Y).^2)./(stdev.^2));
+    case 'MAWE'
+        err = (1./length(X)) .* ( sum(abs(y_hat - Y)./stdev));
+    otherwise
+        disp('no objective function specified - using least-squares')
+      err = sum((y_hat - Y).^2);
+end
+out = err;
+end

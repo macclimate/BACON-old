@@ -1,0 +1,196 @@
+% function [] = mcm_chamber_mat2annual(year, site)
+
+%%%% TO BE REMOVED AFTER OPERATIONAL:
+clear all;
+ year = 2009;
+ site = 'TP39_chamber';
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Paths and Tags -- add more to these as move to more sites:
+switch site
+    case 'TP39_chamber';        
+        tag = 'ACS_Flux_16.mat'; 
+        maxNch = 6; % maximum number of chambers
+        num_samples = 3; % number of samples per chamber per hhour
+end
+
+yr_str = num2str(year);
+if ischar(year)
+    year = str2double(year);
+end
+
+loadstart = addpath_loadstart;
+log_path = [loadstart '/SiteData/logs/'];
+load_path = [loadstart 'SiteData/' site '/MET-DATA/'];
+save_path = [loadstart 'SiteData/' site '/MET-DATA/annual/'];
+
+%% Enter information about the variables (paths and names)
+% vars = struct;
+vars = mcm_get_varnames(site);
+
+YY = yr_str(3:4);
+[Mon Day] = make_Mon_Day(year, 1440);
+if isleapyear(year) == 1; num_days = 366; else num_days = 365; end
+hhour = struct;
+hhour_field = struct;
+
+
+
+% hhour_output = NaN.*ones(48.*num_days,length(vars));
+% hhour_field_output = NaN.*ones(48.*num_days,length(vars));
+
+%% Load data file tracker if it exists... If not, make a new one:
+if exist([log_path site '_hhour_tracker_' yr_str '.dat'],'file') == 2;
+    hhour_tracker = load([log_path site '_hhour_tracker_' yr_str '.dat']);
+    old_hhour_tracker = hhour_tracker;
+else
+    hhour_tracker = NaN.*ones(num_days,4);
+end
+
+%%% Make the tracker list for both /hhour and /hhour_field:
+for k = 1:1:num_days
+    MM = create_label(Mon(k,1),2); DD = create_label(Day(k,1),2);
+    datastr(k,:) = [YY MM DD];
+    hhour_tracker(k,1) = str2double(datastr(k,:));
+    hhour_tracker(k,2) = ceil(exist([load_path 'hhour/' datastr(k,:) '.' tag])./10);
+    hhour_tracker(k,3) = ceil(exist([load_path 'hhour_field/' datastr(k,:) '.' tag])./10);
+    hhour_tracker(k,4) = ceil((hhour_tracker(k,2)+hhour_tracker(k,3))./10);
+    clear MM DD;
+end
+%%% Save the tracker file:
+save([log_path site '_hhour_tracker_' yr_str '.dat'],'hhour_tracker','-ASCII');
+%%% Compare the old and new hhour_trackers to see what's new:
+% -- do this later if the new computer is still really slow at processing
+% hhour files...
+[r_diff c_diff] = find(old_hhour_tracker ~= hhour_tracker);
+% diffs = old_hhour_tracker - hhour_tracker;
+
+if ~isempty(r_diff)
+    resp_recalc = input('Enter <1> to recalculate all data or hit <enter> to add new data only (faster)');
+else
+resp_recalc = 1;
+end
+
+if isempty(resp_recalc) == 1
+    %%% Load the master files:
+    load([save_path site '_' yr_str '_recalc.mat']);
+    load([save_path site '_' yr_str '_field.mat']);
+    
+    hhour_tracker(:,2:4) = zeros(num_days,3);
+    hhour_tracker(r_diff, c_diff) = 1;
+else
+    for i = 1:1:maxNch
+    hhour(i).results(1:num_days*48,1:15) = NaN;
+    hhour_field(i).results(1:num_days*48,1:15) = NaN;
+    end
+end
+    
+    
+    
+
+%% Main Loop - Load files from /hhour (processed) and place in master:
+for j = 1:1:num_days
+     disp(datastr(j,:));
+    if hhour_tracker(j,2) == 1; % make sure the hhour file is there
+        tmp_hhour = load([load_path 'hhour/' datastr(j,:) '.' tag]);
+        for hh_ctr = 1:1:48 %cycle through half-hours
+            for ch_ctr = 1:1:maxNch % cycle through chambers
+                for smpl_ctr = 1:1:num_samples % cycle through samples
+                    for var_ctr = 1:1:length(vars)
+                        try
+                            tmp(smpl_ctr,var_ctr) = eval(['tmp_hhour.HHour(hh_ctr).Chamber(ch_ctr).Sample(smpl_ctr).' vars(var_ctr).path]);
+                        catch
+                            tmp(smpl_ctr,var_ctr) = NaN;
+                        end
+                    end
+                end
+                tmp_avg = nanmean(tmp); % take the nanmean of the 3 samples
+                hhour(ch_ctr).results(j.*48 + hh_ctr - 48,1:var_ctr) = tmp_avg;
+                clear tmp_avg tmp;
+            end
+        end
+    end
+
+
+%% Main Loop2 - Load files from /hhour_field (processed) and place in master:
+    if hhour_tracker(j,3) == 1; % make sure the hhour file is there
+        tmp_hhour_field = load([load_path 'hhour_field/' datastr(j,:) '.' tag]);
+        for hh_ctr = 1:1:48 %cycle through half-hours
+            for ch_ctr = 1:1:maxNch % cycle through chambers
+                for smpl_ctr = 1:1:num_samples % cycle through samples
+                    for var_ctr = 1:1:length(vars)
+                        try
+                            tmp(smpl_ctr,var_ctr) = eval(['tmp_hhour_field.HHour(hh_ctr).Chamber(ch_ctr).Sample(smpl_ctr).' vars(var_ctr).path]);
+                        catch
+                            tmp(smpl_ctr,var_ctr) = NaN;
+                        end
+                    end
+                end
+                tmp_avg = nanmean(tmp); % take the nanmean of the 3 samples
+                hhour_field(ch_ctr).results(j.*48 + hh_ctr - 48,1:var_ctr) = tmp_avg;
+                clear tmp_avg tmp;
+            end
+        end
+    end
+    %%%% Display an update on progress every 100 days:
+    if rem(j,100) == 0;   disp(['Working on Day: ' num2str(j)]);   end
+end
+%% Give option to fill in NaN data in recalc data with data calculated in
+%%% the field -- This is useful if /data files are missing for some reason,
+%%% or, data files are corrupt, etc.
+resp = input('Fill gaps in recalc data using field data? <y/n>','s');
+if strcmp(resp,'y')==1
+    for k = 1:1:maxNch
+        [r_ind c_ind] = find(isnan(hhour(k).results)==1);
+        hhour(k).results(r_ind,c_ind) = hhour_field(k).results(r_ind,c_ind);
+    clear r_ind c_ind;
+    end
+    disp('data copied from field data successfully');
+else
+    disp('data not copied from field data');
+end
+    
+%% Export columns from each chamber to file:
+
+for ch_ctr = 1:1:maxNch
+    for var_ctr = 1:1:length(vars)
+        tmp_out = hhour(ch_ctr).results(:,var_ctr);
+        tmp_tag = vars(var_ctr).name;
+        save([save_path site '_' yr_str '.C' num2str(ch_ctr) '_' tmp_tag],'tmp_out','-ASCII')
+        clear tmp_out tmp_tag;
+    end
+end
+
+%% Also export all similar variables to same matrix files:
+    for var_ctr = 1:1:length(vars)
+for ch_ctr = 1:1:maxNch
+    tmp_out2(:,ch_ctr) = hhour(ch_ctr).results(:,var_ctr);
+    tmp_tag2 = vars(var_ctr).name;
+    save([save_path site '_' yr_str '.' tmp_tag2 '_all'],'tmp_out2','-ASCII')
+end
+    clear tmp_out2 tmp_tag2;
+    end
+
+%% Save the .mat files:
+save([save_path site '_' yr_str '_recalc.mat'],'hhour');
+save([save_path site '_' yr_str '_field.mat'],'hhour_field');
+
+%% Finally, give the user the opportunity to plot the data quickly:
+plot_resp = input('Would you like to quickly plot the data? <y/n>','s');
+if strcmp(plot_resp,'y') == 1;
+    for var_ctr = 1:1:length(vars)
+        for ch_ctr = 1:1:maxNch
+            tmp_out2(:,ch_ctr) = hhour(ch_ctr).results(:,var_ctr);
+            tmp_tag2 = vars(var_ctr).name;
+
+
+        end
+        figure(var_ctr);clf;
+        plot(tmp_out2);hold on;
+        title(vars(var_ctr).name);
+        if maxNch < 10
+        legend(num2str((1:1:ch_ctr)'));
+        end
+        clear tmp_out2 tmp_tag2;
+    end
+
+end

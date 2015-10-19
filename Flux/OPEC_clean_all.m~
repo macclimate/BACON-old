@@ -1,0 +1,624 @@
+% function [] = OPEC_clean_all(site)
+clear all; close all;
+% site = 'TP74';
+% site = 'TP89';
+site = 'TP02';
+
+
+%%% Declare Paths:
+ls = addpath_loadstart;
+load_dir = [ls 'Matlab/Data/Flux/OPEC/Organized2/' site '/'];
+out_path = [ls 'Matlab/Data/Flux/OPEC/Cleaned3/' site '/'];
+fluxsave_path = [ls 'Matlab/Data/Flux/OPEC/'];
+thresh_path = [ls 'Matlab/Data/Flux/OPEC/Docs/'];
+%%%%%%%%%%%%%%%%%
+% 
+% %%%% Load Data:
+% disp('Loading Master File.... Please Wait');
+% load([load_dir  site '_10min_all.mat']);
+% 
+% disp('loading threshold file');
+% thresh = jjb_hdr_read([thresh_path site '_OPEC_thresholds.csv'],',',5);
+% 
+% low_thresh(length(thresh),1) = NaN;
+% high_thresh(length(thresh),1) = NaN;
+% 
+% for j = 5:1:length(thresh)
+%     low_thresh(j,1) = str2num(char(thresh{j,4}));
+%     high_thresh(j,1) = str2num(char(thresh{j,5}));
+% end
+% 
+% %% Site-specific manual cleans:
+% switch site
+%     case 'TP02';
+%         % Large data shift
+% OPEC_all10(40157*3:40868*3,5:end) = OPEC_all10((40157*3)+48*3:(40868*3)+48*3,5:end);
+% OPEC_all10((40868*3)+1:(40868*3)+48*3,5:end) = NaN;
+% 
+%     case 'TP89'
+%                 % Large data shift
+% OPEC_all10(39345*3:40149*3,5:end) = OPEC_all10((39345*3)+48*3:(40149*3)+48*3,5:end);
+% OPEC_all10((40149*3)+1:(40149*3)+48*3,5:end) = NaN;
+% 
+% end
+% 
+% 
+% 
+% %% Clean outliers from data using thresholds
+% [r c] = size(OPEC_all10);
+% skip_flag = 0;
+% for loop = 5:1:c
+%     if skip_flag == 0;
+%         accept = 1;
+%         % columns 4 and 5 are the lower/upper thresholds, respectively.
+%         if ~isnan(thresh{loop,4})
+%             var_title = [char(thresh{loop,2}) ' ('   char(thresh{loop,3})   ')' ];
+%             figure(1); clf;
+%             plot(OPEC_all10(:,loop),'b-'); hold on; grid on;
+%             line([1 length(OPEC_all10)],[low_thresh(loop,1) low_thresh(loop,1)],'Color',[1 0 0], 'LineStyle','--'); %lower limit
+%             line([1 length(OPEC_all10)],[high_thresh(loop,1) high_thresh(loop,1)],'Color',[1 0 0], 'LineStyle','--'); %upper limit
+%             thresh_range = abs(high_thresh(loop,1)- low_thresh(loop,1));
+%             axis([1 length(OPEC_all10) low_thresh(loop,1)-(.1*thresh_range) high_thresh(loop,1)+(.1.*thresh_range)]);
+%             title([var_title ', column' num2str(loop) 'of ' num2str(c)]);
+%             response = input('Press enter to accept, "1" to enter new thresholds, 9 to accept all thresholds, or any other key to reject: ', 's');
+% 
+%             if isequal(str2double(response),9)==1;
+%                 skip_flag = 1;
+%             end
+% 
+% 
+%             %%% If user wants to change thresholds..
+%             if isequal(str2double(response),1)==1;
+%                 accept = 0;
+% 
+%                 while accept == 0;
+%                     low_lim = input('enter new lower limit: ','s');
+%                     low_thresh(loop,1) = str2double(low_lim);
+%                     up_lim = input('enter new upper limit: ','s');
+%                     high_thresh(loop,1) = str2double(up_lim);
+%                     %%% plot again
+%                     figure (1)
+%                     clf;
+%                     plot(OPEC_all10(:,loop),'b-'); hold on; grid on;
+%                     line([1 length(OPEC_all10)],[low_thresh(loop,1) low_thresh(loop,1)],'Color',[1 0 0], 'LineStyle','--'); %lower limit
+%                     line([1 length(OPEC_all10)],[high_thresh(loop,1) high_thresh(loop,1)],'Color',[1 0 0], 'LineStyle','--'); %upper limit
+%                     thresh_range = abs(high_thresh(loop,1)- low_thresh(loop,1));
+%                     axis([1 length(OPEC_all10) low_thresh(loop,1)-(.1*thresh_range) high_thresh(loop,1)+(.1.*thresh_range)]);
+%                     title([var_title ', column' num2str(loop) 'of ' num2str(c)]);
+%                     accept_resp = input('hit enter to accept, 1 to change again: ','s');
+%                     if isempty(accept_resp)
+%                         accept = 1;
+%                     else
+%                         accept = 0;
+%                     end
+%                 end
+% 
+%                 saveflag = 1;
+% 
+%             end
+% 
+%             OPEC_all10(OPEC_all10(:,loop) < low_thresh(loop,1) | OPEC_all10(:,loop) > high_thresh(loop,1) ,loop) = NaN;
+%             %         else
+%             %         OPEC_all10(OPEC_all10(:,loop) < low_thresh(loop,1) | OPEC_all10(:,loop) > high_thresh(loop,1) ,loop) = NaN;
+% 
+%         end
+%     else
+%         OPEC_all10(OPEC_all10(:,loop) < low_thresh(loop,1) | OPEC_all10(:,loop) > high_thresh(loop,1) ,loop) = NaN;
+%     end
+% end
+% 
+% %% Save threshold file (if it has been changed)
+% for j = 1:1:length(thresh);
+%     thresh{j,4} = low_thresh(j,1);
+%     thresh{j,5} = high_thresh(j,1);
+% end
+% 
+% format = '%s';
+% fid = fopen([thresh_path site '_OPEC_thresholds.csv'],'w');
+% for j = 1:1:length(thresh)
+%     for k = 1:1:3
+%         fprintf(fid, format, [char(thresh{j,k}) ',']);
+%     end
+%     fprintf(fid, '%6.2g',thresh{j,k+1});
+%     fprintf(fid,'%s', ',');
+%     fprintf(fid,'%6.2g\n', thresh{j,k+2});
+% end
+% fclose(fid)
+% 
+% % dlmwrite([thresh_path site '_OPEC_thresholds.csv'],thresh,',');
+
+%%
+% Perhaps here we will save the .mat file as a L2 (cleaned file), and then
+% continue on with higher level operations
+
+load([out_path site '_10min_L2.mat'], 'OPEC_all10');
+
+%% Do storage calculation:
+%%% FC_wpl - col 5 (in mg/m2/s)
+%%% FC_irga - col 7 (in mg/m2/s)
+%%% CO2 top - col 45 (in mg/m3)
+%%% CO2 cpy - col 92 (in ppm)
+%%% t_hmp - col 52 (in C)
+%%% press_avg - col 53 (in kPa)
+
+% Load .mat file with all meteo data:
+load([ls '1/fielddata/Matlab/Data/Master_Files/' site '/' site '.mat']);
+met = eval(site);
+eval( ['clear ' site]);
+
+
+%%% Put the met data into a vector the same length as
+Ta_10(1:length(OPEC_all10),1) = NaN;
+APR_10(1:length(OPEC_all10),1) = NaN;
+toph_10(1:length(OPEC_all10),1) = NaN; % height from cpy CO2 sensor to top sensor
+cpyh_10(1:length(OPEC_all10),1) = NaN; % height from ground to cpy CO2 sensor
+z_tot_10(1:length(OPEC_all10),1) = NaN;
+WS_10(1:length(OPEC_all10),1) = NaN;
+WDir_10(1:length(OPEC_all10),1) = NaN;
+
+%%% Set this up for all the data that we'll move over from met data to go
+%%% in the OPEC_flux file:
+Ta(1:(length(OPEC_all10))/3,1) = NaN;
+APR(1:(length(OPEC_all10))/3,1) = NaN;
+WS(1:(length(OPEC_all10))/3,1) = NaN;
+WDir(1:(length(OPEC_all10))/3,1) = NaN;
+Year30(1:(length(OPEC_all10))/3,1) = NaN;
+dt30(1:(length(OPEC_all10))/3,1) = NaN;
+Hour(1:(length(OPEC_all10))/3,1) = NaN;
+Minute(1:(length(OPEC_all10))/3,1) = NaN;
+VPD(1:(length(OPEC_all10))/3,1) = NaN;
+Ts5(1:(length(OPEC_all10))/3,1) = NaN;
+PAR(1:(length(OPEC_all10))/3,1) = NaN;
+SMa(1:(length(OPEC_all10))/3,1) = NaN;
+SMb(1:(length(OPEC_all10))/3,1) = NaN;
+%%%%%%%%%%%%%%%%%%%%%%%%
+toph_10(1:length(OPEC_all10),1) = NaN; % height from cpy CO2 sensor to top sensor
+cpyh_10(1:length(OPEC_all10),1) = NaN; % height from ground to cpy CO2 sensor
+z_tot_10(1:length(OPEC_all10),1) = NaN;
+dt_10 = [];
+ctr = 1;
+for yr = 2002:1:2010
+    try
+        [final] = params(num2str(yr), site, 'CO2_storage');
+        z = final(:,1); z_top = final(:,2); z_cpy = final(:,3); col_flag = final(:,4);
+    catch
+        z = 1; z_top = 1; z_cpy = 1;
+    end
+    %         yr_len = yr_length(yr);
+    toph_10(OPEC_all10(:,2)==yr) = z_top;
+    cpyh_10(OPEC_all10(:,2)==yr) = z_cpy;
+    [junk1, junk2, junk3, dt_temp] = jjb_makedate(yr, 10);
+    dt_10 = [dt_10; dt_temp];
+    clear z z_top z_cpy junk*;
+end
+
+% z_tot_10 = toph_10 + cpy_10;
+
+%%% Put met Ta into a vector and then put it into hhourly Ta for
+Ta_sub = jjb_struct2col(met, 'Ta'); Ta(17521:17520+length(Ta_sub),1) = Ta_sub;
+APR_sub = jjb_struct2col(met, 'APR'); APR(17521:17520+length(APR_sub),1) = APR_sub;
+WS_sub = jjb_struct2col(met, 'WS'); WS(17521:17520+length(WS_sub),1) = WS_sub;
+WDir_sub = jjb_struct2col(met, 'WDir');WDir(17521:17520+length(WDir_sub),1) = WDir_sub;
+Year30_sub = jjb_struct2col(met, 'Year');Year30(17521:17520+length(Year30_sub),1) = Year30_sub;
+dt_sub = jjb_struct2col(met, 'dt'); dt30(17521:17520+length(dt_sub),1) = dt_sub;
+Hour_sub = jjb_struct2col(met, 'Hour'); Hour(17521:17520+length(Hour_sub),1) = Hour_sub;
+Minute_sub = jjb_struct2col(met, 'Minute'); Minute(17521:17520+length(Minute_sub),1) = Minute_sub;
+VPD_sub = jjb_struct2col(met, 'VPD'); VPD(17521:17520+length(VPD_sub),1) = VPD_sub;
+Ts5_sub = jjb_struct2col(met, 'Ts5'); Ts5(17521:17520+length(Ts5_sub),1) = Ts5_sub;
+PAR_sub = jjb_struct2col(met, 'PAR'); PAR(17521:17520+length(PAR_sub),1) = PAR_sub;
+SMa_sub = jjb_struct2col(met, 'SMa'); SMa(17521:17520+length(SMa_sub),1) = SMa_sub;
+SMb_sub = jjb_struct2col(met, 'SMb'); SMb(17521:17520+length(SMb_sub),1) = SMb_sub;
+
+%%%% Sub in numbers for 2002:
+Year30(1:17520,1) = 2002; 
+dt30(1:17520,1) = dt30(Year30==2003,1); 
+Hour(1:17520,1) = Hour(Year30==2003,1); 
+Minute(1:17520,1) = Minute(Year30==2003,1);
+
+%%% We're going to have to shift 2008--2010 data back by 5 hours to keep it in
+%%% line with the rest of the data (local time instead of UTC):
+start_2008 = find(Year30==2008,1,'first');
+if isempty(start_2008); start_2008 = 105169; end
+Ta(start_2008:length(Ta),1) = [Ta(start_2008+10:length(Ta),1); NaN.*ones(10,1)];
+APR(start_2008:length(APR),1) = [APR(start_2008+10:length(APR),1); NaN.*ones(10,1)];
+WS(start_2008:length(WS),1) = [WS(start_2008+10:length(WS),1); NaN.*ones(10,1)];
+WDir(start_2008:length(WDir),1) = [WDir(start_2008+10:length(WDir),1); NaN.*ones(10,1)];
+dt30(start_2008:length(dt30),1) = [dt30(start_2008+10:length(dt30),1); NaN.*ones(10,1)];
+Hour(start_2008:length(Hour),1) = [Hour(start_2008+10:length(Hour),1); NaN.*ones(10,1)];
+Minute(start_2008:length(Minute),1) = [Minute(start_2008+10:length(Minute),1); NaN.*ones(10,1)];
+VPD(start_2008:length(VPD),1) = [VPD(start_2008+10:length(VPD),1); NaN.*ones(10,1)];
+Ts5(start_2008:length(Ts5),1) = [Ts5(start_2008+10:length(Ts5),1); NaN.*ones(10,1)];
+PAR(start_2008:length(PAR),1) = [PAR(start_2008+10:length(PAR),1); NaN.*ones(10,1)];
+SMa(start_2008:length(SMa),1) = [SMa(start_2008+10:length(SMa),1); NaN.*ones(10,1)];
+SMb(start_2008:length(SMb),1) = [SMb(start_2008+10:length(SMb),1); NaN.*ones(10,1)];
+
+clear Ta_sub APR_sub WS_sub WDir_sub Year30_sub *_sub;
+
+ctr30 = 17521;
+ctr10 = 17520.*3 + 1;
+
+for loop = ctr10:3:length(Ta_10)
+    Ta_10(loop:loop+2,1) = Ta(ctr30,1);
+    APR_10(loop:loop+2,1) = APR(ctr30,1);
+    WS_10(loop:loop+2,1) = WS(ctr30,1);
+    WDir_10(loop:loop+2,1) = WDir(ctr30,1);
+    ctr30 = ctr30+1;
+end
+
+clear met ctr10 ctr30 Ta_sub APR_sub
+
+Ta_10(isnan(Ta_10),1) = OPEC_all10(isnan(Ta_10),52);
+APR_10(isnan(APR_10),1) = OPEC_all10(isnan(APR_10),53);
+APR_10(isnan(APR_10),1) = 99;
+
+figure(2);clf;
+subplot(2,1,1);
+plot(Ta_10);
+subplot(2,1,2);
+plot(APR_10);hold on;
+plot(OPEC_all10(:,53),'g')
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Do rotations in the middle of this
+% rotations on 10-minute data
+% col 1 - x
+% col 2 - y
+% col 3 - z
+% col 4 - xx
+% col 5 - yy
+% col 6 - zz
+% col 7 - xy
+% col 8 - xz
+% col 9 - yz
+% col 10 - xc
+% col 11 - yc
+% col 12 - zc
+covs = [OPEC_all10(:,42) OPEC_all10(:,43) OPEC_all10(:,44) OPEC_all10(:,22) OPEC_all10(:,29) OPEC_all10(:,14) ...
+    OPEC_all10(:,23) OPEC_all10(:,15) OPEC_all10(:,16) OPEC_all10(:,24) OPEC_all10(:,30) OPEC_all10(:,5)];
+[output] = OPEC_Rotations(covs);
+Fc_rot = output(:,12);
+u = output(:,1);
+
+covs_LE = [OPEC_all10(:,42) OPEC_all10(:,43) OPEC_all10(:,44) OPEC_all10(:,22) OPEC_all10(:,29) OPEC_all10(:,14) ...
+    OPEC_all10(:,23) OPEC_all10(:,15) OPEC_all10(:,16) OPEC_all10(:,25) OPEC_all10(:,31) OPEC_all10(:,18)];
+[output2] = OPEC_Rotations(covs_LE);
+LE_rot = (output2(:,12)./OPEC_all10(:,18)).*OPEC_all10(:,6); % indirect means of getting corrected LE
+
+covs_Hs = [OPEC_all10(:,42) OPEC_all10(:,43) OPEC_all10(:,44) OPEC_all10(:,22) OPEC_all10(:,29) OPEC_all10(:,14) ...
+    OPEC_all10(:,23) OPEC_all10(:,15) OPEC_all10(:,16) OPEC_all10(:,27) OPEC_all10(:,33) OPEC_all10(:,20)];
+[output3] = OPEC_Rotations(covs_Hs);
+Hs_rot = (output3(:,12)./OPEC_all10(:,20)).*OPEC_all10(:,10); % indirect means of getting corrected Hs
+
+covs_Ht = [OPEC_all10(:,42) OPEC_all10(:,43) OPEC_all10(:,44) OPEC_all10(:,22) OPEC_all10(:,29) OPEC_all10(:,14) ...
+    OPEC_all10(:,23) OPEC_all10(:,15) OPEC_all10(:,16) OPEC_all10(:,28) OPEC_all10(:,34) OPEC_all10(:,21)];
+[output4] = OPEC_Rotations(covs_Ht);
+Ht_rot = (output4(:,12)./OPEC_all10(:,21)).*OPEC_all10(:,11); % indirect means of getting corrected Hs
+
+clear covs* output output2 output3 output4;
+% figure(3);clf;
+% subplot(2,1,1);
+% plot(Fc_rot,'b');
+% subplot(2,1,2);
+% plot(u,'b');
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%% Now finish with storage:
+%%% convert FC, CO2_top to umolm-2s-1:
+Fc_rot = CO2_convert(Fc_rot, Ta_10, APR_10, 2);
+Fc_norot = CO2_convert(OPEC_all10(:,5), Ta_10, APR_10, 2);
+CO2_top = CO2_convert(OPEC_all10(:,45), Ta_10, APR_10, 4);
+CO2_cpy = OPEC_all10(:,92);
+
+figure(4);clf;
+subplot(2,1,1);
+plot(Fc_rot,'b');
+subplot(2,1,2);
+plot(CO2_top,'b');hold on;
+plot(CO2_cpy,'g');
+
+switch site
+    case 'TP02'; height_flag = 1;
+    case 'TP74'; height_flag = 2;
+    case 'TP89'; height_flag = 2;
+    case 'TP39'; height_flag = 2;
+end
+
+[NEEraw_rot Jt1] = OPEC_storage_all(Fc_rot, CO2_top, CO2_cpy, Ta_10, APR_10, toph_10, cpyh_10, dt_10, height_flag);
+[NEEraw_norot Jt2] = OPEC_storage_all(Fc_norot, CO2_top, CO2_cpy, Ta_10, APR_10 , toph_10, cpyh_10, dt_10, height_flag);
+figure(102); clf;
+plot(NEEraw_norot,'b'); hold on;
+plot(NEEraw_rot,'g');
+legend('unrotated', 'rotated');
+
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Here we need to correct wind data before going foreward -- In this
+%%% exercise, we'll fix offsets in wind direction between met and OPEC,
+%%% and we'll also figure out the timeshifts for OPEC data vs. met
+%%% data....
+
+WDir_CSAT = OPEC_all10(:,55);
+WDir_CSAT_corr(1:length(WDir_CSAT),1) = NaN;
+%%%% Average CSAT WDir into 1/2hour averages:
+rs = reshape(WDir_CSAT,3,[]);
+WDir_30 = (mean(rs))'; clear rs;
+WDir_30_corr(1:length(WDir_30),1) = NaN;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+%%% First, fix offsets in wind direction:
+[start_times] = find_OPEC_intervals(WDir_30, 30);
+[start_times_10] = find_OPEC_intervals(WDir_CSAT, 10);
+interval_tracker_10(1:length(WDir_CSAT),1) = NaN;
+
+for j = 1:1:length(start_times)
+% interval_tracker_10(start_times(j,1):start_times(j,2),1) = j;   
+    WDir_30_in = WDir_30(start_times(j,1):start_times(j,2),1);
+    WDir_in = WDir(start_times(j,1):start_times(j,2),1);
+
+    diff = WDir_30_in(~isnan(WDir_30_in.*WDir_in),1) - WDir_in(~isnan(WDir_30_in.*WDir_in),1);
+    med_diff(j,1) = median(diff);
+    mean_diff(j,1) = mean(diff);
+    if isnan(med_diff(j,1)) && j>1;
+        med_diff(j,1) = med_diff(j-1,1); % make the offset same as previous period if data is missing.
+    end
+
+    if isnan(med_diff(j,1))
+        med_diff(j,1) = 0;
+    end
+
+    WDir_30_corr(start_times(j,1):start_times(j,2),1) =  WDir_30(start_times(j,1):start_times(j,2),1) - med_diff(j,1);
+    WDir_CSAT_corr(start_times_10(j,1):start_times_10(j,2),1) =  WDir_CSAT(start_times_10(j,1):start_times_10(j,2),1) - med_diff(j,1);
+
+    clear diff WDir_30_in WDir_in;
+end
+WDir_30_corr(WDir_30_corr < 0,1) = 360 + WDir_30_corr(WDir_30_corr < 0,1) ;
+WDir_30_corr(WDir_30_corr > 360,1) = 0 + WDir_30_corr(WDir_30_corr > 360,1) - 360;
+WDir_CSAT_corr(WDir_CSAT_corr < 0,1) = 360 + WDir_CSAT_corr(WDir_CSAT_corr < 0,1) ;
+WDir_CSAT_corr(WDir_CSAT_corr > 360,1) = 0 + WDir_CSAT_corr(WDir_CSAT_corr > 360,1) - 360;
+
+%%%%%%%% Plot each WDir dataset and make sure they match up:
+figure(105); clf;
+plot(WDir(:,1),'g.-');hold on;
+plot(WDir_30_corr(:,1),'r+-');
+grid on;
+legend('Met','OPEC')
+% plot(interval_tracker_10,'r+-');
+% plot(WDir_CSAT_corr,'b');
+
+
+%% Now, we can find time offsets for 1/2 hourly data:
+
+clear c lags;
+num_lags = 10;
+
+for j = 1:1:length(start_times)
+    try
+        WDir_30_in = WDir_30_corr(start_times(j,1):start_times(j,2),1); %met data
+        WDir_in = WDir(start_times(j,1):start_times(j,2),1);            % OPEC data
+
+        [c_temp, lags_temp] = xcorr(WDir_30_in(~isnan(WDir_30_in.*WDir_in),1),WDir_in(~isnan(WDir_30_in.*WDir_in),1),num_lags);
+        c(1:num_lags*2+1,j) = c_temp(1:num_lags*2+1,1);
+        lags(1:num_lags*2+1,j) = lags_temp(1:num_lags*2+1);
+        c(:,j) = c(:,j)./(max(c(:,j)));
+        clear c_temp lags_temp;
+% negative shift means OPEC should be shifted backward in time
+% positive shift means OPEC should be shifted forward in time
+        shift(j,1) = -1.*lags(find(c(:,j) == 1),j);
+    catch
+        c(:,j) = NaN;
+        lags(:,j) = NaN;
+        shift(j,1) = 0;
+    end
+
+    clear WDir_30_in WDir_in
+end
+
+%%%% Little fixes when the method doesn't work so well:
+   if strcmp(site, 'TP02')==1;
+        shift(13,1) = 2;
+   end
+%        disp('Re-Check the manual inputs for shifts');
+%        pause   
+
+%% Spike Detection
+NEE_spike_rot = OPEC_outlier_removal(site, NEEraw_rot, 10,'Fc');% OPEC_findspike(NEEraw_rot, site, z_score, stdev);
+NEE_spike_norot = OPEC_outlier_removal(site, NEEraw_norot, 10,'Fc');% OPEC_findspike(NEEraw_norot, site, z_score, stdev);
+
+LE_spike_rot = OPEC_outlier_removal(site, LE_rot, 10,'LE');
+Hs_spike_rot = OPEC_outlier_removal(site, Hs_rot, 10,'H');
+Ht_spike_rot = OPEC_outlier_removal(site, Ht_rot, 10,'H');
+% tic
+% NEE_spike_wind_rot = OPEC_outlier_removal(site, NEE_wind_rot, 10); %OPEC_findspike(NEE_wind_rot, site, z_score, stdev);
+% toc
+% NEE_spike_wind_norot = OPEC_outlier_removal(site, NEE_wind_norot, 10);%OPEC_findspike(NEE_wind_norot, site, z_score, stdev);
+
+% %% Wind filtering
+% NEE_spike_wind_rot = OPEC_wind_filter(site, NEE_spike_rot, u, WDir_CSAT_corr);
+% NEE_spike_wind_norot = OPEC_wind_filter(site, NEE_spike_norot, u, WDir_CSAT_corr);
+% 
+
+%%
+% Replace incorrect wind directions with proper directions:
+OPEC_all10(:,55) = WDir_CSAT_corr;
+%% ************************ Calculate 1/2 hourly averages for data
+[rows cols] = size(OPEC_all10);
+disp('now calculating hhourly averages');
+OPEC_all30 = NaN.*ones(rows/3,cols);
+NEE30_raw = NaN.*ones(rows/3,1);
+NEE30_raw_rot = NaN.*ones(rows/3,1);
+NEE30_raw_wind = NaN.*ones(rows/3,1);
+NEE30_raw_rot_wind = NaN.*ones(rows/3,1);
+u30 = NaN.*ones(rows/3,1);
+LE30_raw_rot = NaN.*ones(rows/3,1);
+Hs30_raw_rot = NaN.*ones(rows/3,1);
+Ht30_raw_rot = NaN.*ones(rows/3,1);
+CO230_top= NaN.*ones(rows/3,1);
+CO230_cpy= NaN.*ones(rows/3,1);
+Fc30_rot= NaN.*ones(rows/3,1);
+Jt30= NaN.*ones(rows/3,1);
+
+
+
+transfer_ind = (1:3:rows);
+disp('moving time/dates over');
+OPEC_all30(:,1:4) = OPEC_all10(transfer_ind,1:4);
+
+clear transfer_ind;
+
+disp('doing averages')
+for loop2 = 5:1:cols
+%     %%% Reshape given column to group in 1/2hr segments
+%     rs_var = reshape(OPEC_all10(:,loop2),3,[]);
+%     %      HH_mean(1,1:length(rs_var)) = NaN;
+%     HHmean = nanmean(rs_var);
+%     HH_mean = HH_mean';
+[HH_mean] = OPEC_HH_mean(OPEC_all10(:,loop2));
+    OPEC_all30(:,loop2) = HH_mean;
+
+    clear HH_mean;
+end
+
+clear OPEC_all10;
+
+NEE30_raw   = OPEC_HH_mean(NEE_spike_norot);
+NEE30_raw_rot = OPEC_HH_mean(NEE_spike_rot);
+u30         = OPEC_HH_mean(u);
+LE30_raw_rot = OPEC_HH_mean(LE_spike_rot);
+Hs30_raw_rot = OPEC_HH_mean(Hs_spike_rot);
+Ht30_raw_rot = OPEC_HH_mean(Ht_spike_rot);
+CO230_top   = OPEC_HH_mean(CO2_top);
+CO230_cpy   = OPEC_HH_mean(CO2_cpy);
+Fc30_rot    = OPEC_HH_mean(Fc_rot);
+Jt30        = OPEC_HH_mean(Jt1);
+% NEE30_raw_wind = OPEC_HH_mean(NEE_spike_wind_norot);
+% NEE30_raw_rot_wind = OPEC_HH_mean(NEE_spike_wind_rot);
+
+%%% Now, apply shift that we had determined before:
+tmp = OPEC_all30;
+
+for j = 1:1:length(start_times)
+    ind_orig = (start_times(j,1):1:start_times(j,2))';
+    ind_new = ind_orig;
+    if shift(j,1) > 0 %%% case where OPEC data should be shifted ahead
+        for i = 1:1:abs(shift(j,1))
+            ind_new = [ ind_new ; ind_new(end)+1];
+        end
+
+        OPEC_all30(ind_new, 5:cols) = [NaN.*ones(abs(shift(j,1)),cols-5+1); OPEC_all30(ind_orig, 5:cols)];
+        NEE30_raw(ind_new, 1) = [NaN.*ones(abs(shift(j,1)),1); NEE30_raw(ind_orig, 1)];
+        NEE30_raw_rot(ind_new, 1) = [NaN.*ones(abs(shift(j,1)),1); NEE30_raw_rot(ind_orig, 1)];
+        u30(ind_new, 1) = [NaN.*ones(abs(shift(j,1)),1); u30(ind_orig, 1)];
+        LE30_raw_rot(ind_new, 1) = [NaN.*ones(abs(shift(j,1)),1); LE30_raw_rot(ind_orig, 1)];
+        Hs30_raw_rot(ind_new, 1) = [NaN.*ones(abs(shift(j,1)),1); Hs30_raw_rot(ind_orig, 1)];
+        Ht30_raw_rot(ind_new, 1) = [NaN.*ones(abs(shift(j,1)),1); Ht30_raw_rot(ind_orig, 1)];
+        CO230_top(ind_new, 1) = [NaN.*ones(abs(shift(j,1)),1); CO230_top(ind_orig, 1)];
+        CO230_cpy(ind_new, 1) = [NaN.*ones(abs(shift(j,1)),1); CO230_cpy(ind_orig, 1)];
+        Fc30_rot(ind_new, 1) = [NaN.*ones(abs(shift(j,1)),1); Fc30_rot(ind_orig, 1)];
+        Jt30(ind_new, 1) = [NaN.*ones(abs(shift(j,1)),1); Jt30(ind_orig, 1)];
+        
+        
+        
+        
+        
+%         NEE30_raw_wind(ind_new, 1) = [NaN.*ones(abs(shift(j,1)),1); NEE30_raw_wind(ind_orig, 1)];
+%         NEE30_raw_rot_wind(ind_new, 1) = [NaN.*ones(abs(shift(j,1)),1); NEE30_raw_rot_wind(ind_orig, 1)];
+    elseif shift(j,1) < 0 %% case where OPEC data should be shifted back
+        
+        for i = 1:1:abs(shift(j,1))
+            ind_new = [ind_new(1)-1 ; ind_new];
+        end
+
+        OPEC_all30(ind_new, 5:cols) = [OPEC_all30(ind_orig, 5:cols) ; NaN.*ones(abs(shift(j,1)),cols-5+1)];
+        NEE30_raw(ind_new, 1) = [ NEE30_raw(ind_orig, 1); NaN.*ones(abs(shift(j,1)),1)];
+        NEE30_raw_rot(ind_new, 1) = [ NEE30_raw_rot(ind_orig, 1); NaN.*ones(abs(shift(j,1)),1)];
+        u30(ind_new, 1) = [ u30(ind_orig, 1); NaN.*ones(abs(shift(j,1)),1)]; 
+        LE30_raw_rot(ind_new, 1) = [ LE30_raw_rot(ind_orig, 1); NaN.*ones(abs(shift(j,1)),1)];
+        Ht30_raw_rot(ind_new, 1) = [ Ht30_raw_rot(ind_orig, 1); NaN.*ones(abs(shift(j,1)),1)];
+        Hs30_raw_rot(ind_new, 1) = [ Hs30_raw_rot(ind_orig, 1); NaN.*ones(abs(shift(j,1)),1)];
+        CO230_top(ind_new, 1) = [ CO230_top(ind_orig, 1); NaN.*ones(abs(shift(j,1)),1)];
+        CO230_cpy(ind_new, 1) = [ CO230_cpy(ind_orig, 1); NaN.*ones(abs(shift(j,1)),1)];
+        Fc30_rot(ind_new, 1) = [ Fc30_rot(ind_orig, 1); NaN.*ones(abs(shift(j,1)),1)];
+        Jt30(ind_new, 1) = [ Jt30(ind_orig, 1); NaN.*ones(abs(shift(j,1)),1)];
+
+%         NEE30_raw_wind(ind_new, 1) = [ NEE30_raw_wind(ind_orig, 1); NaN.*ones(abs(shift(j,1)),1)];
+%         NEE30_raw_rot_wind(ind_new, 1) = [ NEE30_raw_rot_wind(ind_orig, 1); NaN.*ones(abs(shift(j,1)),1)];
+
+    end
+
+    clear ind_orig ind_new
+end
+
+%% Wind filtering
+u30(isnan(u30),1) = WS(isnan(u30),1);
+NEE30_raw_wind = OPEC_wind_filter(site, NEE30_raw, u30, WDir);
+NEE30_raw_rot_wind = OPEC_wind_filter(site, NEE30_raw_rot, u30, WDir);
+LE30_raw_rot_wind = OPEC_wind_filter(site, LE30_raw_rot, u30, WDir);
+Hs30_raw_rot_wind = OPEC_wind_filter(site, Hs30_raw_rot, u30, WDir);
+Ht30_raw_rot_wind = OPEC_wind_filter(site, Ht30_raw_rot, u30, WDir);
+
+%% Check:
+figure(110);clf
+plot(OPEC_all30(:,55));
+hold on;
+plot(WDir,'r')
+plot(tmp(:,55),'g');
+legend('Shifted','Met','Unshifted')
+        %
+%        
+%            pad_before =
+%
+%        OPEC_all10(ind,
+
+%% Save master 30-min file
+disp('Saving Master Files.')
+save([out_path site '_30min_all.mat'],'OPEC_all30');
+
+
+%% Make little fixes before saving data to flux file:
+% 1. Fix bad WDir data, and fill with data from the OPEC
+WDir(WDir==0,1) = NaN;
+WDir(isnan(WDir),1) = OPEC_all30(isnan(WDir),55);
+
+%% Create a master file for calculating fluxes:
+clear OPEC_flux;
+OPEC_flux = struct;
+OPEC_flux.site = site;
+
+OPEC_flux.PAR = PAR;
+OPEC_flux.WS = WS;
+OPEC_flux.Ta = Ta;
+OPEC_flux.APR = APR;
+OPEC_flux.WDir = WDir;
+OPEC_flux.Year = Year30;
+OPEC_flux.dt = dt30;
+OPEC_flux.Hour = Hour;
+OPEC_flux.Minute = Minute;
+OPEC_flux.VPD = VPD;
+OPEC_flux.Ts5 = Ts5;
+OPEC_flux.PAR = PAR;
+OPEC_flux.SMa = SMa;
+OPEC_flux.SMb = SMb;
+
+OPEC_flux.ustar = OPEC_all30(:,13);
+
+OPEC_flux.Hsraw = Hs30_raw_rot;
+OPEC_flux.Hsraw_wind = Hs30_raw_rot_wind;
+OPEC_flux.Htraw = Ht30_raw_rot;
+OPEC_flux.Htraw_wind = Ht30_raw_rot_wind;
+OPEC_flux.LEraw = LE30_raw_rot;
+OPEC_flux.LEraw_wind = LE30_raw_rot_wind;
+
+OPEC_flux.NEEraw = NEE30_raw;
+OPEC_flux.NEEraw_rot = NEE30_raw_rot;
+OPEC_flux.NEEraw_wind = NEE30_raw_wind;
+OPEC_flux.NEEraw_rot_wind = NEE30_raw_rot_wind;
+
+OPEC_flux.CO2_top = CO230_top;
+OPEC_flux.CO2_cpy = CO230_cpy;
+OPEC_flux.Fc = Fc30_rot;
+OPEC_flux.Jt = Jt30;
+
+save([fluxsave_path site '_OPEC_flux.mat'], 'OPEC_flux');
+disp('done');

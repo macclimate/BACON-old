@@ -1,0 +1,430 @@
+function [] = metloader(input_file, input_file2, input_hdr_file, input_hdr_file2, yr, site, template_hdr)
+
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% metloader.m %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% This script loads time-averaged data taken from one field site (Met 1, Met 2, Met 3, Met 4), 
+%%%% sorts the different field ID entries, and creates 2 outputs:
+%%%%
+%%%% 1. Master file with 5 minute time intervals and all variables sorted
+%%%% 2. Separate column vector files for each time interval.
+%%%% Outputs are saved in separate folders, depending on the site from which the data is taken.
+%%%% A list of outputted variables is produced and placed into the 'Docs'
+%%%% Folder in \Data\organized\
+%%%%
+%%%% Required inputs are:
+%%%% - The filename of the raw met data (or separate file names for atmo
+%%%% and soil data if used for Met 1)
+%%%% - Filename of header '.csv' file that stores information about input data
+%%%% (minute interval, field ID, column for each field ID entry, variable
+%%%% name) ----- (2 files needed if using for Met 1)
+%%%% - Measurement year
+%%%% - Site number ** String Format ** (i.e. '1', '2', '3' or '4'.) OR 'sf'
+%%%% for sapflow data
+%%%% - Output template header (.csv) file -- specifies the order you want
+%%%% the output data to be in, and the variables for each
+%%%%
+%%%% Usage 1: For Met 1 (two data input files)
+%%%% metload('atmo filename','soil filename', 'atmo header filename', 'soil header filename', year, 'site number', 'template header filename')
+%%%%
+%%%% Usage 2: For Met 2, 3 or 4 (one data input file) OR Sapflow
+%%%% metload('data filename', 'input header filename', year, site number, 'template hdr filename')
+
+%%%% Created September 25 by JJB
+%%%% Based on metload Version 2.0: June 05, 2007 by JJB
+%%%%
+%%%% 
+%%%%
+%%%% Program Script and Subscript Structure
+%%%%
+%%%% metloader
+%%%%    |
+%%%%    |-- jjb_loadmet
+%%%%           |-- dlmread (Loads raw, comma separated data)
+%%%%    |
+%%%%    |-- maketv (makes timevector)
+%%%%    |-- jjb_makedate (creates vectors of year, JD, HHMM for a year at desired interval
+%%%%    |-- jjb_find_diff (find different Field IDs used in raw data file)
+%%%%    |
+%%%%    |-- jjb_timematch (matches raw data to master file by matching input times
+%%%%                |-- JJB_DL2Datenum (converts times to timevectors)
+%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+tic;
+
+%% Adjust variables for different number of inputted variables
+%%%% If 5 inputs are entered (i.e. Met2,3 or 4), then the input arguments
+%%%% are shifted accordingly
+if nargin == 5
+    template_hdr = yr;
+    site = input_hdr_file2;
+    yr = input_hdr_file;
+    input_hdr_file = input_file2;
+
+%%% If 6 inputs are entered, it means that the template header file has not
+%%% been entered -- temporarly, the program will redirect to metload
+%%% program
+elseif nargin == 6
+    disp('You need to enter a header template file');
+    finish;
+end
+%%
+if ispc == 1
+    loadstart = 'C:\HOME';
+else
+    try
+    loadstart = '/home/brodeujj';
+    catch
+    loadstart = '/home/jayb';
+    end
+end
+%% Declaring variables
+
+%%% Check if site is entered as string -- if not, convert it.
+if ischar(site) == false
+    site = num2str(site);
+end
+if ischar(yr) == true
+    yr = str2num(yr);
+end
+%%% Convert yr into a string
+yr_str = num2str(yr); 
+
+%% DECLARE PATHS 
+%%% Declare the folder where column header .txt (or .csv) files are located
+pth_hdr = ([ loadstart '/MATLAB/Data/Met/Raw1/Docs/']);  
+
+%%% Loads paths for Sapflow data
+if strcmp(site,'sf')==true        %%%% check if processing sapflow or met data
+
+%%% Defines the path where the raw data file is to be loaded
+pth_data = ([ loadstart '/MATLAB/Data/Met/Raw1/Sapflow/' yr_str '/']);        
+%%% Establish Output directories for master file, 5min, 30min and 1 hour column vectors
+output_dir = ([ loadstart '/MATLAB/Data/Met/Organized2/Sapflow/Master/']);    % Master file
+output_5min = [];
+output_30min = ([ loadstart '/MATLAB/Data/Met/Organized2/Sapflow/Column/30min/Metsf']);   % 30-min data
+output_60min = ([ loadstart '/MATLAB/Data/Met/Organized2/Sapflow/Column/60min/Metsf']);   % 60-min data
+output_1440min = ([ loadstart '/MATLAB/Data/Met/Organized2/Sapflow/Column/1440min/Metsf']);   % day data
+    
+elseif strcmp(site,'FH')==true        %%%% check if processing Fish Hatchery Precip Data
+pth_data = ([ loadstart '/MATLAB/Data/Met/Raw1/FHPrecip/' yr_str '/']);        
+%%% Establish Output directories for master file, 5min, 30min and 1 hour column vectors    
+output_dir = ([ loadstart '/MATLAB/Data/Met/Organized2/FHPrecip/Master/']);    % Master file
+output_5min = [];
+output_30min = ([ loadstart '/MATLAB/Data/Met/Organized2/Sapflow/Column/30min/FH']);   % 30-min data
+output_60min = ([ loadstart '/MATLAB/Data/Met/Organized2/Sapflow/Column/60min/FH']);   % 60-min data
+output_1440min = ([ loadstart '/MATLAB/Data/Met/Organized2/Sapflow/Column/1440min/FH']);   % day data
+    
+    
+else
+% pth_hdr = ('C:/Home/MATLAB/Data/Met/Raw1/Docs/'); %% declare the folder where column header .txt files are located 
+%%% Defines the path where the raw data file is to be loaded
+pth_data = ([ loadstart '/MATLAB/Data/Met/Raw1/Met' site '/' yr_str '/' ]);        % Defines the path where the raw data file is to be loaded
+%%% Establish Output directories for master file, 5min, 30min and 1 hour column vectors
+output_dir = [ loadstart '/MATLAB/Data/Met/Organized2/Met' site '/Master/'];    % Master File
+output_5min = [ loadstart '/MATLAB/Data/Met/Organized2/Met' site '/Column/5min/Met' site];  % 5-minute data
+output_30min = [ loadstart '/MATLAB/Data/Met/Organized2/Met' site '/Column/30min/Met' site];    % 30-min data
+output_1440min = [ loadstart '/MATLAB/Data/Met/Organized2/Met' site '/Column/1440min/Met' site];    % day data
+end
+
+%% OPEN HEADER FILES %%%%%%%%%%%%%%%%%%%%%%%
+%%% Open the output template file
+[hdr_cell_tmpt] = jjb_hdr_read([pth_hdr template_hdr ],',',3);
+%%% Open main input header file
+[hdr_cell_input] = jjb_hdr_read([pth_hdr input_hdr_file],',',4);
+%%% If for Met 1, open the secondary header file (soil data logger)
+if strcmp(site,'1')==true
+[hdr_cell_input2] = jjb_hdr_read([pth_hdr input_hdr_file2],',',4);
+end
+
+%% Pull out Field ID column vector from input header file
+fid = str2num(char(hdr_cell_input(:,1)));
+fid_col = str2num(char(hdr_cell_input(:,2)));
+min_int = str2num(char(hdr_cell_input(:,3)));
+title = char(hdr_cell_input(:,4));
+
+if strcmp(site,'1')==true
+  fid2 = str2num(char(hdr_cell_input2(:,1)));
+fid_col2 = str2num(char(hdr_cell_input2(:,2)));
+min_int2 = str2num(char(hdr_cell_input2(:,3)));
+title2 = char(hdr_cell_input2(:,4)); 
+end
+
+%% %%%%%%%%%%%%% RAW DATA FILES
+%% Load Raw Data File
+disp(['Now Opening file ' pth_data input_file]);          % Displays the path name on the screen
+metdata = jjb_loadmet([pth_data input_file],1,'all');    % **NOTE ** Must be used in MATLAB 7.0 or later 
+
+%% Repeats the above on soil file if calculating for Met 1 %%
+
+if strcmp(site,'1')==true
+    metdata2 = jjb_loadmet([pth_data input_file2],1,'all');    % **NOTE ** Must open file in excel and save as CSV before processing
+    num_cols = 110;
+elseif strcmp(site,'FH')==true
+    num_cols = 30;
+else
+    num_cols = 60;
+end 
+
+%% Determine Year length:
+[junk(:,1) junk(:,2) junk(:,3) junk(:,4)]  = jjb_makedate(str2double(yr_str),30);
+yr_len = length(junk);
+clear junk
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%% OUTPUT 1 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% This is the first of two outputs from this program.
+%%%% This part places loaded time-averaged (5,10,30,1 hour, etc) data from
+%%%% different Field ID tables into sorted columns of a 5-minute master table for
+%%%% the entire year
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+if exist([output_dir 'met' site 'master' yr_str '.dat']);                           % Check if the output master file already exists
+    disp ('File exists --- Opening for appending')
+    met_master = load([output_dir 'met' site 'master' yr_str '.dat']);               % If master file exists, open it for appending
+else
+    disp('File does not exist --- Creating file')                      % If master file does not exist,
+    if strcmp(site,'FH')==true
+        met_master(1:yr_len,1:num_cols) = NaN;
+    else
+        met_master(1:yr_len*6,1:num_cols) = NaN;                                % create a matrix with 60 (0r 110) empty NaN columns for every 5 minutes in a year
+    end
+end
+
+%%%% make a time vector using make_tv function, place it into the first
+%%%% column of master file
+if strcmp(site,'FH')==true
+    TV = make_tv(yr,30);
+    [year JD HHMM] =jjb_makedate(yr,30);
+else
+TV = make_tv(yr,5);
+    [year JD HHMM] =jjb_makedate(yr,5);
+end
+met_master(:,1) = TV;
+
+%%%% Use the 'jjb_makedate' function to create year, Julian Day and HHMM
+%%%% columns, and place them into the master file
+
+
+met_master(:,2) = year(:,1);
+met_master(:,3) = JD(:,1);
+met_master(:,4) = HHMM(:,1);
+
+clear year JD HHMM;
+
+%%% FIND THE DIFFERENT FIELD IDS USED IN RAW DATA FILE
+[fid_list, s_col, e_col] = jjb_find_diff(fid);
+
+%%% RUN A LOOP TO PRINT DATA FROM EACH FIELD ID INTO THE MASTER
+master_start = 5;           %% initial starting column of data input in master file
+st = 1;
+row_list_start = 1;
+
+for p = 1:length(fid_list)  
+    
+    %%% Run jjb_timematch to find appropriate rows in master file for each Field ID
+    [loc,iTV,ifid] = jjb_timematch(TV,metdata,fid_list(p),2,3,4); 
+    
+    %%%%%%%%%%%%%%% Define starting and ending columns for each field ID
+    metdata_start = fid_col(s_col(p))+4;  % Starting column of metdata file for copying into master 
+    metdata_end = fid_col(e_col(p));      % End column of metdata file for copying into master
+    
+    master_end = master_start + (e_col(p)-s_col(p)-4);  % End column for input of data in master file
+    
+    %%% Fill the values into the appropriate cells of the master table
+    met_master(iTV,master_start:master_end) = metdata(loc,metdata_start:metdata_end); %% Fill data from raw file to master file
+    
+    %%%%% Make a list of the time_intervals and titles of variable written to master file
+    time_tracker(st:st+(metdata_end-metdata_start),1)=min_int(s_col(p)+4:e_col(p),1);
+    title_tracker(st:st+(metdata_end-metdata_start),:)= title(s_col(p)+4:e_col(p),:);
+    
+    master_start = master_end+1;
+    st = st+(metdata_end-metdata_start)+1;
+    
+    %%%%% Total list of all rows in the master file that are being filled
+    %%%%% by the program --- use for shifting in Metfix
+    row_list(row_list_start:row_list_start+length(iTV)-1,1) = iTV;
+    row_list_start = row_list_start+length(iTV);
+end
+
+row_list = sort(row_list);
+row_list = unique(row_list);
+
+%% Convert title tracker into a cell array
+title_tracker_cell = cellstr(title_tracker);
+
+%% REPEAT THE ABOVE FOR SOIL DATA - IF INCLUDED (MET 1 ONLY) 
+
+if strcmp(site,'1')==true
+    
+    %%% FIND THE DIFFERENT FIELD IDS USED IN RAW DATA FILE
+    [fid_list2, s_col2, e_col2] = jjb_find_diff(fid2);
+    
+    %%% RUN A LOOP TO PRINT DATA FROM EACH FIELD ID INTO THE MASTER
+    master_start2 = master_start;           %% initial starting column of data input in master file
+    st2 = st;
+    
+    for p2 = 1:length(fid_list2)  
+        
+    %%% Run jjb_timematch to find appropriate rows in master file for each Field ID
+        [loc2,iTV2,ifid2] = jjb_timematch(TV,metdata2,fid_list2(p2),2,3,4); 
+        
+    %%% Define starting and ending columns for each field ID
+        metdata_start2 = fid_col2(s_col2(p2))+4;  % Starting column of metdata file for copying into master 
+        metdata_end2 = fid_col2(e_col2(p2));      % End column of metdata file for copying into master
+        
+        master_end2 = master_start2 + (e_col2(p2)-s_col2(p2)-4);  % End column for input of data in master file
+        
+    %%% Fill the values into the appropriate cells of the master table
+        met_master(iTV2,master_start2:master_end2) = metdata2(loc2,metdata_start2:metdata_end2); %% Fill data from raw file to master file
+        
+    %%% Make a list of the time_intervals and titles of variable written to master file
+        time_tracker(st2:st2+(metdata_end2-metdata_start2),1)=min_int2(s_col2(p2)+4:e_col2(p2),1);
+        title_tracker2(st2-length(title_tracker):st2+(metdata_end2-metdata_start2)-length(title_tracker),:)= title2(s_col2(p2)+4:e_col2(p2),:);
+       
+        master_start2 = master_end2+1;
+        st2 = st2+(metdata_end2-metdata_start2)+1;    
+    end
+
+%% Attach title_tracker2 to title_tracker_cell
+title_tracker_cell2 = cellstr(title_tracker2);
+title_tracker_cell(length(title_tracker_cell)+1:length(title_tracker_cell)+length(title_tracker_cell2),1) = title_tracker_cell2(1:length(title_tracker_cell2),1);
+end
+
+%% Move columns inside of master file 
+%%% to match with the desired output specified in template header file
+final_master(1:length(TV),1:4) = met_master(1:length(TV),1:4);
+final_master(1:length(TV),5:num_cols) = NaN;
+%final_master(~row_list,1:num_cols) = met_master(~row_list,1:num_cols);
+
+for hh = 5:length(hdr_cell_tmpt);
+    
+    input_col_test = find(strcmp(hdr_cell_tmpt(hh,2),title_tracker_cell(:,1))==1);
+    
+    if isempty(input_col_test)
+        disp(['variable' hdr_cell_tmpt(hh,2) 'not found']);
+    else
+    final_master(row_list,hh) = met_master(row_list,input_col_test+4);
+    end
+end
+
+met_master(row_list,1:num_cols)= final_master(row_list,1:num_cols);
+
+clear final_master
+
+
+%% Save the master file %%%%%%%%%%%%%%%%%%%%% 
+save([output_dir 'met' site 'master' yr_str '.dat'],'met_master','-ASCII'); %% removed '-DOUBLE'
+
+
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%% OUTPUT 2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+%%%% Part 2 -- This part of the program turns the columns of the master file 
+%%%% into column vectors, and saves each variable seperately as such, in
+%%%% the appropriate folder, based on the measurement interval.
+%%%% First, creates NaN column vectors and subsequently writes to each
+%%%% file.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% Find starting and ending rows for all columns produced in met_master
+%%% Convert minute interval list in template header to numeric vector
+tmpt_min_list = str2num(char(hdr_cell_tmpt(:,3)));
+%%% Use jjb_find_diff to find where different minute intervals start & end
+[list_tmpt, s_col_tmpt, e_col_tmpt] = jjb_find_diff(tmpt_min_list);
+%%% Put all together in a single matrix
+start_end_tmpt1 = [s_col_tmpt e_col_tmpt list_tmpt];
+if start_end_tmpt1(1,3) == 0;
+    start_end_tmpt = start_end_tmpt1(2:length(start_end_tmpt1),:);
+else
+    start_end_tmpt = start_end_tmpt1;
+end
+
+%% Row indexes and timevectors
+%%% Row indexes for 5min, 30min and 1 day files
+
+if strcmp(site,'FH')==true
+ind5 = [];
+ind30 = (1:1:length(met_master));
+ind60 = (2:2:length(met_master));
+indday = (48:48:length(met_master));
+else
+ind5 = (1:1:length(met_master));
+ind30 = (6:6:length(met_master));
+ind60 = (12:12:length(met_master));
+indday = (288:288:length(met_master));
+
+%%% 5 min Timevector file
+tv_5(1:yr_len*6,1) = make_tv(yr,5);
+save([output_5min '_' yr_str '.tv'],'tv_5','-ASCII', '-DOUBLE');
+end
+
+
+%%% 30 min Timevector column vector
+tv_30(1:yr_len,1) = make_tv(yr,30);
+save([output_30min '_' yr_str '.tv'],'tv_30','-ASCII', '-DOUBLE');
+
+if strcmp(site,'sf')==true
+%%%%% 60 min Timevector column vector
+tv_60(1:yr_len/2,1) = make_tv(yr,60);
+save([output_60min '_' yr_str '.tv'],'tv_60','-ASCII', '-DOUBLE');
+end
+
+%%% 1day Timevector column vector
+tv_24(1:yr_len/48,1) = make_tv(yr,1440);
+save([output_1440min '_' yr_str '.tv'],'tv_24','-ASCII', '-DOUBLE');
+
+%%% Save Prelim columns (Year, JD, HHMM)
+YYYY(1:yr_len,1) = met_master(ind30,2);
+save ([output_30min '_' yr_str '.002'], 'YYYY','-ASCII') 
+clear YYYY;
+JDx(1:yr_len,1) = met_master(ind30,3);
+save ([output_30min '_' yr_str '.003'], 'JDx','-ASCII') 
+clear JDx
+HHMMx(1:yr_len,1) = met_master(ind30,4);
+save ([output_30min '_' yr_str '.004'], 'HHMMx','-ASCII') 
+clear HHMMx
+%%%%
+
+%%%%% Create 3-number labels for labelling column vectors
+exten = create_label([1:1:num_cols]',3);
+exten2 = create_label([1:1:num_cols]',3);
+
+[s_e_row s_e_col] = size(start_end_tmpt); % calculate the width and length of variable start_end
+
+
+for abc = 1:s_e_row;
+    
+    %%%% Establish the time indexes needed
+    if start_end_tmpt(abc,3) == 5
+        indtime = ind5;
+    elseif start_end_tmpt(abc,3) == 30
+        indtime = ind30;
+    elseif start_end_tmpt(abc,3) == 60
+        indtime = ind60;
+    elseif start_end_tmpt(abc,3) == 1440
+        indtime = indday;
+    end
+    
+    %%%% Open column vector, replace with all entries of NaN
+    if strcmp (site,'sf') == true
+    outpath_first = ([ loadstart '/MATLAB/Data/Met/Organized2/Sapflow/Column/']); 
+    elseif strcmp (site,'FH') == true
+    outpath_first = ([ loadstart '/MATLAB/Data/Met/Organized2/FHPrecip/Column/']);
+    else
+    outpath_first = [ loadstart '/MATLAB/Data/Met/Organized2/Met' site '/Column/'];
+    end
+ 
+    for i =start_end_tmpt(abc,1):1:start_end_tmpt(abc,2)
+        outpath = [outpath_first num2str(start_end_tmpt(abc,3)) 'min/Met' site '_' yr_str];
+        fout=fopen([outpath '.' exten(i,:)],'w');
+        a(1:((yr_len.*30)/start_end_tmpt(abc,3)),1) = NaN;
+        fprintf (fout,'%f\r\n', a);  
+        fclose(fout);
+    end
+    
+    %%%% Re-open same column vector file, save appropriate column from master file
+    for j = start_end_tmpt(abc,1):1:start_end_tmpt(abc,2)
+        bv = load([outpath '.' exten2(j,:)]);
+        bv(:,1)=met_master(indtime,j);
+        save([outpath '.' exten2(j,:)],'bv','-ASCII');
+    end
+    clear i j a bv indtime;
+end
+toc
+end

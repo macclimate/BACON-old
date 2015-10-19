@@ -1,0 +1,19 @@
+function [hh_mean] = OPEC_HH_mean(array_in)
+
+
+hh_mean(1:length(array_in)/3,1) = NaN;
+
+rs = reshape(array_in,3,[]);
+
+ind_abc = find(~isnan(rs(1,:)) & ~isnan(rs(2,:)) & ~isnan(rs(3,:)));
+hh_mean(ind_abc,1) = mean([rs(1,ind_abc) ; rs(2,ind_abc) ; rs(3,ind_abc)]);
+
+ind_ab = find(isnan((hh_mean(:,1))') & ~isnan(rs(1,:)) & ~isnan(rs(2,:)));
+hh_mean(ind_ab,1) = mean([rs(1,ind_ab) ; rs(2,ind_ab)]);
+
+ind_ac = find(isnan((hh_mean(:,1))') & ~isnan(rs(1,:)) & ~isnan(rs(3,:)));
+hh_mean(ind_ac,1) = mean([rs(1,ind_ac) ; rs(3,ind_ac)]);
+
+hh_mean(isnan(hh_mean),1) = rs(1,isnan(hh_mean));
+hh_mean(isnan(hh_mean),1) = rs(2,isnan(hh_mean));
+hh_mean(isnan(hh_mean),1) = rs(3,isnan(hh_mean));

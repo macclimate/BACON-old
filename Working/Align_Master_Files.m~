@@ -1,0 +1,299 @@
+clear all;
+close all;
+
+ls = addpath_loadstart;
+
+TP39_tmp = load([ls 'Matlab/Data/Master_Files/TP39/TP39_data_master.mat']);
+ind = find(TP39_tmp.master.data(:,1)>=2003 & TP39_tmp.master.data(:,1)<=2007);
+TP39.PAR = TP39_tmp.master.data(ind,33);
+TP39.WS = TP39_tmp.master.data(ind,42);
+TP39.WDir = TP39_tmp.master.data(ind,43);
+
+% clear TP39_tmp
+
+TP02_tmp = load([ls 'Matlab/Data/Master_Files/TP02/TP02_data_master.mat']);
+TP02.PAR = TP02_tmp.master.data(ind,27);
+TP02.WS = TP02_tmp.master.data(ind,32);
+TP02.WDir = TP02_tmp.master.data(ind,33);
+
+% clear TP02_tmp
+
+TP89_tmp = load([ls 'Matlab/Data/Master_Files/TP89/TP89_data_master.mat']);
+TP89.PAR = TP89_tmp.master.data(ind,27);
+TP89.WS = TP89_tmp.master.data(ind,32);
+TP89.WDir = TP89_tmp.master.data(ind,33);
+
+% clear TP89_tmp
+
+TP74_tmp = load([ls 'Matlab/Data/Master_Files/TP74/TP74_data_master.mat']);
+TP74.PAR = TP74_tmp.master.data(ind,27);
+TP74.WS = TP74_tmp.master.data(ind,32);
+TP74.WDir = TP74_tmp.master.data(ind,33);
+
+% clear TP74_tmp
+
+figure(1);clf;
+plot(TP39.PAR,'b');hold on;
+plot(TP74.PAR,'r');hold on;
+plot(TP89.PAR,'g');hold on;
+plot(TP02.PAR,'c');hold on;
+legend('39','74','89','02');
+title('PAR');
+
+figure(2);clf;
+plot(TP39.WS,'b');hold on;
+plot(TP74.WS,'r');hold on;
+plot(TP89.WS,'g');hold on;
+plot(TP02.WS,'c');hold on;
+legend('39','74','89','02');
+title('WS');
+
+figure(3);clf;
+plot(TP39.WDir,'b');hold on;
+plot(TP74.WDir,'r');hold on;
+plot(TP89.WDir,'g');hold on;
+plot(TP02.WDir,'c');hold on;
+legend('39','74','89','02');
+title('WDir');
+
+%% Move data from OPEC_master files into new master files
+%%% met data clocks all match up, and fluxes are matched up to met.
+% Load OPEC files
+load([ls 'Matlab/Data/Master_Files/Old/TP02_master.mat']);
+load([ls 'Matlab/Data/Master_Files/Old/TP89_master.mat']);
+load([ls 'Matlab/Data/Master_Files/Old/TP74_master.mat']);
+ind = (1:1:length(TP02_master.Year))';
+ind2 = (1:1:length(TP02_master.Hmaster))';
+ind3 = (1:1:length(TP02_master.LEmaster))';
+
+TP02_tmp.master.data(ind,7) = TP02_master.NEEmaster;
+TP02_tmp.master.data(ind,8) = TP02_master.GEPfilled;
+TP02_tmp.master.data(ind,9) = TP02_master.Rfilled;
+TP02_tmp.master.data(ind,10) = TP02_master.NEEfilled;
+TP02_tmp.master.data(ind,11) = TP02_master.Fcmaster;
+TP02_tmp.master.data(ind,12) = TP02_master.CO2_topmaster;
+TP02_tmp.master.data(ind,13) = TP02_master.CO2_cpymaster;
+TP02_tmp.master.data(1:length(TP02_master.LEmaster),15) = TP02_master.LEmaster; try TP02_tmp.master.data(TP02_tmp.master.data(:,15)==0,15) = NaN; catch; end
+TP02_tmp.master.data(1:length(TP02_master.Hmaster),16) = TP02_master.Hmaster;try TP02_tmp.master.data(TP02_tmp.master.data(:,16)==0,16) = NaN; catch; end
+TP02_tmp.master.data(ind,19) = TP02_master.ustarmaster;
+% TP02_tmp.master.data(ind,21) = TP02_master.Jt;
+TP02_tmp.master.data(ind,33) = TP02_master.WDir;
+
+TP89_tmp.master.data(ind,7) = TP89_master.NEEmaster;
+TP89_tmp.master.data(ind,8) = TP89_master.GEPfilled;
+TP89_tmp.master.data(ind,9) = TP89_master.Rfilled;
+TP89_tmp.master.data(ind,10) = TP89_master.NEEfilled;
+TP89_tmp.master.data(ind,11) = TP89_master.Fcmaster;
+TP89_tmp.master.data(ind,12) = TP89_master.CO2_topmaster;
+TP89_tmp.master.data(ind,13) = TP89_master.CO2_cpymaster;
+TP89_tmp.master.data(1:length(TP89_master.LEmaster),15) = TP89_master.LEmaster; try TP89_tmp.master.data(TP89_tmp.master.data(:,15)==0,15) = NaN; catch; end
+TP89_tmp.master.data(1:length(TP89_master.Hmaster),16) = TP89_master.Hmaster;  try TP89_tmp.master.data(TP89_tmp.master.data(:,16)==0,16) = NaN; catch; end
+TP89_tmp.master.data(ind,19) = TP89_master.ustarmaster;
+% TP89_tmp.master.data(ind,21) = TP89_master.Jt;
+TP89_tmp.master.data(ind,33) = TP89_master.WDir;
+
+TP74_tmp.master.data(ind,7) = TP74_master.NEEmaster;
+TP74_tmp.master.data(ind,8) = TP74_master.GEPfilled;
+TP74_tmp.master.data(ind,9) = TP74_master.Rfilled;
+TP74_tmp.master.data(ind,10) = TP74_master.NEEfilled;
+TP74_tmp.master.data(ind,11) = TP74_master.Fcmaster;
+TP74_tmp.master.data(ind,12) = TP74_master.CO2_topmaster;
+TP74_tmp.master.data(ind,13) = TP74_master.CO2_cpymaster;
+TP74_tmp.master.data(1:length(TP74_master.LEmaster),15) = TP74_master.LEmaster; try TP74_tmp.master.data(TP74_tmp.master.data(ind,15)==0,15) = NaN; catch; end
+TP74_tmp.master.data(1:length(TP74_master.Hmaster),16) = TP74_master.Hmaster;  try TP74_tmp.master.data(TP74_tmp.master.data(ind,16)==0,16) = NaN; catch; end
+TP74_tmp.master.data(ind,19) = TP74_master.ustarmaster;
+% TP74_tmp.master.data(ind,21) = TP74_master.Jt;
+TP74_tmp.master.data(ind,33) = TP74_master.WDir;
+
+%%% Try to test for lags in data
+% Align everything up to TP39:
+jump_ind = (1:48:length(TP74.WDir))';
+num_lags = 4;
+
+shift_TP74 = NaN.*ones(length(jump_ind),1);
+shift_TP89 = NaN.*ones(length(jump_ind),1);
+shift_TP02 = NaN.*ones(length(jump_ind),1);
+c_TP74 = NaN.*ones(length(jump_ind),num_lags*2+1);
+
+for day = 1:1:length(jump_ind);
+ref = TP39.PAR(jump_ind(day):jump_ind(day)+47);
+test_TP74 = TP74.PAR(jump_ind(day):jump_ind(day)+47);
+test_TP89 = TP89.PAR(jump_ind(day):jump_ind(day)+47);
+test_TP02 = TP02.PAR(jump_ind(day):jump_ind(day)+47);
+    [c_TP74(day,:), ~, shift_TP74(day,1)] = find_PAR_shift(ref,test_TP74,num_lags);
+    [c_TP89(day,:), ~, shift_TP89(day,1)] = find_PAR_shift(ref,test_TP89,num_lags);
+    [c_TP02(day,:), ~, shift_TP02(day,1)] = find_PAR_shift(ref,test_TP02,num_lags);
+
+    clear ref test*
+   
+end
+
+figure(4);clf
+subplot(3,1,1);
+plot(shift_TP74,'b');hold on;
+subplot(3,1,2);
+plot(shift_TP89,'r');
+subplot(3,1,3);
+plot(shift_TP02,'g');
+extra = 17520;
+% fix shifts in data:
+TP39_tmp.master.data(12128+extra:13568+extra,7:end) = TP39_tmp.master.data(12129+extra:13569+extra,7:end); TP39_tmp.master.data(13569+extra,7:end) = NaN;
+TP39_tmp.master.data(35101+extra:52611+extra,7:end) = TP39_tmp.master.data(35100+extra:52610+extra,7:end); TP39_tmp.master.data(35100+extra,7:end) = NaN;
+TP39_tmp.master.data(55756+extra:62259+extra,7:end) = TP39_tmp.master.data(55757+extra:62260+extra,7:end); TP39_tmp.master.data(62260+extra,7:end) = NaN;
+TP39_tmp.master.data(64450+extra:65632+extra,7:end) = TP39_tmp.master.data(64451+extra:65633+extra,7:end); TP39_tmp.master.data(65633+extra,7:end) = NaN;
+
+TP39_to_fix = [13569 35100 62260 65633]+extra;
+% fix TP74:
+TP74_tmp.master.data(25747+extra:25951+extra,7:end) = TP74_tmp.master.data(25748+extra:25952+extra,7:end); TP74_tmp.master.data(25952+extra,7:end) = NaN;
+TP74_to_fix = 25952+extra;
+
+% TP89:
+TP89_tmp.master.data(30417+extra:35081+extra,7:end) = TP89_tmp.master.data(30418+extra:35082+extra,7:end); TP89_tmp.master.data(35082+extra,7:end) = NaN;
+TP89_to_fix = 35082+extra;
+
+
+% TP02:
+TP02_tmp.master.data(1+extra:12893+extra,7:end) = TP02_tmp.master.data(2+extra:12894+extra,7:end); TP02_tmp.master.data(12894+extra,7:end) = NaN;
+TP02_tmp.master.data(19470+extra:20531+extra,7:end) = TP02_tmp.master.data(19471+extra:20532+extra,7:end); TP02_tmp.master.data(20532+extra,7:end) = NaN;
+TP02_tmp.master.data(20532+extra:21092+extra,7:end) = TP02_tmp.master.data(20534+extra:21094+extra,7:end); TP02_tmp.master.data(21093+extra:21094,7:end) = NaN;
+TP02_tmp.master.data(44188+extra:45388+extra,7:end) = TP02_tmp.master.data(44189+extra:45389+extra,7:end); TP02_tmp.master.data(45389+extra,7:end) = NaN;
+TP02_to_fix = [12894 20532 21093 21094 45389]+extra;
+
+for k = 1:1:length(TP39_to_fix)
+    TP39_tmp.master.data(TP39_to_fix(k),7:end) = mean([TP39_tmp.master.data(TP39_to_fix(k)-1,7:end) ; TP39_tmp.master.data(TP39_to_fix(k)+1,7:end)]);
+end
+
+for k  = 1:1:length(TP74_to_fix)
+    TP74_tmp.master.data(TP74_to_fix(k),7:end) = mean([TP74_tmp.master.data(TP74_to_fix(k)-1,7:end) ; TP74_tmp.master.data(TP74_to_fix(k)+1,7:end)]);
+end
+
+for k  = 1:1:length(TP89_to_fix)
+    TP89_tmp.master.data(TP89_to_fix(k),7:end) = mean([TP89_tmp.master.data(TP89_to_fix(k)-1,7:end) ; TP89_tmp.master.data(TP89_to_fix(k)+1,7:end)]);
+end
+
+for k  = 1:1:length(TP02_to_fix)
+    TP02_tmp.master.data(TP02_to_fix(k),7:end) = mean([TP02_tmp.master.data(TP02_to_fix(k)-1,7:end) ; TP02_tmp.master.data(TP02_to_fix(k)+1,7:end)]);
+end
+
+
+ind = find(TP39_tmp.master.data(:,1)>=2003 & TP39_tmp.master.data(:,1)<=2007);
+TP39.PAR = TP39_tmp.master.data(ind,33);
+TP02.PAR = TP02_tmp.master.data(ind,27);
+TP89.PAR = TP89_tmp.master.data(ind,27);
+TP74.PAR = TP74_tmp.master.data(ind,27);
+
+
+figure(10);clf;
+plot(TP39.PAR,'b');hold on;
+plot(TP74.PAR,'r');hold on;
+plot(TP89.PAR,'g');hold on;
+plot(TP02.PAR,'c');hold on;
+legend('39','74','89','02');
+title('PAR');
+
+%%% Add columns that will hold OPEC data (if specified):
+
+resp = input('Do you want to add columns for OPEC data? Enter <n> if this has already been done.','s')
+if strcmp(resp,'y')==1;
+TP02_tmp.master.data = [TP02_tmp.master.data NaN.*ones(length(TP02_tmp.master.data),13)];
+TP89_tmp.master.data = [TP89_tmp.master.data NaN.*ones(length(TP89_tmp.master.data),13)];
+TP74_tmp.master.data = [TP74_tmp.master.data NaN.*ones(length(TP74_tmp.master.data),13)];
+TP39_tmp.master.data = [TP39_tmp.master.data NaN.*ones(length(TP39_tmp.master.data),13)];
+
+label_to_add{1,1} = 'NEE_OPEC';
+label_to_add{2,1} = 'GEP_filled_OPEC';
+label_to_add{3,1} = 'R_filled_OPEC';
+label_to_add{4,1} = 'NEE_filled_OPEC';
+label_to_add{5,1} = 'FC_OPEC';
+label_to_add{6,1} = 'CO2_OPEC';
+label_to_add{7,1} = 'SFC_OPEC';
+label_to_add{8,1} = 'LE_OPEC';
+label_to_add{9,1} = 'H_OPEC';
+label_to_add{10,1} = 'LE_filled_OPEC';
+label_to_add{11,1} = 'H_filled_OPEC';
+label_to_add{12,1} = 'Ustar_OPEC';
+label_to_add{13,1} = 'H2O_OPEC';
+
+len_TP02 = length(TP02_tmp.master.labels);
+len_TP74 = length(TP74_tmp.master.labels);
+len_TP89 = length(TP89_tmp.master.labels);
+len_TP39 = length(TP39_tmp.master.labels);
+
+
+for i = 1:1:length(label_to_add)
+    
+    
+    TP02_tmp.master.labels{len_TP02+i,1} = label_to_add{i,1};
+    TP74_tmp.master.labels{len_TP74+i,1} = label_to_add{i,1};
+    TP89_tmp.master.labels{len_TP89+i,1} = label_to_add{i,1};
+    TP39_tmp.master.labels{len_TP39+i,1} = label_to_add{i,1};
+    
+    
+    for j = 2:1:5
+        TP02_tmp.master.labels{len_TP02+i,j} = '';
+        TP89_tmp.master.labels{len_TP89+i,j} = '';
+        TP74_tmp.master.labels{len_TP74+i,j} = '';
+        TP39_tmp.master.labels{len_TP39+i,j} = '';
+        
+    end
+    
+end
+end
+%%% Move flux data from 2008 over to _OPEC columns
+ind_2008 = find(TP02_tmp.master.data(:,1)==2008 & TP02_tmp.master.data(:,6)<=175);
+TP02_tmp.master.data(ind_2008,74:79) = TP02_tmp.master.data(ind_2008,7:12);
+TP02_tmp.master.data(ind_2008,80:86) = TP02_tmp.master.data(ind_2008,14:20);
+TP02_tmp.master.data(ind_2008,7:12) = NaN;
+TP02_tmp.master.data(ind_2008,14:20) = NaN;
+
+ind_2008 = find(TP02_tmp.master.data(:,1)==2008);
+
+
+%  TP89_tmp.master.data(ind_2008,74:79) = TP89_tmp.master.data(ind_2008,7:12);
+% TP89_tmp.master.data(ind_2008,80:86)= TP89_tmp.master.data(ind_2008,14:20);
+% TP89_tmp.master.data(ind_2008,7:12) = NaN;
+% TP89_tmp.master.data(ind_2008,14:20) = NaN;
+
+% TP74_tmp.master.data(ind_2008,85:90) = TP74_tmp.master.data(ind_2008,7:12);
+% TP74_tmp.master.data(ind_2008,91:97) = TP74_tmp.master.data(ind_2008,14:20);
+% TP74_tmp.master.data(ind_2008,7:12) = NaN;
+% TP74_tmp.master.data(ind_2008,14:20) = NaN;
+
+%% Shift Everything Into UTC, save files::
+% TP02:
+[r c] = size(TP02_tmp.master.data);
+master.data = NaN.*ones(r,c);
+master.data(:,1:6) = TP02_tmp.master.data(1:end,1:6);
+master.data(:,7:c) = [NaN.*ones(8,length(TP02_tmp.master.labels)-6) ; TP02_tmp.master.data(1:end-8,7:end)];
+master.labels = TP02_tmp.master.labels;
+save([ls 'Matlab/Data/Master_Files/TP02/TP02_data_master.mat'],'master')
+clear master r c;
+
+% TP89:
+[r c] = size(TP89_tmp.master.data);
+master.data = NaN.*ones(r,c);
+master.data(:,1:6) = TP89_tmp.master.data(1:end,1:6);
+master.data(:,7:c) = [NaN.*ones(8,length(TP89_tmp.master.labels)-6) ; TP89_tmp.master.data(1:end-8,7:end)];
+master.labels = TP89_tmp.master.labels;
+save([ls 'Matlab/Data/Master_Files/TP89/TP89_data_master.mat'],'master')
+clear master r c;
+
+% TP74:
+[r c] = size(TP74_tmp.master.data);
+master.data = NaN.*ones(r,c);
+master.data(:,1:6) = TP74_tmp.master.data(1:end,1:6);
+master.data(:,7:c) = [NaN.*ones(8,length(TP74_tmp.master.labels)-6) ; TP74_tmp.master.data(1:end-8,7:end)];
+master.labels = TP74_tmp.master.labels;
+save([ls 'Matlab/Data/Master_Files/TP74/TP74_data_master.mat'],'master')
+clear master r c;
+
+% TP39:
+[r c] = size(TP39_tmp.master.data);
+master.data = NaN.*ones(r,c);
+master.data(:,1:6) = TP39_tmp.master.data(1:end,1:6);
+master.data(:,7:c) = [NaN.*ones(8,length(TP39_tmp.master.labels)-6) ; TP39_tmp.master.data(1:end-8,7:end)];
+master.labels = TP39_tmp.master.labels;
+save([ls 'Matlab/Data/Master_Files/TP39/TP39_data_master.mat'],'master')
+clear master r c;
+
+

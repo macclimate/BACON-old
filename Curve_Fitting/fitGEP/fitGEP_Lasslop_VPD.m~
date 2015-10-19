@@ -1,0 +1,93 @@
+function out = fitGEP_Lasslop_VPD(c_hat,x)
+%%
+%%% fitGEP_Lasslop_noVPD.m
+%%% This function estimates NEE (not GEP) using the MM rectangular
+%%% hyperbolic function and subtracting RE (using the L&T method, with only
+%%% one flexible parameter -- rb [a.k.a. Rref]).
+%%% The Eo parameter is set, but is not a fixed value.  Therefore, it needs
+%%% to be inputted as a third column in x.
+%%% Input: x (or X) must be in the form: [PAR T Eo VPD k(optional)]
+
+global X Y stdev objfun fixed_coeff coeffs_to_fix;
+
+if ~isempty(coeffs_to_fix)==1
+    ctr = 1;
+    for i = 1:1:length(fixed_coeff)
+        if isnan(fixed_coeff(i))
+            c_hat_tmp(i) = c_hat(ctr);
+            ctr = ctr+1;
+        else
+            c_hat_tmp(i) = fixed_coeff(i);
+        end
+        
+    end
+    
+    c_hat = c_hat_tmp;
+end
+
+
+    % Note that c_hat(2) has been replaced with:
+    % c_hat(2).*exp(-1.*c_hat(4).*(x(ind_VPD_up,4)-1))
+    %%% If x has 5 columns, it means that k has been pre-determined, and is
+    %%% entered as a variable instead of an adjustable parameter:
+    %%% Input: x (or X) must be in the form: [PAR T Eo VPD k(optional)]
+    
+%% Evaluation Mode: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+if nargin > 1
+    y_hat = NaN.*ones(size(x,1),1);
+    %%% Evaluation Mode, Dynamic k value (triggered when x has 5 columns):
+    if size(x,2) == 5
+        ind_VPD_up = find(x(:,4) > 1);
+        y_hat(ind_VPD_up,1) = (c_hat(3).*exp(x(ind_VPD_up,3).*( (1./(10-(-46.02))) - (1./(x(ind_VPD_up,2)-(-46.02))) ))) - ...
+        ( (c_hat(1).*(c_hat(2).*exp(-1.*x(ind_VPD_up,5).*(x(ind_VPD_up,4)-1))).*x(ind_VPD_up,1))./(c_hat(1).*x(ind_VPD_up,1) + (c_hat(2).*exp(-1.*x(ind_VPD_up,5).*(x(ind_VPD_up,4)-1)))) );
+        ind_VPD_down = find(x(:,4) <= 1);
+        y_hat(ind_VPD_down,1) = (c_hat(3).*exp(x(ind_VPD_down,3).*( (1./(10-(-46.02))) - (1./(x(ind_VPD_down,2)-(-46.02))) ))) - ...
+        ( (c_hat(1).*c_hat(2).*x(ind_VPD_down,1))./(c_hat(1).*x(ind_VPD_down,1) + c_hat(2)) );
+    else
+        %%% Evaluation Mode, Static k value (triggered when x has <= 4 columns):
+        ind_VPD_up = find(x(:,4) > 1);
+        y_hat(ind_VPD_up,1) = (c_hat(3).*exp(x(ind_VPD_up,3).*( (1./(10-(-46.02))) - (1./(x(ind_VPD_up,2)-(-46.02))) ))) - ...
+        ( (c_hat(1).*(c_hat(2).*exp(-1.*c_hat(4).*(x(ind_VPD_up,4)-1))).*x(ind_VPD_up,1))./(c_hat(1).*x(ind_VPD_up,1) + (c_hat(2).*exp(-1.*c_hat(4).*(x(ind_VPD_up,4)-1)))) );
+        ind_VPD_down = find(x(:,4) <= 1);
+        y_hat(ind_VPD_down,1) = (c_hat(3).*exp(x(ind_VPD_down,3).*( (1./(10-(-46.02))) - (1./(x(ind_VPD_down,2)-(-46.02))) ))) - ...
+        ( (c_hat(1).*c_hat(2).*x(ind_VPD_down,1))./(c_hat(1).*x(ind_VPD_down,1) + c_hat(2)) );
+    end
+    out = y_hat;
+
+%% Parameterization Mode: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+else    
+        y_hat = NaN.*ones(size(X,1),1);
+    %%% Paramaterization Mode, Dynamic k value (triggered when X has 5
+    %%% columns):
+    if size(X,2) == 5
+        ind_VPD_up = find(X(:,4) > 1);
+        y_hat(ind_VPD_up,1) = (c_hat(3).*exp(X(ind_VPD_up,3).*( (1./(10-(-46.02))) - (1./(X(ind_VPD_up,2)-(-46.02))) ))) - ...
+        ( (c_hat(1).*(c_hat(2).*exp(-1.*X(ind_VPD_up,5).*(X(ind_VPD_up,4)-1))).*X(ind_VPD_up,1)) ./ (c_hat(1).*X(ind_VPD_up,1) + (c_hat(2).*exp(-1.*X(ind_VPD_up,5).*(X(ind_VPD_up,4)-1)))) );
+        ind_VPD_down = find(X(:,4) <= 1);
+        y_hat(ind_VPD_down,1) = (c_hat(3).*exp(X(ind_VPD_down,3).*( (1./(10-(-46.02))) - (1./(X(ind_VPD_down,2)-(-46.02))) ))) - ...
+        ( (c_hat(1).*c_hat(2).*X(ind_VPD_down,1))./(c_hat(1).*X(ind_VPD_down,1) + c_hat(2)) );
+    else
+        %%% Paramaterization Mode, Static k value (triggered when X has <= 4
+        %%% columns):
+        ind_VPD_up = find(X(:,4) > 1);
+        y_hat(ind_VPD_up,1) = (c_hat(3).*exp(X(ind_VPD_up,3).*( (1./(10-(-46.02))) - (1./(X(ind_VPD_up,2)-(-46.02))) ))) - ...
+        ( (c_hat(1).*(c_hat(2).*exp(-1.*c_hat(4).*(X(ind_VPD_up,4)-1))).*X(ind_VPD_up,1))./(c_hat(1).*X(ind_VPD_up,1) + (c_hat(2).*exp(-1.*c_hat(4).*(X(ind_VPD_up,4)-1)))) );
+            
+        ind_VPD_down = find(X(:,4) <= 1);
+        y_hat(ind_VPD_down,1) = (c_hat(3).*exp(X(ind_VPD_down,3).*( (1./(10-(-46.02))) - (1./(X(ind_VPD_down,2)-(-46.02))) ))) - ...
+        ( (c_hat(1).*c_hat(2).*X(ind_VPD_down,1))./(c_hat(1).*X(ind_VPD_down,1) + c_hat(2)) );
+    end
+
+switch objfun
+    case 'OLS'
+        err = sum((y_hat - Y).^2);
+    case 'WSS'
+        err = sum(((y_hat - Y).^2)./(stdev.^2));
+    case 'MAWE'
+        err = (1./length(X)) .* ( sum(abs(y_hat - Y)./stdev));
+    otherwise
+        disp('no objective function specified - using least-squares')
+        err = sum((y_hat - Y).^2);
+end
+out = err;
+end

@@ -1,0 +1,344 @@
+% Flux calculation method comparison
+% Really, all we need to load is main met data, and then ustar, NEE from
+% the other data sources:
+
+
+clear all; close all;
+
+%% Load the three sources of data:
+ls = addpath_loadstart;
+
+%%%%%%%%%%%%%%%%%%% Load main (original) flux and met data:
+TP02.orig = load([loadstart 'Matlab/Data/Flux/OPEC/TP02_orig_flux.mat']);
+TP74.orig = load([loadstart 'Matlab/Data/Flux/OPEC/TP74_orig_flux.mat']);
+TP89.orig = load([loadstart 'Matlab/Data/Flux/OPEC/TP89_orig_flux.mat']);
+
+%%%%%%%%%%%%%%%%%%% Load OPEC (10-min) flux and met data:
+TP02.OPEC = load([loadstart 'Matlab/Data/Flux/OPEC/TP02_OPEC_flux.mat']);
+TP74.OPEC = load([loadstart 'Matlab/Data/Flux/OPEC/TP74_OPEC_flux.mat']);
+TP89.OPEC = load([loadstart 'Matlab/Data/Flux/OPEC/TP89_OPEC_flux.mat']);
+
+%%%%%%%%%%%%%%%%%%% Load EdiRe (HF) flux and met data:
+TP02.EdiRe = load([loadstart 'Matlab/Data/Flux/OPEC/EdiRe/TP02/Processed/TP02_EdiRe_flux.mat']);
+TP74.EdiRe = load([loadstart 'Matlab/Data/Flux/OPEC/EdiRe/TP74/Processed/TP74_EdiRe_flux.mat']);
+TP89.EdiRe = load([loadstart 'Matlab/Data/Flux/OPEC/EdiRe/TP89/Processed/TP89_EdiRe_flux.mat']);
+
+clear yr_ends
+yr_ends = cumsum([17520 17520 17568 17520 17520 17520 17568 17520 17520]');
+
+%% Figure 1: Group by method, plot between sites:
+figure('Name','Original Data');clf
+subplot(3,1,1);
+plot(TP89.orig.flux_out.NEEraw,'b-'); hold on;
+plot(TP74.orig.flux_out.NEEraw,'g-'); hold on;
+plot(TP02.orig.flux_out.NEEraw,'r-'); hold on;
+for j = 1:1:length(yr_ends); plot([yr_ends(j,1) yr_ends(j,1)],[-50 30],'k--'); end
+axis([15000 130000 -50 30])
+legend('TP89','TP74','TP02',4)
+title('Original Data');
+grid on;
+
+subplot(3,1,2);
+plot(TP89.OPEC.OPEC_flux.NEEraw_rot,'b-'); hold on;
+plot(TP74.OPEC.OPEC_flux.NEEraw_rot,'g-'); hold on;
+plot(TP02.OPEC.OPEC_flux.NEEraw_rot,'r-'); hold on;
+for j = 1:1:length(yr_ends); plot([yr_ends(j,1) yr_ends(j,1)],[-50 30],'k--'); end
+axis([15000 130000 -50 30])
+legend('TP89','TP74','TP02',4)
+title('10 min data');
+grid on;
+
+subplot(3,1,3);
+plot(TP89.EdiRe.EdiRe_flux.NEE_rot_freq_WPL,'b-'); hold on;
+plot(TP74.EdiRe.EdiRe_flux.NEE_rot_freq_WPL,'g-'); hold on;
+plot(TP02.EdiRe.EdiRe_flux.NEE_rot_freq_WPL,'r-'); hold on;
+for j = 1:1:length(yr_ends); plot([yr_ends(j,1) yr_ends(j,1)],[-50 30],'k--'); end
+axis([15000 130000 -50 30])
+legend('TP89','TP74','TP02',4)
+title('EdiRe Data');
+grid on;
+%% Figure 2: Group by site, plot between method:
+figure('Name','Compare Between Methods');clf
+subplot(3,1,1);
+plot(TP89.orig.flux_out.NEEraw,'b-'); hold on;
+plot(TP89.OPEC.OPEC_flux.NEEraw_rot,'g-'); hold on;
+plot(TP89.EdiRe.EdiRe_flux.NEE_rot_freq_WPL,'r-'); hold on;
+axis([15000 130000 -50 30])
+legend('Orig','OPEC','EdiRe',4)
+title('TP89');
+
+subplot(3,1,2);
+plot(TP74.orig.flux_out.NEEraw,'b-'); hold on;
+plot(TP74.OPEC.OPEC_flux.NEEraw_rot,'g-'); hold on;
+plot(TP74.EdiRe.EdiRe_flux.NEE_rot_freq_WPL,'r-'); hold on;
+axis([15000 130000 -50 30])
+legend('Orig','OPEC','EdiRe',4)
+title('TP74');
+
+subplot(3,1,3);
+plot(TP02.orig.flux_out.NEEraw,'b-'); hold on;
+plot(TP02.OPEC.OPEC_flux.NEEraw_rot,'g-'); hold on;
+plot(TP02.EdiRe.EdiRe_flux.NEE_rot_freq_WPL,'r-'); hold on;
+axis([15000 130000 -50 30])
+legend('Orig','OPEC','EdiRe',4)
+title('TP02');
+
+
+%%% Now, we're going to have to fill in both NEE and ustar into a master:
+% - need to modify this to keep track of what data is from which source:
+% Also need to fill in for: Hraw, LEraw, Fc, CO2_top, CO2_cpy
+
+% TP74:
+TP74.orig.flux_out.NEEmaster(1:length(TP74.orig.flux_out.NEEraw),1) = NaN;
+TP74.orig.flux_out.ustarmaster(1:length(TP74.orig.flux_out.ustar),1) = NaN;
+TP74.orig.flux_out.Hrawmaster(1:length(TP74.orig.flux_out.Hraw),1) = NaN;
+TP74.orig.flux_out.LErawmaster(1:length(TP74.orig.flux_out.LEraw),1) = NaN;
+TP74.orig.flux_out.Fcmaster(1:length(TP74.orig.flux_out.Fc),1) = NaN;
+TP74.orig.flux_out.CO2_topmaster(1:length(TP74.orig.flux_out.CO2_top),1) = NaN;
+TP74.orig.flux_out.CO2_cpymaster(1:length(TP74.orig.flux_out.CO2_cpy),1) = NaN;
+
+TP74_data_tracker(1:length(TP74.orig.flux_out.NEEraw),1) = NaN;
+
+% First, fill in with original data (will be copied over mostly):
+TP74.orig.flux_out.NEEmaster = TP74.orig.flux_out.NEEraw;
+TP74.orig.flux_out.ustarmaster = TP74.orig.flux_out.ustar;
+TP74.orig.flux_out.Hrawmaster = TP74.orig.flux_out.Hraw;
+TP74.orig.flux_out.LErawmaster = TP74.orig.flux_out.LEraw;
+TP74.orig.flux_out.Fcmaster = TP74.orig.flux_out.Fc;
+TP74.orig.flux_out.CO2_topmaster = TP74.orig.flux_out.CO2_top;
+TP74.orig.flux_out.CO2_cpymaster = TP74.orig.flux_out.CO2_cpy;
+
+TP74_data_tracker(~isnan(TP74.orig.flux_out.NEEraw),1) = 1;
+% Second, fill in with 10-min data:
+TP74.orig.flux_out.NEEmaster(~isnan(TP74.OPEC.OPEC_flux.NEEraw_rot),1) = ...
+    TP74.OPEC.OPEC_flux.NEEraw_rot(~isnan(TP74.OPEC.OPEC_flux.NEEraw_rot),1);
+TP74.orig.flux_out.ustarmaster(~isnan(TP74.OPEC.OPEC_flux.ustar),1) = ...
+    TP74.OPEC.OPEC_flux.ustar(~isnan(TP74.OPEC.OPEC_flux.ustar),1);
+
+TP74.orig.flux_out.Hrawmaster(~isnan(TP74.OPEC.OPEC_flux.NEEraw_rot),1) = ...
+    TP74.OPEC.OPEC_flux.NEEraw_rot(~isnan(TP74.OPEC.OPEC_flux.NEEraw_rot),1);
+TP74.orig.flux_out.NEEmaster(~isnan(TP74.OPEC.OPEC_flux.NEEraw_rot),1) = ...
+    TP74.OPEC.OPEC_flux.NEEraw_rot(~isnan(TP74.OPEC.OPEC_flux.NEEraw_rot),1);
+TP74.orig.flux_out.NEEmaster(~isnan(TP74.OPEC.OPEC_flux.NEEraw_rot),1) = ...
+    TP74.OPEC.OPEC_flux.NEEraw_rot(~isnan(TP74.OPEC.OPEC_flux.NEEraw_rot),1);
+TP74.orig.flux_out.NEEmaster(~isnan(TP74.OPEC.OPEC_flux.NEEraw_rot),1) = ...
+    TP74.OPEC.OPEC_flux.NEEraw_rot(~isnan(TP74.OPEC.OPEC_flux.NEEraw_rot),1);
+TP74.orig.flux_out.NEEmaster(~isnan(TP74.OPEC.OPEC_flux.NEEraw_rot),1) = ...
+    TP74.OPEC.OPEC_flux.NEEraw_rot(~isnan(TP74.OPEC.OPEC_flux.NEEraw_rot),1);
+
+
+
+
+
+
+TP74_data_tracker(~isnan(TP74.OPEC.OPEC_flux.NEEraw_rot),1) = 2;
+% Third, fill in EdiRe data wherever possible:
+TP74.orig.flux_out.NEEmaster(~isnan(TP74.EdiRe.EdiRe_flux.NEE_rot_freq_WPL),1) = ...
+    TP74.EdiRe.EdiRe_flux.NEE_rot_freq_WPL(~isnan(TP74.EdiRe.EdiRe_flux.NEE_rot_freq_WPL),1);
+TP74.orig.flux_out.ustarmaster(~isnan(TP74.EdiRe.EdiRe_flux.ustar),1) = ...
+    TP74.EdiRe.EdiRe_flux.ustar(~isnan(TP74.EdiRe.EdiRe_flux.ustar),1);
+
+TP74_data_tracker(~isnan(TP74.EdiRe.EdiRe_flux.NEE_rot_freq_WPL),1) = 3;
+
+
+
+% TP89:
+TP89.orig.flux_out.NEEmaster(1:length(TP89.orig.flux_out.NEEraw),1) = NaN;
+TP89.orig.flux_out.ustarmaster(1:length(TP89.orig.flux_out.ustar),1) = NaN;
+TP89.orig.flux_out.Hrawmaster(1:length(TP89.orig.flux_out.Hraw),1) = NaN;
+TP89.orig.flux_out.LErawmaster(1:length(TP89.orig.flux_out.LEraw),1) = NaN;
+TP89.orig.flux_out.Fcmaster(1:length(TP89.orig.flux_out.Fc),1) = NaN;
+TP89.orig.flux_out.CO2_topmaster(1:length(TP89.orig.flux_out.CO2_top),1) = NaN;
+TP89.orig.flux_out.CO2_cpymaster(1:length(TP89.orig.flux_out.CO2_cpy),1) = NaN;
+
+
+
+TP89_data_tracker(1:length(TP89.orig.flux_out.NEEraw),1) = NaN;
+% First, fill in with original data (will be copied over mostly):
+TP89.orig.flux_out.NEEmaster = TP89.orig.flux_out.NEEraw;
+TP89.orig.flux_out.ustarmaster = TP89.orig.flux_out.ustar;
+TP89.orig.flux_out.Hrawmaster = TP89.orig.flux_out.Hraw;
+TP89.orig.flux_out.LErawmaster = TP89.orig.flux_out.LEraw;
+TP89.orig.flux_out.Fcmaster = TP89.orig.flux_out.Fc;
+TP89.orig.flux_out.CO2_topmaster = TP89.orig.flux_out.CO2_top;
+TP89.orig.flux_out.CO2_cpymaster = TP89.orig.flux_out.CO2_cpy;
+
+TP89_data_tracker(~isnan(TP89.orig.flux_out.NEEraw),1) = 1;
+% Second, fill in with 10-min data:
+TP89.orig.flux_out.NEEmaster(~isnan(TP89.OPEC.OPEC_flux.NEEraw_rot),1) = ...
+    TP89.OPEC.OPEC_flux.NEEraw_rot(~isnan(TP89.OPEC.OPEC_flux.NEEraw_rot),1);
+TP89.orig.flux_out.ustarmaster(~isnan(TP89.OPEC.OPEC_flux.ustar),1) = ...
+    TP89.OPEC.OPEC_flux.ustar(~isnan(TP89.OPEC.OPEC_flux.ustar),1);
+
+TP89_data_tracker(~isnan(TP89.OPEC.OPEC_flux.NEEraw_rot),1) = 2;
+% Third, fill in EdiRe data wherever possible:
+TP89.orig.flux_out.NEEmaster(~isnan(TP89.EdiRe.EdiRe_flux.NEE_rot_freq_WPL),1) = ...
+    TP89.EdiRe.EdiRe_flux.NEE_rot_freq_WPL(~isnan(TP89.EdiRe.EdiRe_flux.NEE_rot_freq_WPL),1);
+TP89.orig.flux_out.ustarmaster(~isnan(TP89.EdiRe.EdiRe_flux.ustar),1) = ...
+    TP89.EdiRe.EdiRe_flux.ustar(~isnan(TP89.EdiRe.EdiRe_flux.ustar),1);
+
+TP89_data_tracker(~isnan(TP89.EdiRe.EdiRe_flux.NEE_rot_freq_WPL),1) = 3;
+
+% TP02:
+TP02.orig.flux_out.NEEmaster(1:length(TP02.orig.flux_out.NEEraw),1) = NaN;
+TP02.orig.flux_out.ustarmaster(1:length(TP02.orig.flux_out.ustar),1) = NaN;
+TP02.orig.flux_out.Hrawmaster(1:length(TP02.orig.flux_out.Hraw),1) = NaN;
+TP02.orig.flux_out.LErawmaster(1:length(TP02.orig.flux_out.LEraw),1) = NaN;
+TP02.orig.flux_out.Fcmaster(1:length(TP02.orig.flux_out.Fc),1) = NaN;
+TP02.orig.flux_out.CO2_topmaster(1:length(TP02.orig.flux_out.CO2_top),1) = NaN;
+TP02.orig.flux_out.CO2_cpymaster(1:length(TP02.orig.flux_out.CO2_cpy),1) = NaN;
+
+
+TP02_data_tracker(1:length(TP02.orig.flux_out.NEEraw),1) = NaN;
+% First, fill in with original data (will be copied over mostly):
+TP02.orig.flux_out.NEEmaster = TP02.orig.flux_out.NEEraw;
+TP02.orig.flux_out.ustarmaster = TP02.orig.flux_out.ustar;
+TP02.orig.flux_out.Hrawmaster = TP02.orig.flux_out.Hraw;
+TP02.orig.flux_out.LErawmaster = TP02.orig.flux_out.LEraw;
+TP02.orig.flux_out.Fcmaster = TP02.orig.flux_out.Fc;
+TP02.orig.flux_out.CO2_topmaster = TP02.orig.flux_out.CO2_top;
+TP02.orig.flux_out.CO2_cpymaster = TP02.orig.flux_out.CO2_cpy;
+
+TP02_data_tracker(~isnan(TP02.orig.flux_out.NEEraw),1) = 1;
+% Second, fill in with 10-min data:
+TP02.orig.flux_out.NEEmaster(~isnan(TP02.OPEC.OPEC_flux.NEEraw_rot),1) = ...
+    TP02.OPEC.OPEC_flux.NEEraw_rot(~isnan(TP02.OPEC.OPEC_flux.NEEraw_rot),1);
+TP02.orig.flux_out.ustarmaster(~isnan(TP02.OPEC.OPEC_flux.ustar),1) = ...
+    TP02.OPEC.OPEC_flux.ustar(~isnan(TP02.OPEC.OPEC_flux.ustar),1);
+
+TP02_data_tracker(~isnan(TP02.OPEC.OPEC_flux.NEEraw_rot),1) = 2;
+% Third, fill in EdiRe data wherever possible:
+TP02.orig.flux_out.NEEmaster(~isnan(TP02.EdiRe.EdiRe_flux.NEE_rot_freq_WPL),1) = ...
+    TP02.EdiRe.EdiRe_flux.NEE_rot_freq_WPL(~isnan(TP02.EdiRe.EdiRe_flux.NEE_rot_freq_WPL),1);
+TP02.orig.flux_out.ustarmaster(~isnan(TP02.EdiRe.EdiRe_flux.ustar),1) = ...
+    TP02.EdiRe.EdiRe_flux.ustar(~isnan(TP02.EdiRe.EdiRe_flux.ustar),1);
+
+TP02_data_tracker(~isnan(TP02.EdiRe.EdiRe_flux.NEE_rot_freq_WPL),1) = 3;
+
+figure('Name','Filled NEE datasets');clf
+plot(TP89.orig.flux_out.NEEmaster,'b'); hold on;
+plot(TP74.orig.flux_out.NEEmaster,'g'); hold on;
+plot(TP02.orig.flux_out.NEEmaster,'r'); hold on;
+axis([15000 130000 -50 30])
+legend('TP89','TP74','TP02',4)
+
+% proportions of each source used in the final data: 
+data_prop = [];
+data_prop(1:3,1) = [74; 89; 02]; 
+data_prop(1,2) = length(find(TP74_data_tracker==1));
+data_prop(1,3) = length(find(TP74_data_tracker==2));
+data_prop(1,4) = length(find(TP74_data_tracker==3));
+
+data_prop(2,2) = length(find(TP89_data_tracker==1));
+data_prop(2,3) = length(find(TP89_data_tracker==2));
+data_prop(2,4) = length(find(TP89_data_tracker==3));
+
+data_prop(3,2) = length(find(TP02_data_tracker==1));
+data_prop(3,3) = length(find(TP02_data_tracker==2));
+data_prop(3,4) = length(find(TP02_data_tracker==3));
+
+%% Investigate differences between methods, for each site:
+
+% 1. TP74
+TP74_diff_Orig_OPEC = TP74.OPEC.OPEC_flux.NEEraw_rot - TP74.orig.flux_out.NEEraw;
+TP74_diff_Orig_EdiRe = TP74.EdiRe.EdiRe_flux.NEE_rot_freq_WPL - TP74.orig.flux_out.NEEraw;
+TP74_diff_OPEC_EdiRe = TP74.EdiRe.EdiRe_flux.NEE_rot_freq_WPL - TP74.OPEC.OPEC_flux.NEEraw_rot;
+TP74_diff_Orig_Master = TP74.orig.flux_out.NEEmaster - TP74.orig.flux_out.NEEraw;
+% 2. TP89
+TP89_diff_Orig_OPEC = TP89.OPEC.OPEC_flux.NEEraw_rot - TP89.orig.flux_out.NEEraw;
+TP89_diff_Orig_EdiRe = TP89.EdiRe.EdiRe_flux.NEE_rot_freq_WPL - TP89.orig.flux_out.NEEraw;
+TP89_diff_OPEC_EdiRe = TP89.EdiRe.EdiRe_flux.NEE_rot_freq_WPL - TP89.OPEC.OPEC_flux.NEEraw_rot;
+TP89_diff_Orig_Master = TP89.orig.flux_out.NEEmaster - TP89.orig.flux_out.NEEraw;
+% 3. TP02
+TP02_diff_Orig_OPEC = TP02.OPEC.OPEC_flux.NEEraw_rot - TP02.orig.flux_out.NEEraw;
+TP02_diff_Orig_EdiRe = TP02.EdiRe.EdiRe_flux.NEE_rot_freq_WPL - TP02.orig.flux_out.NEEraw;
+TP02_diff_OPEC_EdiRe = TP02.EdiRe.EdiRe_flux.NEE_rot_freq_WPL - TP02.OPEC.OPEC_flux.NEEraw_rot;
+TP02_diff_Orig_Master = TP02.orig.flux_out.NEEmaster - TP02.orig.flux_out.NEEraw;
+
+figure('Name','Cumulative Differences Between Methods');
+subplot(3,1,1);
+plot(nancumsum(TP74_diff_Orig_OPEC(1:105169,1)).*0.0216,'g');hold on;
+plot(nancumsum(TP74_diff_Orig_EdiRe(1:105169,1)).*0.0216,'r');
+plot(nancumsum(TP74_diff_OPEC_EdiRe(1:105169,1)).*0.0216,'c');
+plot(nancumsum(TP74_diff_Orig_Master(1:105169,1)).*0.0216,'k');
+
+title('TP74');
+legend('OPEC-Orig','Edi-Orig','Edi-OPEC','Master-Orig');
+ylabel('<- more sink; more source -> gC m^-^2');
+grid on;
+
+subplot(3,1,2);
+plot(nancumsum(TP89_diff_Orig_OPEC(1:105169,1)).*0.0216,'g');hold on;
+plot(nancumsum(TP89_diff_Orig_EdiRe(1:105169,1)).*0.0216,'r');
+plot(nancumsum(TP89_diff_OPEC_EdiRe(1:105169,1)).*0.0216,'c');
+plot(nancumsum(TP89_diff_Orig_Master(1:105169,1)).*0.0216,'k');
+title('TP89');
+legend('OPEC-Orig','Edi-Orig','Edi-OPEC','Master-Orig');
+ylabel('<- more sink; more source -> gC m^-^2');
+grid on;
+
+subplot(3,1,3);
+plot(nancumsum(TP02_diff_Orig_OPEC(1:105169,1)).*0.0216,'g');hold on;
+plot(nancumsum(TP02_diff_Orig_EdiRe(1:105169,1)).*0.0216,'r');
+plot(nancumsum(TP02_diff_OPEC_EdiRe(1:105169,1)).*0.0216,'c');
+plot(nancumsum(TP02_diff_Orig_Master(1:105169,1)).*0.0216,'k');
+title('TP02');
+legend('OPEC-Orig','Edi-Orig','Edi-OPEC','Master-Orig');
+ylabel('<- more sink; more source -> gC m^-^2');
+grid on;
+
+%%% Make annualized errors for each:
+ann_bias = [];
+ann_bias(1:3,1) = [74; 89; 02]; 
+ann_bias(1,2) = (nansum(TP74_diff_Orig_OPEC(1:105169,1)).*0.0216.*17520)./length(find(~isnan(TP74_diff_Orig_OPEC(1:105169,1))));
+ann_bias(1,3) = (nansum(TP74_diff_Orig_EdiRe(1:105169,1)).*0.0216.*17520)./length(find(~isnan(TP74_diff_Orig_EdiRe(1:105169,1))));
+ann_bias(1,4) = (nansum(TP74_diff_OPEC_EdiRe(1:105169,1)).*0.0216.*17520)./length(find(~isnan(TP74_diff_OPEC_EdiRe(1:105169,1))));
+ann_bias(1,5) = (nansum(TP74_diff_Orig_Master(1:105169,1)).*0.0216.*17520)./length(find(~isnan(TP74_diff_Orig_Master(1:105169,1))));
+
+ann_bias(2,2) = (nansum(TP89_diff_Orig_OPEC(1:105169,1)).*0.0216.*17520)./length(find(~isnan(TP89_diff_Orig_OPEC(1:105169,1))));
+ann_bias(2,3) = (nansum(TP89_diff_Orig_EdiRe(1:105169,1)).*0.0216.*17520)./length(find(~isnan(TP89_diff_Orig_EdiRe(1:105169,1))));
+ann_bias(2,4) = (nansum(TP89_diff_OPEC_EdiRe(1:105169,1)).*0.0216.*17520)./length(find(~isnan(TP89_diff_OPEC_EdiRe(1:105169,1))));
+ann_bias(2,5) = (nansum(TP89_diff_Orig_Master(1:105169,1)).*0.0216.*17520)./length(find(~isnan(TP89_diff_Orig_Master(1:105169,1))));
+
+ann_bias(3,2) = (nansum(TP02_diff_Orig_OPEC(1:105169,1)).*0.0216.*17520)./length(find(~isnan(TP02_diff_Orig_OPEC(1:105169,1))));
+ann_bias(3,3) = (nansum(TP02_diff_Orig_EdiRe(1:105169,1)).*0.0216.*17520)./length(find(~isnan(TP02_diff_Orig_EdiRe(1:105169,1))));
+ann_bias(3,4) = (nansum(TP02_diff_OPEC_EdiRe(1:105169,1)).*0.0216.*17520)./length(find(~isnan(TP02_diff_OPEC_EdiRe(1:105169,1))));
+ann_bias(3,5) = (nansum(TP02_diff_Orig_Master(1:105169,1)).*0.0216.*17520)./length(find(~isnan(TP02_diff_Orig_Master(1:105169,1))));
+
+%% Figure 5: Plot Original and New on top of each other:
+
+figure('Name','Original & New data');clf
+
+h1 = plot(TP89.orig.flux_out.NEEraw,'Color',[0,0,1]); hold on;
+plot(TP74.orig.flux_out.NEEraw,'Color',[0,0,1]); hold on;
+plot(TP02.orig.flux_out.NEEraw,'Color',[0,0,1]); hold on;
+
+h2 = plot(TP89.orig.flux_out.NEEmaster,'Color',[0.2,0.2,0.2]); hold on;
+plot(TP74.orig.flux_out.NEEmaster,'Color',[0.2,0.2,0.2]); hold on;
+plot(TP02.orig.flux_out.NEEmaster,'Color',[0.2,0.2,0.2]); hold on;
+
+for j = 1:1:length(yr_ends); plot([yr_ends(j,1) yr_ends(j,1)],[-50 30],'k--'); end
+axis([15000 130000 -50 30])
+
+legend([h1 h2],'Orig','New',4)
+title('Original Data');
+grid on;
+
+%% Export the master data into one structure file for use in gapfilling
+
+TP74_master = struct;
+TP74_master = TP74.orig.flux_out;
+TP74_master.data_tracker = TP74_data_tracker;
+
+TP89_master = struct;
+TP89_master = TP89.orig.flux_out;
+TP89_master.data_tracker = TP89_data_tracker;
+
+TP02_master = struct;
+TP02_master = TP02.orig.flux_out;
+TP02_master.data_tracker = TP02_data_tracker;
+
+save([ls 'Matlab/Data/Flux/OPEC/TP74_master.mat'],'TP74_master');
+save([ls 'Matlab/Data/Flux/OPEC/TP89_master.mat'],'TP89_master');
+save([ls 'Matlab/Data/Flux/OPEC/TP02_master.mat'],'TP02_master');
+

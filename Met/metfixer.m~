@@ -1,0 +1,78 @@
+function [] = metfixer(year, site)
+%% metfixer.m
+%%% This function is designed to be run on data after being processed with
+%%% met_cleaner
+
+
+loadstart = addpath_loadstart;
+
+load_path = [loadstart 'Matlab/Data/Met/Organized2/' site '/Column/30min/' site '_' year '.'];
+hdr_path = [loadstart 'Matlab/Data/Met/Raw1/Docs/'];
+
+header = jjb_hdr_read([hdr_path site '_OutputTemplate.csv'], ',', 3);
+
+
+
+
+switch site
+    case 'TP39'
+        switch year
+            case '2002'
+            case '2003'
+            case '2004'
+            case '2005'
+            case '2006'
+            case '2007'
+                %% Corrects for inverted Net Radiation for a period of time
+                %% in the data -- due to backwards wiring of sensor into
+                %% datalogger.
+
+                NR = jjb_load_var(header, load_path, 'NetRad_BlwCnpy');
+                %% use the mean of one day during the period to make sure
+                %% the data hasn't already been flipped once (mean of the
+                %% day is -24.707)
+                if mean(NR(6015:6063,1)) < 0  
+                NR(459:7842,1) = -1.*NR(459:7842,1);
+                save([load_path '018'],'NR','-ASCII');
+                end
+                
+                %% Fill missing PAR_down values for first 2481 pts of 2007
+                PAR = jjb_load_var(header, load_path, 'DownPAR_AbvCnpy');
+                %% CHeck to make sure data is still missing
+                PAR_M2 = load([loadstart 'Matlab/Data/Met/Organized2/TP74/Column/30min/TP74_2007.013']);
+                PAR(1:2480,1) = PAR_M2(1:2480,1);
+%                 if PAR(1:600,1) == -6999
+%                     PAR_M2 = load(loadstart 'Matlab/Data/Met/Organized2/TP74/Column/30min/TP74_2007.013');
+%                     PAR(PAR(:,1)== -6999) = PAR_M2(PAR(:,1) == -6999);
+                save([load_path '015'],'PAR','-ASCII');
+%                 end
+            case '2008'
+                        
+
+        CO2_cpy = jjb_load_var(header, load_path, 'CO2_BlwCnpy');
+        CO2_cpy(15822:17568,1) = CO2_cpy(15822:17568,1)-33;
+        save([load_path '080'],'CO2_cpy','-ASCII'); clear CO2_cpy;
+
+       
+        
+        
+        end
+
+    case 'TP74'
+switch year
+    case '2008'
+        Ta_top = jjb_load_var(header, load_path, 'AirTemp_AbvCnpy');
+        Ta_top(11363:12475,1) = NaN;
+        save([load_path '007'],'Ta_top','-ASCII'); clear Ta_top;
+        
+        RH_top = jjb_load_var(header, load_path, 'RelHum_AbvCnpy');
+        RH_top(11363:12475,1) = NaN;
+        save([load_path '008'],'RH_top','-ASCII'); clear RH_top;
+       
+
+end
+    case 'TP89'
+
+    case 'TP02'
+
+end

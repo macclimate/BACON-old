@@ -1,0 +1,328 @@
+function [final] = params(year, site, program)
+%% OPEC_params.m
+%%% This function serves as a central source of parameters for use in all
+%%% scripts operating on OPEC data
+% program specifies which program this script is being run from (see
+% bottom)
+%%
+
+
+switch site
+
+    %%%%%%%%%%%% MET 1 PARAMETERS
+    case 'TP39'
+         theta_w = 0.13;
+        theta_m = 0.01;
+        theta_o = 160/1300;
+                        lat = dms2dec(42, 42, 35.20);
+        long = dms2dec(80, 21, 26.64);
+
+%           42, 39', 39.37'' N
+%           80, 33', 34.27'' W
+        switch year
+            case '2002'
+                 % CO2 Storage
+                z = 28; ztop = 14; zcpy = 14; col_flag = 2;
+                % Respiration
+                gsstart = 88; gsend = 329; NEE_cap = 7; ustar_crit = 0.1;
+                % Photosynthesis
+                Qthresh = 10; Awa = 0.62; ka = 0.540; kh = 0.756; alpha = 0.03;
+                % Final Flux Calculation (OPEC_Fluxes)
+                GEPcutstart = 151; GEPcutend = 273; corr_1 = 1; corr_2 = 0;
+                
+                
+            case '2003'
+                % CO2 Storage
+                z = 28; ztop = 14; zcpy = 14; col_flag = 2;
+                % Respiration
+                gsstart = 81; gsend = 334; NEE_cap = 7; ustar_crit = 0.1;
+                % Photosynthesis
+                Qthresh = 10; Awa = 0.62; ka = 0.540; kh = 0.756; alpha = 0.03;
+                % Final Flux Calculation (OPEC_Fluxes)
+                GEPcutstart = 151; GEPcutend = 273; corr_1 = 1; corr_2 = 0;
+            case '2004'
+                % CO2 Storage
+                z = 28; ztop = 14; zcpy = 14; col_flag = 2;
+                % Respiration
+                gsstart = 86; gsend = 336; NEE_cap = 7; ustar_crit = 0.3;
+                % Photosynthesis
+                Qthresh = 10; Awa = 0.62; ka = 0.540; kh = 0.756; alpha = 0.03;
+                % Final Flux Calculation (OPEC_Fluxes)
+                GEPcutstart = 151; GEPcutend = 273; corr_1 = 1; corr_2 = 0;
+            case '2005'
+                % CO2 Storage
+                z = 28; ztop = 14; zcpy = 14; col_flag = 2;
+                % Respiration
+                gsstart = 94; gsend = 317; NEE_cap = 7; ustar_crit = 0.1;
+                % Photosynthesis
+                Qthresh = 10; Awa = 0.62; ka = 0.540; kh = 0.756; alpha = 0.03;
+                % Final Flux Calculation (OPEC_Fluxes)
+                GEPcutstart = 151; GEPcutend = 273; corr_1 = 1; corr_2 = 0;
+            case '2006'
+                % CO2 Storage
+                z = 28; ztop = 14; zcpy = 14; col_flag = 2;
+                % Respiration
+                gsstart = 86; gsend = 331; NEE_cap = 7; ustar_crit = 0.1;
+                % Photosynthesis
+                Qthresh = 10; Awa = 0.62; ka = 0.540; kh = 0.756; alpha = 0.03;
+                % Final Flux Calculation (OPEC_Fluxes)
+                GEPcutstart = 151; GEPcutend = 273; corr_1 = 1; corr_2 = 0;
+            case '2007'
+                % CO2 Storage
+                z = 28; ztop = 14; zcpy = 14; col_flag = 2;
+                % Respiration
+                gsstart = 84; gsend = 331; NEE_cap = 7; ustar_crit = 0.1;
+                % Photosynthesis
+                Qthresh = 10; Awa = 0.62; ka = 0.540; kh = 0.756; alpha = 0.03;
+                % Final Flux Calculation (OPEC_Fluxes)
+                GEPcutstart = 151; GEPcutend = 273; corr_1 = 1; corr_2 = 0;
+            case '2008'
+                % CO2 Storage
+                z = 28; ztop = 14; zcpy = 14; col_flag = 2;
+                % Respiration
+                gsstart = 84; gsend = 331; NEE_cap = 7; ustar_crit = 0.1;
+                % Photosynthesis
+                Qthresh = 10; Awa = 0.62; ka = 0.540; kh = 0.756; alpha = 0.03;
+                % Final Flux Calculation (OPEC_Fluxes)
+                GEPcutstart = 151; GEPcutend = 273; corr_1 = 1; corr_2 = 0;     
+                
+        end
+
+        %%%%%%%%%%%% MET 2 PARAMETERS
+    case 'TP74'
+         theta_w = 0.13;
+        theta_m = 0.01;
+        theta_o = 160/1300;
+                lat = dms2dec(42, 46, 27.91);
+        long = dms2dec(80, 27, 31.59);
+        
+        switch year
+
+            case '2002'
+                % CO2 Storage
+                z = 15; ztop = 9.2; zcpy = 5.8; col_flag = 2;
+                % Respiration
+                gsstart = 88; gsend = 329; NEE_cap = 7; ustar_crit = 0.1;
+                % Photosynthesis
+                Qthresh = 10; Awa = 0.62; ka = 0.540; kh = 0.756; alpha = 0.03;
+                % Final Flux Calculation (OPEC_Fluxes)
+                GEPcutstart = 151; GEPcutend = 273; corr_1 = 1; corr_2 = 0;   
+                
+            case '2003'
+                % CO2 Storage
+                z = 15; ztop = 9.2; zcpy = 5.8; col_flag = 2;
+                % Respiration
+                gsstart = 81; gsend = 334; NEE_cap = 7; ustar_crit = 0.1;
+                % Photosynthesis
+                Qthresh = 10; Awa = 0.62; ka = 0.540; kh = 0.756; alpha = 0.03;
+                % Final Flux Calculation (OPEC_Fluxes)
+                GEPcutstart = 151; GEPcutend = 273; corr_1 = 1; corr_2 = 0;           
+            case '2004'
+                % CO2 Storage
+                z = 15; ztop = 9.2; zcpy = 5.8; col_flag = 2;
+                % Respiration
+                gsstart = 90; gsend = 304; NEE_cap = 7; ustar_crit = 0.1;
+                % Photosynthesis
+                Qthresh = 10; Awa = 0.62; ka = 0.540; kh = 0.756; alpha = 0.03;
+                % Final Flux Calculation (OPEC_Fluxes)
+                GEPcutstart = 151; GEPcutend = 273; corr_1 = 1; corr_2 = 0;
+            case '2005'
+                % CO2 Storage
+                z = 15; ztop = 9.2; zcpy = 5.8; col_flag = 2;
+                % Respiration
+                gsstart = 94; gsend = 317; NEE_cap = 7; ustar_crit = 0.1;
+                % Photosynthesis
+                Qthresh = 10; Awa = 0.62; ka = 0.540; kh = 0.756; alpha = 0.03;
+                % Final Flux Calculation (OPEC_Fluxes)
+                GEPcutstart = 151; GEPcutend = 273; corr_1 = 1; corr_2 = 0;
+            case '2006'
+                % CO2 Storage
+                z = 15; ztop = 9.2; zcpy = 5.8; col_flag = 2;
+                % Respiration
+                gsstart = 86; gsend = 331; NEE_cap = 7; ustar_crit = 0.1;
+                % Photosynthesis
+                Qthresh = 10; Awa = 0.62; ka = 0.540; kh = 0.756; alpha = 0.03;
+                % Final Flux Calculation (OPEC_Fluxes)
+                GEPcutstart = 151; GEPcutend = 273; corr_1 = 1; corr_2 = 0;
+            case '2007'
+                % CO2 Storage
+                z = 15; ztop = 9.2; zcpy = 5.8; col_flag = 2;
+                % Respiration
+                gsstart = 90; gsend = 304; NEE_cap = 7; ustar_crit = 0.25;
+                % Photosynthesis
+                Qthresh = 10; Awa = 0.62; ka = 0.540; kh = 0.756; alpha = 0.03;
+                % Final Flux Calculation (OPEC_Fluxes)
+                GEPcutstart = 151; GEPcutend = 273; corr_1 = 1; corr_2 = 0;
+        end
+
+        %%%%%%%%%%%% MET 3 PARAMETERS
+    case 'TP89'
+theta_w  = 0.20;     % 20% water
+        theta_m	= 0.01;
+        theta_o  = 160/1300;
+                lat = dms2dec(42, 42, 24.52);
+        long = dms2dec(80, 20, 53.93);
+
+
+        switch year
+            case '2002'
+                 % CO2 Storage
+                z = 12; ztop = 6; zcpy = 6; col_flag = 2;
+                % Respiration
+                gsstart = 88; gsend = 329; NEE_cap = 7; ustar_crit = 0.1;
+                % Photosynthesis
+                Qthresh = 10; Awa = 0.62; ka = 0.540; kh = 0.756; alpha = 0.03;
+                % Final Flux Calculation (OPEC_Fluxes)
+                GEPcutstart = 151; GEPcutend = 273; corr_1 = 1; corr_2 = 0;
+                % gsend in this program set as 334 instead of 304 as in
+                % Resp..
+            case '2003'
+                 % CO2 Storage
+                z = 12; ztop = 6; zcpy = 6; col_flag = 2;
+                % Respiration
+                gsstart = 81; gsend = 334; NEE_cap = 7; ustar_crit = 0.1;
+                % Photosynthesis
+                Qthresh = 10; Awa = 0.62; ka = 0.540; kh = 0.756; alpha = 0.03;
+                % Final Flux Calculation (OPEC_Fluxes)
+                GEPcutstart = 151; GEPcutend = 273; corr_1 = 1; corr_2 = 0;
+                % gsend in this program set as 334 instead of 304 as in
+                % Resp..
+            case '2004'
+                 % CO2 Storage
+                z = 12; ztop = 6; zcpy = 6; col_flag = 2;
+                % Respiration
+                gsstart = 90; gsend = 304; NEE_cap = 7; ustar_crit = 0.1;
+                % Photosynthesis
+                Qthresh = 10; Awa = 0.62; ka = 0.540; kh = 0.756; alpha = 0.03;
+                % Final Flux Calculation (OPEC_Fluxes)
+                GEPcutstart = 151; GEPcutend = 273; corr_1 = 1; corr_2 = 0;
+                % gsend in this program set as 334 instead of 304 as in
+                % Resp..
+            case '2005'
+                % CO2 Storage
+                z = 12; ztop = 6; zcpy = 6; col_flag = 2;
+                % Respiration
+                gsstart = 94; gsend = 317; NEE_cap = 7; ustar_crit = 0.1;
+                % Photosynthesis
+                Qthresh = 10; Awa = 0.62; ka = 0.540; kh = 0.756; alpha = 0.03;
+                % Final Flux Calculation (OPEC_Fluxes)
+                GEPcutstart = 151; GEPcutend = 273; corr_1 = 1; corr_2 = 0;
+                % gsend in this program set as 334 instead of 304 as in Resp..
+            case '2006'
+                 % CO2 Storage
+                z = 12; ztop = 6; zcpy = 6; col_flag = 2;
+                % Respiration
+                gsstart = 86; gsend = 331; NEE_cap = 7; ustar_crit = 0.1;
+                % Photosynthesis
+                Qthresh = 10; Awa = 0.62; ka = 0.540; kh = 0.756; alpha = 0.03;
+                % Final Flux Calculation (OPEC_Fluxes)
+                GEPcutstart = 151; GEPcutend = 273; corr_1 = 1; corr_2 = 0;
+                % gsend in this program set as 334 instead of 304 as in
+                % Resp..
+            case '2007'
+                 % CO2 Storage
+                z = 12; ztop = 6; zcpy = 6; col_flag = 2;
+                % Respiration
+                gsstart = 90; gsend = 304; NEE_cap = 7; ustar_crit = 0.1;
+                % Photosynthesis
+                Qthresh = 10; Awa = 0.62; ka = 0.540; kh = 0.756; alpha = 0.03;
+                % Final Flux Calculation (OPEC_Fluxes)
+                GEPcutstart = 151; GEPcutend = 273; corr_1 = 1; corr_2 = 0;
+                % gsend in this program set as 334 instead of 304 as in
+                % Resp..
+        end
+
+        %%%%%%%%%%%% MET 4 PARAMETERS
+    case 'TP02'
+theta_w = 0.13;
+        theta_m = 0.01;
+        theta_o = 160/1300;
+        lat = dms2dec(42,39,39.37);
+        long = dms2dec(80,33,34.27);
+ 
+        switch year
+            case '2002'
+                % CO2 storage
+                z = 3; ztop = NaN; zcpy = NaN; col_flag = 1;
+                % Respiration
+                gsstart = 88; gsend = 329; NEE_cap = 7; ustar_crit = 0.1;
+                % Photosynthesis
+                Qthresh = 10; Awa = 0.62; ka = 0.540; kh = 0.756; alpha = 0.03;
+                % Final Flux Calculation (OPEC_Fluxes)
+                GEPcutstart = 151; GEPcutend = 273; corr_1 = 1; corr_2 = 0;
+                % gsend in this program set as 334 instead of 304 as in
+                % Resp..
+            case '2003'
+                % CO2 storage
+                z = 3; ztop = NaN; zcpy = NaN; col_flag = 1;
+                % Respiration
+                gsstart = 81; gsend = 334; NEE_cap = 7; ustar_crit = 0.1;
+                % Photosynthesis
+                Qthresh = 10; Awa = 0.62; ka = 0.540; kh = 0.756; alpha = 0.03;
+                % Final Flux Calculation (OPEC_Fluxes)
+                GEPcutstart = 151; GEPcutend = 273; corr_1 = 1; corr_2 = 0;
+                % gsend in this program set as 334 instead of 304 as in
+                % Resp..
+            case '2004'
+                % CO2 storage
+                z = 3; ztop = NaN; zcpy = NaN; col_flag = 1;
+                % Respiration
+                gsstart = 90; gsend = 304; NEE_cap = 7; ustar_crit = 0.1;
+                % Photosynthesis
+                Qthresh = 10; Awa = 0.62; ka = 0.540; kh = 0.756; alpha = 0.03;
+                % Final Flux Calculation (OPEC_Fluxes)
+                GEPcutstart = 151; GEPcutend = 273; corr_1 = 1; corr_2 = 0;
+                % gsend in this program set as 334 instead of 304 as in
+                % Resp..
+            case '2005'
+                % CO2 storage
+                z = 3; ztop = NaN; zcpy = NaN; col_flag = 1;
+                % Respiration
+                gsstart = 94; gsend = 317; NEE_cap = 7; ustar_crit = 0.1;
+                % Photosynthesis
+                Qthresh = 10; Awa = 0.62; ka = 0.540; kh = 0.756; alpha = 0.03;
+                % Final Flux Calculation (OPEC_Fluxes)
+                GEPcutstart = 151; GEPcutend = 273; corr_1 = 1; corr_2 = 0;
+                % gsend in this program set as 334 instead of 304 as in
+                % Resp..
+            case '2006'
+                % CO2 storage
+                z = 3; ztop = NaN; zcpy = NaN; col_flag = 1;
+                % Respiration
+                gsstart = 86; gsend = 331; NEE_cap = 7; ustar_crit = 0.1;
+                % Photosynthesis
+                Qthresh = 10; Awa = 0.62; ka = 0.540; kh = 0.756; alpha = 0.03;
+                % Final Flux Calculation (OPEC_Fluxes)
+                GEPcutstart = 151; GEPcutend = 273; corr_1 = 1; corr_2 = 0;
+                % gsend in this program set as 334 instead of 304 as in
+                % Resp..
+            case '2007'
+                % CO2 storage
+                z = 3; ztop = NaN; zcpy = NaN; col_flag = 1;
+                % Respiration
+                gsstart = 90; gsend = 304; NEE_cap = 7; ustar_crit = 0.1;
+                % Photosynthesis
+                Qthresh = 10; Awa = 0.62; ka = 0.540; kh = 0.756; alpha = 0.03;
+                % Final Flux Calculation (OPEC_Fluxes)
+                GEPcutstart = 151; GEPcutend = 273; corr_1 = 1; corr_2 = 0;
+                % gsend in this program set as 334 instead of 304 as in
+                % Resp..
+        end
+
+end
+
+%% This Section controls the parameters outputted, based on which program calls it
+switch program
+    case 'Resp'
+        final = [gsstart gsend NEE_cap ustar_crit];
+    case 'Met'
+        final = [];
+    case 'CO2_storage'
+        final = [z ztop zcpy col_flag];
+    case 'Photosynth'
+        final = [Qthresh Awa ka kh alpha gsstart gsend];
+    case 'Fluxes'
+        final = [gsstart gsend GEPcutstart GEPcutend corr_1 corr_2 ustar_crit];
+    case 'SHF'
+        final = [theta_w theta_m theta_o];
+end

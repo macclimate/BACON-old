@@ -1,0 +1,122 @@
+clear all
+close all
+
+M1path = ('C:\Home\Matlab\Data\Organized\Met1\Column\30min\');
+M2path = ('C:\Home\Matlab\Data\Organized\Met2\Column\30min\');
+M3path = ('C:\Home\Matlab\Data\Organized\Met3\Column\30min\');
+M4path = ('C:\Home\Matlab\Data\Organized\Met4\Column\30min\');
+
+M1_Tair_2005_top = load([M1path 'Met1_2005.008']);
+M1_Tair_2006_top = load([M1path 'Met1_2006.008']);
+M1_Tair_2005_cpy = load([M1path 'Met1_2005.009']);
+M1_Tair_2005_gnd = load([M1path 'Met1_2005.007']);
+
+M2_Tair_2005 = load([M2path 'Met2_2005.007']);
+M3_Tair_2005 = load([M3path 'Met3_2005.007']);
+M4_Tair_2005 = load([M4path 'Met4_2005.005']);
+
+% M1_RH = load([M1path 'Met1_2005.011']);
+M1_Tcsat_2005 = load('C:\Home\Matlab\Data\Flux\T_Csat05.dat');
+
+M1_Ts5a_2005 = load([M1path 'Met1_2005.090']);
+M1_Ts5b_2005 = load([M1path 'Met1_2005.096']);
+
+
+x_axis(:,1) = (7200:1:11520);
+x_axis = x_axis./48;
+
+x_axis_year(:,1) = (1:1:17520);
+x_axis_year = x_axis_year./48;
+
+figure (1)
+plot(x_axis,M1_Tair_2005_top(7200:11520),'rx-');
+hold on;
+plot(x_axis,M1_Tair_2005_cpy(7200:11520),'bx-');
+plot(x_axis,M2_Tair_2005(7200:11520),'gx-');
+plot(x_axis,M3_Tair_2005(7200:11520),'kx-');
+plot(x_axis,M4_Tair_2005(7200:11520),'cx-');
+axis([150 240 5 35]);
+xlabel ('DOY');
+ylabel ('Temperature ^oC')
+title ( 'T_a_i_r 2005 at various sites');
+legend('M1 top', 'M1 cpy', 'M2', 'M3', 'M4');
+grid on;
+
+figure (2)
+plot (x_axis,M1_Tair_2005_top(7200:11520),'rx-');
+hold on;
+plot (x_axis,M1_Tcsat_2005(7200:11520),'bx-');
+axis([150 240 5 35]);
+xlabel ('DOY');
+ylabel ('Temperature ^oC')
+title ( 'T_a_i_r 2005: HMP vs. CSAT');
+legend('M1 hmp', 'M1 CSAT');
+grid on;
+
+figure (3)
+clf;
+plot(x_axis, M1_Ts5a_2005(7200:11520),'rx-');
+hold on
+plot(x_axis, M1_Ts5b_2005(7200:11520),'bx-');
+axis([150 240 5 30])
+xlabel ('DOY');
+ylabel ('Soil Temperature ^oC')
+title ('Soil temperature at 5cm, Pit A vs. Pit B, 2005');
+legend ('Ts5a', 'Ts5b');
+grid on;
+
+figure (4)
+plot(x_axis,M1_Tair_2005_top(7200:11520),'rx-');
+hold on;
+plot(x_axis,M1_Tair_2006_top(7200:11520),'bx-');
+axis([150 240 10 30]);
+xlabel ('DOY');
+ylabel ('Temperature ^oC')
+title ( 'T_a_i_r 2005 vs. 2006 at Met 1');
+legend('M1 2005', 'M1 2006');
+grid on;
+
+%%%%%%%%%%%%%%%%%% Make dialy average
+x_avg = (1:1:365);
+
+M1_day_2005 = reshape(M1_Tair_2005_top,48,[]);
+M1_day_2006 = reshape(M1_Tair_2006_top,48,[]);
+
+for j = 1:365
+   M1_dayavg_2005(1,j) = nanmean(M1_day_2005(:,j));
+   M1_dayavg_2006(1,j) = nanmean(M1_day_2006(:,j));
+end
+
+avgT_2005 = mean(M1_dayavg_2005);
+avgT_2005_gs = nanmean(M1_dayavg_2005(150:240));
+
+avgT_2006 = nanmean(M1_dayavg_2006);
+avgT_2006_gs = nanmean(M1_dayavg_2006(150:240));
+
+figure (5)
+clf;
+subplot(2,1,1)
+plot(x_axis_year,M1_Tair_2005_top,'rx-');
+hold on;
+plot(x_axis_year,M1_Tair_2006_top,'bx-');
+axis([1 365 -10 30]);
+xlabel ('DOY');
+ylabel ('Temperature ^oC')
+title ( 'T_a_i_r 2005 vs. 2006 at Met 1');
+legend('M1 2005', 'M1 2006');
+grid on;
+
+x_avg = (1:1:365);
+
+subplot(2,1,2)
+plot(x_avg,M1_dayavg_2005,'rx-');
+hold on;
+plot(x_avg,M1_dayavg_2006,'bx-');
+axis([1 365 -10 30]);
+xlabel ('DOY');
+ylabel ('Temperature ^oC')
+title ( 'T_a_i_r 2005 vs. 2006 at Met 1 Daily Average');
+legend('M1 2005', 'M1 2006');
+grid on;
+
+

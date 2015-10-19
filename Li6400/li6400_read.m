@@ -1,0 +1,112 @@
+function [master] = li6400_read(file_path)
+%% li6400_read.m
+% This function loads data recorded by a LI-6400, organizes the information
+% in the file into a header, column names, and data:
+% usage:
+% [master] = li6400_read(file)
+% Outputs:
+% a structure file 'master', with 3 items:
+%%% master.header - the header that came with the data
+%%% master.col_names - names of variables on the original file
+%%% master.data - data from the original file, sorted into columns (with
+%%% HH, MM and SS added)
+%%% master.data_columns - column numbers and names for all variables in the
+%%% processed data file.
+%*** To access any of these simply use the following form:
+%*** var_name = master.data -- this will make a matrix called 'var_name'
+% with all the data in it.
+% Inputs:
+%%% file_path - the full path (and filename) of the data file (as a string) 
+%%% e.g. 'C:/Matlab/data/05102010_transect_12'
+%%% Created May 13, 2010 by JJB
+
+%%%%%% This was used for testing -- not needed %%%%%%%%%%%%%
+% file_path = '/home/brodeujj/Matlab/Data/Li6400/05102010_transect_12';
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Open the file:
+fid = fopen(file_path);
+continue_flag = 1;
+eofstat = 0;
+ctr = 1;
+% Go through the header and store it
+while continue_flag ==1 && eofstat == 0;
+    tline = fgets(fid);
+    
+    if strncmp(tline,'$STARTOFDATA$',13)==1;
+        continue_flag = 0;
+    else
+        header{ctr,1} = tline;
+    end
+    
+    eofstat = feof(fid);
+    ctr = ctr+1;
+end
+% Stops when we are at the part of the file that has the column names:
+
+% Figure out how many columns we have:
+pos = ftell(fid);
+tline = fgets(fid);
+num_cols = length(strfind(tline,sprintf('\t'))) + 1;
+
+% Go back to the line where the column titles are:
+fseek(fid,pos,'bof');
+
+% Make a format file to read the column names, read them and store them:
+format_string1 = '%s';
+for k = 2:1:num_cols
+    format_string1 = [format_string1 ' %s'];
+end
+col_names = textscan(fid,format_string1,1,'Delimiter','\t','EmptyValue', NaN);
+col_names = col_names';
+
+% Make a format file to read the data
+format_string2 = '%n %s';
+for k = 2:1:num_cols-1
+    format_string2 = [format_string2 ' %n'];
+end
+% Read the data
+data_cols = [1, 3:num_cols]';
+eofstat = feof(fid);
+data = [];
+for k = 1:1:num_cols+3
+data_columns(k,1) = {k};
+end
+if eofstat == 1; % Check to see if the file is empty:
+    disp('file is empty');
+    
+else
+    
+while eofstat == 0 % if it's not empty, then we start reading data:
+meas_data = [];
+
+    % Read data:
+    tmp_data = textscan(fid, format_string2, 200, 'Delimiter','\t','EmptyValue', NaN);%,'CommentStyle',{'-1.#','D'});
+        % turns time data (column 2) into hour, minute, second columns:
+            tmp_ts = char(tmp_data{1,2});
+            tmp_HH = str2num(tmp_ts(:,2:3));
+            tmp_MM = str2num(tmp_ts(:,5:6));
+            tmp_SS = str2num(tmp_ts(:,8:9));  
+            time_data = [tmp_HH tmp_MM tmp_SS];
+    for j = 1:1:length(data_cols)
+            meas_data = [meas_data tmp_data{1,data_cols(j)}];
+    end
+            data = [data ; time_data meas_data];
+
+    eofstat = feof(fid);
+
+end
+end
+fclose(fid);
+% Make the final names for the columns in master.data
+data_columns{1,2} = 'Hour'; data_columns{2,2} = 'Minute'; data_columns{3,2} = 'Seconds';
+
+for k = 4:1:num_cols+3
+data_columns(k,2) = col_names(k-3,1);
+end
+
+%% Put all the data in the final master file:
+master.data = data;
+master.header = header;
+master.col_names = col_names;
+master.data_columns = data_columns;

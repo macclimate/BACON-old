@@ -1,0 +1,76 @@
+
+clear all; close all;
+ls = addpath_loadstart;
+
+load([ls 'Matlab/Data/Flux/OPEC/TP02_master.mat']);
+load([ls 'Matlab/Data/Data_Analysis/Uncert/TP39.mat']);
+% _Mat_ustar_Master.mat
+load([ls 'Matlab/Data/Flux/OPEC/TP02_Mat_ustar_Master.mat']);
+
+TP39_master = struct;
+
+TP39_master.NEEmaster = NaN.*ones(157776,1);
+TP39_master.ustarmaster = NaN.*ones(157776,1);
+TP39_master.PAR = NaN.*ones(157776,1);
+    TP39_master.P_GEP_PAR = NaN.*ones(157776,1);
+TP39_master.P_GEP_PAR_pw = NaN.*ones(157776,1);
+TP39_master.P_GEP_PAR_Ts = NaN.*ones(157776,1);
+TP39_master.P_GEP_PAR_Ts_VPD = NaN.*ones(157776,1);
+TP39_master.P_GEP_PAR_Ts_VPD_SM = NaN.*ones(157776,1);
+TP39_master.P_GEP_PAR_Ts_VPD_SM_pw = NaN.*ones(157776,1);
+TP39_master.NEEmaster = NaN.*ones(157776,1);
+
+
+
+TP39_master.R_est_Ts = NaN.*ones(157776,1);
+TP39_master.R_est_Ts_rw = NaN.*ones(157776,1);
+TP39_master.R_est_Ts_SM = NaN.*ones(157776,1);
+TP39_master.R_est_Ts_SM_rw = NaN.*ones(157776,1);
+
+
+TP39_master.Year = TP02_master.Year;
+TP39_master.dt = TP02_master.dt;
+
+yr_ctr = 1;
+for yr = 2003:1:2007
+    
+
+    
+    
+    TP39_master.NEEmaster(TP39_master.Year == yr,1) = TP39(yr_ctr).NEP.*-1;
+    TP39_master.ustarmaster(TP39_master.Year == yr,1) = TP39(yr_ctr).ustar;
+    TP39_master.PAR(TP39_master.Year == yr,1) = TP39(yr_ctr).PAR;
+    
+    TP39_master.P_GEP_PAR(TP39_master.Year == yr,1) = TP39(yr_ctr).P_GEP_PAR;
+TP39_master.P_GEP_PAR_pw(TP39_master.Year == yr,1) = TP39(yr_ctr).P_GEP_PAR_pw;
+TP39_master.P_GEP_PAR_Ts(TP39_master.Year == yr,1) = TP39(yr_ctr).P_GEP_PAR_Ts;
+TP39_master.P_GEP_PAR_Ts_VPD(TP39_master.Year == yr,1) = TP39(yr_ctr).P_GEP_PAR_Ts_VPD;
+TP39_master.P_GEP_PAR_Ts_VPD_SM(TP39_master.Year == yr,1) = TP39(yr_ctr).P_GEP_PAR_Ts_VPD_SM;
+TP39_master.P_GEP_PAR_Ts_VPD_SM_pw(TP39_master.Year == yr,1) = TP39(yr_ctr).P_GEP_PAR_Ts_VPD_SM_pw;
+
+
+TP39_master.R_est_Ts(TP39_master.Year == yr,1) = TP39(yr_ctr).R_est_Ts;
+TP39_master.R_est_Ts_rw(TP39_master.Year == yr,1) = TP39(yr_ctr).R_est_Ts_rw;
+TP39_master.R_est_Ts_SM(TP39_master.Year == yr,1) = TP39(yr_ctr).R_est_Ts_SM;
+TP39_master.R_est_Ts_SM_rw(TP39_master.Year == yr,1) = TP39(yr_ctr).R_est_Ts_SM_rw;
+yr_ctr = yr_ctr +1;
+end
+
+save([ls 'Matlab/Data/Flux/OPEC/TP39_Mat_ustar_Master.mat'], 'TP39_master');
+
+yr_ctr = 1;
+
+for yr = 2003:1:2008
+    
+    
+       TP39class(yr_ctr).Year(:,1) = TP39(yr_ctr).Year;
+       TP39class(yr_ctr).GEP_filled(:,1) = TP39(yr_ctr).GEP;
+       TP39class(yr_ctr).RE_filled(:,1) = TP39(yr_ctr).R;      
+       TP39class(yr_ctr).ustar(:,1) = TP39(yr_ctr).ustar;      
+       TP39class(yr_ctr).NEEraw(:,1) = TP39(yr_ctr).NEPraw.*-1;      
+       TP39class(yr_ctr).NEP_filled(:,1) = TP39(yr_ctr).NEP.*-1;      
+       TP39class(yr_ctr).PAR(:,1) = TP39(yr_ctr).PAR;      
+       yr_ctr = yr_ctr +1;
+end
+
+save([ls 'Matlab/Data/Distributed/TP39_for_Altaf_class.mat'], 'TP39class');

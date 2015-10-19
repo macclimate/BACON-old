@@ -1,0 +1,37 @@
+
+%% 
+% This function compares inputted downward PAR to estimated suntimes, to
+% try and help figure out what timecode is being used with the data - and if it
+% changes throughout the year:
+%
+% inputs:
+% year
+% site
+year = '2008';
+site = 'TP39';
+% Load data from /Cleaned3 folder (or should I use /Organized2 folder?)
+% loadstart = addpath_loadstart;
+loadstart = addpath_loadstart_portable;
+
+%%% load header
+hdr = jjb_hdr_read([loadstart 'Matlab/Data/Met/Raw1/Docs/' site '_OutputTemplate.csv'], ',', 3);
+%%% Use header to find the extension for PAR, and load it:
+right_ext = str2num(char(hdr((strcmp(hdr(:,2),'DownPAR_AbvCnpy')==1),1)));
+right_ext = create_label(right_ext, 3);
+PAR = load([loadstart 'Matlab/Data/Met/Organized2/' site '/Column/30min/' site '_' year '.' right_ext]);
+
+%%% Load latitude and longitude using params.m:
+[final] = params(year, site, 'Sun');
+lat = final(1);
+long = final(2);
+
+%%% Use suntimes.m to calculate sun_up and sundown times
+for j = 1:1:365
+[srhr(j,1) srmin(j,1) sshr(j,1) ssmin(j,1) snhr(j,1) snmin(j,1)] = suntimes(lat, long, j, 0);
+end
+
+
+
+
+
+

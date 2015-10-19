@@ -1,0 +1,810 @@
+function [] = mcm_CPEC_Gapfill(site, year_start, year_end, Ustar_th)
+% clear all
+close all;
+
+% % Start and End Year, u* threshold:
+if nargin == 3 || isempty(Ustar_th)
+Ustar_th = input('Enter u* threshold: ');
+end
+
+if nargin == 1
+Ustar_th = input('Enter u* threshold: ');    
+year_start = input('Enter start year: ');
+year_end = input('Enter end year: ');
+end
+
+if isempty(year_start)
+    year_start = input('Enter start year: ');
+end
+if isempty(year_end)
+    year_end = input('Enter end year: ');
+end
+
+%%% Declare Paths
+ls = addpath_loadstart;
+load_path = [ls 'Matlab/Data/Master_Files/' site '/'];
+save_path = [ls 'Matlab/Data/Flux/CPEC/' site '/Final_Calculated/'];
+info_path = [ls 'Matlab/Data/Flux/Gapfilling_Docs/'];
+
+
+%%% Load the gapfilling file:
+% All the variables are now in a structure called 'data', in the form:
+% data.Ts, data.NEE, etc., etc......
+
+load([load_path site '_gapfill_data_in.mat']);
+
+% Calculate VPD from RH and Ta:
+data.VPD = VPD_calc(data.RH, data.Ta);
+
+%%% Make a single SM index from a and b pits:
+SM(1:length(data.SM_a),1) = NaN;
+SM(isnan(SM),1) = data.SM_a(isnan(SM),1);
+SM(isnan(SM),1) = data.SM_b(isnan(SM),1);
+data.SM = SM; clear SM;
+
+% SM(~isnan(data.SM_a.*data.SM_b),1) = (data.SM_a(~isnan(data.SM_a.*data.SM_b),1) + data.SM_b(~isnan(data.SM_a.*data.SM_b),1)) ./2;
+
+
+
+%%% Plotting variables:
+test_Ts = (-10:2:26)';
+test_PAR = (0:200:2400)';
+clrs = [1 0 0; 0.5 0 0; 0 1 0; 0.8 0.5 0.7; 0 0 1; 0.2 0.1 0.1; ...
+    1 1 0; 0.4 0.5 0.1; 1 0 1; 0.9 0.9 0.4; 0 1 1; 0.4 0.8 0.1];
+test_VPD = (0:0.2:3)';
+test_SM = (0.045:0.005:0.10)';
+
+% %%% Load the info_file:
+% info_file = csvread([info_path site '_CPEC_Gapfilling_info.csv']);
+% [r c] = size(info_file);
+% right_row = [];
+% for j = 1:1:r
+%     ind = find(info_file(j,1)== year_start & info_file(j,2)== year_end & info_file(j,3)== Ustar_th);
+%     if ~isempty(ind)
+%         right_row = j;
+%     else
+%         
+%     end
+% end
+% 
+% if isempty(right_row)
+%     disp('Creating new entry and using defaults');
+%     right_row = r+1;
+%     info_file(r+1,1) = year_start;
+% info_file(r+1,2) = year_end;
+% info_file(r+1,3) = Ustar_th;
+%     info_file(r+1,4) = input('Enter max_SM_R: ');
+% info_file(r+1,5) = input('Enter max_Ts: ');
+% info_file(r+1,6) = input('Enter max_VPD: ');
+% info_file(r+1,7) = input('Enter max_SM_P: ');
+% csvwrite([info_path site '_CPEC_Gapfilling_info.csv'],info_file);
+% end
+% max_SM_R = info_file(right_row,4)
+% max_Ts = info_file(right_row,5)
+% max_VPD = info_file(right_row,6)
+% max_SM_P = info_file(right_row,7)
+% 
+%% Necessary to estimate the std associated with each measurement of NEE:
+data.NEEstd = NEE_random_error_estimator(data, [], Ustar_th);
+close all
+
+%% trim data to fit with the years selected:
+var_names = fieldnames(data);
+tmp_data = struct;
+% tmp_year = data.Year;
+yr_list = find(data.Year >= year_start & data.Year <= year_end);
+
+
+for i = 1:1:length(var_names)
+   eval(['tmp_data.' char(var_names(i)) ' = data.' char(var_names(i)) '(yr_list,:);']);
+end
+
+clear data;
+data = tmp_data;
+
+%%% For TP02 in 2008, incorporate the OPEC data:
+
+switch site 
+    case 'TP02'
+        try
+          ind = find(data.Year == 2008);
+          if ~isempty(ind)
+              data.NEE(data.Year == 2008 & isnan(data.NEE) & data.dt < 190) = data.NEE_OPEC(data.Year == 2008 & isnan(data.NEE) & data.dt < 190);
+              data.Ustar(data.Year == 2008 & isnan(data.Ustar) & data.dt < 190) = data.Ustar_OPEC(data.Year == 2008 & isnan(data.Ustar) & data.dt < 190);
+     
+          end
+        catch
+        end
+end
+
+
+%% Find out what percentage of respiration data is a) measured per year,
+%%% and b) useable in parameterization per year:
+ctr = 1;
+for yr_ctr = year_start:1:year_end
+    try
+        pot_resp(ctr,1) = length(find(data.PAR < 20 & data.Year == yr_ctr));
+        meas_resp(ctr,1) = length(find(data.PAR < 20 & data.Year == yr_ctr & ~isnan(data.NEE)));
+        used_resp(ctr,1) = length(find(data.PAR < 20 & data.Year == yr_ctr & ~isnan(data.NEE) & data.Ustar > Ustar_th));
+
+    catch
+        disp(['something went wrong figuring out proportion of R used, year: ' num2str(yr_ctr)]);
+        pot_resp(ctr,1) = NaN;
+        meas_resp(ctr,1) = NaN;
+        used_resp(ctr,1) = NaN;
+
+    end
+
+    ctr = ctr+1;
+end
+
+
+
+
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%% Part 1: Respiration %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+resp_day_constraints = [0 367];
+%%%% Backup - model RE based only on Ts -- we need to do this, since the SM
+%%%% data has some unfillable gaps, and therefore, modeled RE will have
+%%%% some gaps as well.  We will use the single-year
+
+%%%% Method 1: Group data together for all years for parameterization:
+[model_TsSM_all Rraw rw_TsSM_all coeff_TsSM_all] = ...
+    Ts_SM_RE_logistic(data, data.SM, data.NEEstd,Ustar_th, 'all', day_constraints);
+% Save the coefficients for all-years SM response:
+global SM_coeff;
+SM_coeff = coeff_TsSM_all(4:5)';
+
+%%%% Method 2: Run for individual years, but with a fixed SM response:
+ctr = 1;
+for year = year_start:1:year_end
+    ind_param =find(data.Year == year & data.Ustar >= param.Ustar_th & ~isnan(data.Ts5) ...
+        & ~isnan(data.NEE) & data.PAR < 20 & data.NEE > -5 & data.Ts5 >= -5  & ~isnan(data.SM)  & ~isnan(data.NEEstd) ...
+        & data.dt >resp_day_constraints(1) & data.dt < resp_day_constraints(2));
+    [coeff_TsSM_fixed_single(ctr,:),y,r2,sigma] = fitmain([10 .3 10], 'fit_RE_Ts_fixed_SM', [data.Ts5(ind_param,1) data.SM(ind_param,1)], data.NEE(ind_param,1),data.NEEstd(ind_param,1));
+    model_TsSM_fixed_single(data.Year==year,1)=((coeff_TsSM_fixed_single(ctr,1))./(1 + exp(coeff_TsSM_fixed_single(ctr,2).*(coeff_TsSM_fixed_single(ctr,3)-data.Ts5(data.Year==year))))) ...
+        .* (1./(1 + exp(SM_coeff(1)-SM_coeff(2).*data.SM_a(data.Year==year))));
+    ctr = ctr+1;
+    clear ind_param y r2 sigma
+end
+
+
+%%%% Estimate Time-Varying Parameters for both types:
+%%%% Create 4 different Respiration estimates:
+% 1 - TsSM - all years
+% 2 - TsSM - single years
+% 3 - TsSM - all, with bias adjustments
+% 4 - TsSM - single, with bias adjustments
+
+RE_model(:,1) = model_TsSM_all;
+RE_model(:,2) = model_TsSM_fixed_single;
+
+rw_all = jjb_AB_gapfill(model_TsSM_all, Rraw, [],200, 10, 'off', [], [], 'rw');
+RE_model(:,3) = model_TsSM_all.*rw_all(:,2);
+
+rw_single = jjb_AB_gapfill(REmodel_SM_single, Rraw, [],200, 10, 'off', [], [], 'rw');
+RE_model(:,4) = model_TsSM_single.*rw_single(:,2);
+
+%%%% Plot Estimates from different sites for visual inspection:
+RE_plot_titles{1,1} = 'raw'; RE_plot_titles{2,1} = 'TsSM_all'; 
+RE_plot_titles{3,1} = 'TsSM_single'; RE_plot_titles{4,1} = 'TsSM_all+rw'; 
+RE_plot_titles{5,1} = 'TsSM_single+rw';
+
+figure('Name', 'raw RE vs modeled'); clf
+plot(Rraw,'r');hold on;
+
+for i = 1:1:4
+    plot(RE_model(:,i),'Color',clrs(i,:));
+    [RE_stats(i,1) RE_stats(i,2) RE_stats(i,3) RE_stats(i,4)] = model_stats(RE_model(:,i), Rraw,'off');
+end
+
+legend(RE_plot_titles);
+
+%%% Stats for each model:
+
+%% %%%%%%%%%%%%%%%%% PHOTOSYNTHESIS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% The different gapfilling models we want to use:
+% all variables, all years
+% all variables, single years
+% all variables, all years + pw
+% all variables, single years + pw
+%%%% 
+% This will be run for each respiration model, which gives 4x4= 16
+% different estimates for GEP
+
+GEPraw = RE_model - data.NEE; % GEPraw is now a 4-column variable
+GEPraw(data.PAR < 20) = NaN;  
+
+for j = 1:1:4  %cycle through the different GEPraw estimates:
+   
+    
+
+
+end
+
+
+
+
+
+
+%%%% Make index for useable respiration data find useable growing-season data
+ind_resp_gs = find(data.Ustar >= Ustar_th & ~isnan(data.Ts5) & ~isnan(data.NEE) & data.PAR < 20 & data.NEE > -5 & data.Ts >= 0); 
+%%%% find useable non-growing-season data
+ind_resp_nongs = find(data.Ustar >= Ustar_th & ~isnan(data.Ts5) & ~isnan(data.NEE) & data.Ts5 < 0);
+ind_resp = sort([ind_resp_gs; ind_resp_nongs]);
+% clear ind_resp_gs ind_resp_nongs;
+
+%%% Make variable Rraw - Raw Respiration
+Rraw(1:length(data.NEE),1) = NaN;
+Rraw(ind_resp) = data.NEE(ind_resp);
+
+%%%%%%%%%%%%%% Model Respiration 
+% 1. Fit Logistic curve between RE and Ts for all selected years:
+[R.coeff,R.y,R.r2,R.sigma] = fitmain([10 .3 10], 'fitlogi5', data.Ts5(ind_resp,1), data.NEE(ind_resp,1));
+% Estimate Respiration for all days, all years:
+R.est_Ts = R.coeff(1)./(1+exp(R.coeff(2)*(R.coeff(3)-data.Ts5)));
+
+% %%%%%%% Respiration for plotting:
+test_R = R.coeff(1)./(1+exp(R.coeff(2)*(R.coeff(3)-test_Ts)));
+figure('Name', 'Ts vs RE'); clf
+plot(data.Ts5(ind_resp),Rraw(ind_resp),'k.'); hold on;
+plot(test_Ts, test_R,'r-', 'LineWidth',2);
+grid on;
+
+% 2. Residual Analysis to include SM influence:
+% Scaling factor for soil temperature on respiration:
+R.Ts_sf = R.est_Ts./max(R.est_Ts);
+RE_Ts_corr = Rraw./R.Ts_sf; % remove influence of soil temperature:
+
+% Find data points to use for Soil Moisture analysis:
+ind_low_SM = find(data.Ustar >= Ustar_th & ~isnan(data.Ts5) & ~isnan(RE_Ts_corr) & data.PAR < 15  & data.Ts5 > 5 & data.SM < max_SM_R & RE_Ts_corr > -15 & RE_Ts_corr < 25); 
+
+%%% Plot SM vs RE relationship
+figure('Name','SM vs RE');
+subplot(2,1,1)
+plot(data.SM(ind_low_SM),RE_Ts_corr(ind_low_SM),'k.');hold on;
+R_SM_bavg = blockavg(data.SM(ind_low_SM), RE_Ts_corr(ind_low_SM), 0.0025,25, -15);
+plot(R_SM_bavg(:,1),R_SM_bavg(:,2),'-ro')
+
+%%% Try for linear fit:
+
+R.p_SM = polyfit(data.SM(ind_low_SM),RE_Ts_corr(ind_low_SM),1);
+plot(0.05:0.01:max_SM_R,polyval(R.p_SM,(0.05:0.01:max_SM_R)),'b--')
+
+%%% Create SM Scaling factor:
+R.SM_sf = (polyval(R.p_SM,data.SM)-R.p_SM(1,2))./(polyval(R.p_SM,max_SM_R)-R.p_SM(1,2));
+R.SM_sf(R.SM_sf > 1) = 1;
+% Plot scaling factor:
+subplot(2,1,2)
+plot(R.SM_sf);
+legend('SM RE scaling factor');
+
+%%% Only apply this relationship if slope is +ve - otherwise, no effect:
+if R.p_SM(1,1) > 0
+    R.est_Ts_SM = R.est_Ts.*R.SM_sf;
+    R.est_Ts_SM(isnan(R.est_Ts_SM),1) = R.est_Ts(isnan(R.est_Ts_SM),1);
+else
+    disp('SM relationship slope was negative -- disabling the SM correction')
+    R.est_Ts_SM = R.est_Ts;
+end
+
+%%%%%% Time-Varying Parameter: %%%%%%%%%%%
+% model_R_Ts(ind_resp) = R.est_Ts(ind_resp);
+R.rw_Ts = jjb_AB_gapfill(R.est_Ts, Rraw, (1:1:length(R.est_Ts))',200, 20, 'off', [], [], 'rw');
+R.est_Ts_rw = R.est_Ts .* R.rw_Ts(:,2); %model_R_Ts_rw = model_R_Ts.*R.rw_Ts(:,2);
+R.rw_Ts_SM = jjb_AB_gapfill(R.est_Ts_SM, Rraw, (1:1:length(R.est_Ts))',200, 20, 'off', [], [], 'rw');
+R.est_Ts_SM_rw = R.est_Ts_SM .* R.rw_Ts_SM(:,2); %model_R_Ts_rw = model_R_Ts.*R.rw_Ts(:,2);
+% Plot T.V.P.s 
+figure('Name', 'RE Time-Varying parameters, r_w'); clf
+plot(R.rw_Ts(:,2));hold on;
+plot(R.rw_Ts_SM(:,2),'g');
+legend('Ts tvp','Ts+SM tvp');
+
+% % save time-varying parameter (for later comparison between sites):%%%%%%
+% try
+% tmp = R.rw_Ts(:,2);
+% save([ls 'Matlab/Data/Data_Analysis/comparing_tvps/' site '_rw_tvp.dat'],'tmp','-ASCII')
+% clear tmp
+% catch
+%     disp('tvp not saved - Most likely directory doesn''t exist');
+% end
+
+figure('Name', 'raw RE vs modeled'); clf
+plot(Rraw,'k');hold on;
+plot(R.est_Ts,'b'); 
+plot(R.est_Ts_SM,'r'); 
+plot(R.est_Ts_rw,'c');
+plot(R.est_Ts_SM_rw,'m');
+legend('raw','Ts model','Ts+SM model','Ts+rw model','Ts+SM+rw model');
+
+%%% Stats for each model:
+[RMSE_Ts rRMSE_Ts MAE_Ts BE_Ts] = model_stats(R.est_Ts, Rraw,'off');
+[RMSE_Ts_rw rRMSE_Ts_rw MAE_Ts_rw BE_Ts_rw] = model_stats(R.est_Ts_rw, Rraw,'off');
+[RMSE_Ts_SM rRMSE_Ts_SM MAE_Ts_SM BE_Ts_SM] = model_stats(R.est_Ts_SM, Rraw,'off');
+[RMSE_Ts_SM_rw rRMSE_Ts_SM_rw MAE_Ts_SM_rw BE_Ts_SM_rw] = model_stats(R.est_Ts_SM_rw, Rraw,'off');
+
+disp('RMSEs - 2=Ts_rw; 3=Ts_SM; 4=Ts_SM_rw');
+[RMSE_Ts_rw RMSE_Ts_SM RMSE_Ts_SM_rw]
+disp('BEs - 2=Ts_rw; 3=Ts_SM; 4=Ts_SM_rw');
+[BE_Ts_rw BE_Ts_SM BE_Ts_SM_rw]
+
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%% Part 2: Photosynthesis %%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%% Derive GEP as difference between RE and NEEraw:
+
+RE_type = input('Which RE to use: 1=Ts, 2=Ts+rw, 3=Ts+SM, 4=Ts+SM+rw ');
+switch RE_type
+    case 1; RE_out = R.est_Ts;               RE_tag = 'RE=Ts';
+    case 2; RE_out = R.est_Ts_rw;            RE_tag = 'RE=Ts+rw';
+    case 3; RE_out = R.est_Ts_SM;            RE_tag = 'RE=Ts+SM';
+    case 4; RE_out = R.est_Ts_SM_rw;         RE_tag = 'RE=Ts+SM+rw';     
+end
+
+GEPraw = RE_out - data.NEE; 
+GEPraw(data.PAR < 20) = NaN;      
+
+%%% Find out what percentage of GEP data is a) measured per year,
+%%% and b) useable in parameterization per year:
+
+ctr = 1;
+for yr_ctr = year_start:1:year_end
+    try
+        pot_GEP(ctr,1) = length(find(data.PAR > 20 & data.Year == yr_ctr & data.Ts5 > 2));
+        meas_GEP(ctr,1) = length(find(data.PAR > 20 & data.Year == yr_ctr & data.Ts5 > 2 & ~isnan(GEPraw)));
+    catch
+        disp(['something went wrong figuring out proportion of GEP used, year: ' num2str(yr_ctr)]);
+        pot_GEP(ctr,1) = NaN;
+        meas_GEP(ctr,1) = NaN;
+
+    end
+    ctr = ctr+1;
+end
+
+%%%% Index for useable data: 
+% ind_GEP = find(data.Ts5 > 4 & data.Ta > 0 & data.PAR > 30 & ~isnan(data.Ts5) & ~isnan(GEPraw) & ustar > ustar_th);
+ind_GEP = find(data.Ts5 > 0.5 & data.Ta > 2 & data.PAR > 30 & ~isnan(data.Ts5) & ~isnan(GEPraw) & data.Ustar > Ustar_th);
+
+%%% Estimate maximum rate for GEP & maximum values for PAR:
+top_GEP = sort(GEPraw(ind_GEP), 'descend');
+max_GEP = mean(top_GEP(1:50,1)); % about 31 umol/m2/s.
+top_PAR = sort(data.PAR(~isnan(data.PAR)),'descend');
+max_PAR = median(top_PAR(1:50)); % ends up being about 2100 umol/m2/s
+
+%%%%%%% GEP - PAR Relationship:
+[P.gep_par_coeff P.gep_par_y P.gep_par_r2 P.gep_par_sigma] = hypmain1([0.01 10 0.1], 'fit_hyp1', data.PAR(ind_GEP), GEPraw(ind_GEP));
+%%%%%%% Predict GEP for all days
+P.GEP_PAR(1:length(GEPraw),1) = NaN;
+test_GEP_PAR = P.gep_par_coeff(1).*test_PAR.*P.gep_par_coeff(2)./(P.gep_par_coeff(1).*test_PAR + P.gep_par_coeff(2));
+
+figure('Name', 'GEP vs PAR'); clf
+plot(data.PAR(ind_GEP),GEPraw(ind_GEP),'b.'); hold on;
+plot(test_PAR, test_GEP_PAR,'r-','LineWidth',2)
+legend('raw','modeled');
+
+%%%% Scaling Variable for PAR:
+GEP_sf =  (P.gep_par_coeff(1).*data.PAR.*P.gep_par_coeff(2)./(P.gep_par_coeff(1).*data.PAR + P.gep_par_coeff(2))) ./ ...
+    (P.gep_par_coeff(1).*max_PAR.*P.gep_par_coeff(2)./(P.gep_par_coeff(1).*max_PAR + P.gep_par_coeff(2)));
+GEP_sf(GEP_sf > 1) = 1;
+GEP_sf(GEP_sf < 0) = 0;
+
+%%% Plot scaling factor:
+figure(88);clf
+title('GEP Scaling Factors')
+subplot(5,1,1);
+plot(GEP_sf);
+
+subplot(5,1,2);
+plot(GEP_sf);
+legend('PAR sf');
+
+
+%%% Estimate P using PAR sf
+P.GEP_PAR =  max_GEP.* GEP_sf;
+
+%%%%%%%%%%%%% Residual analysis with Ts: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ind_GEP_resid = find(data.Ts5 >= 0.5 & data.Ts5 <= max_Ts & data.Ta > 0 & data.PAR > 20 & ~isnan(data.Ts5) & ~isnan(GEPraw));% & data.Ustar > Ustar_th);
+resid_GEPdiv = GEPraw(ind_GEP_resid) ./ P.GEP_PAR(ind_GEP_resid);
+
+%%% Fit hyperbolic curve to the Ts - GEP function
+[P.gep_par_Ts_coeff P.gep_par_Ts_y P.gep_par_Ts_r2 P.gep_par_Ts_sigma] = hypmain1([0.01 10 0.1], 'fit_hyp1', data.Ts5(ind_GEP_resid), resid_GEPdiv); 
+max_pred =     (P.gep_par_Ts_coeff(1).*max_Ts.*P.gep_par_Ts_coeff(2)./(P.gep_par_Ts_coeff(1).*max_Ts + P.gep_par_Ts_coeff(2)));
+
+P.gep_par_Ts_test = (P.gep_par_Ts_coeff(1).*test_Ts.*P.gep_par_Ts_coeff(2)./(P.gep_par_Ts_coeff(1).*test_Ts + P.gep_par_Ts_coeff(2))) ./ max_pred;
+
+%%% PLot residual w.r.t. Ts:
+figure('Name', 'GEP: Ts residuals (normalized)'); clf
+plot(data.Ts5(ind_GEP_resid),resid_GEPdiv./max_pred,'bx'); hold on;
+grid on;
+resid_bavg3 = blockavg(data.Ts5(ind_GEP_resid), resid_GEPdiv, 0.5,5, -4);
+plot(resid_bavg3(:,1),resid_bavg3(:,2)./max_pred,'-ro'); % plots the bin-averaged data
+plot(test_Ts,P.gep_par_Ts_test,'Color',[0.3 0.6 0.7],'LineWidth',2); %plots modeled data
+legend('GEP resids','bin-avged','mean regression');
+
+%%%%% Get Scaling Variable:
+GEP_Ts_sf = (P.gep_par_Ts_coeff(1).*data.Ts5.*P.gep_par_Ts_coeff(2)./(P.gep_par_Ts_coeff(1).*data.Ts5 + P.gep_par_Ts_coeff(2))) ./ max_pred;
+GEP_Ts_sf(GEP_Ts_sf > 1) = 1;
+GEP_Ts_sf(GEP_Ts_sf < 0) = 0;
+clear max_pred;
+
+figure(88); 
+subplot(5,1,1);
+hold on;
+plot(GEP_Ts_sf,'r');
+
+subplot(5,1,3);
+plot(GEP_Ts_sf);
+legend('Ts sf');
+
+
+
+% Predicted GEP:
+P.GEP_PAR_Ts = P.GEP_PAR.*GEP_Ts_sf;
+
+%%%%%%%%%%%%%%%%%%%%%%%% Residual analysis with VPD: %%%%%%%%%%%%%%%%%%%%
+ind_GEP_resid2 = find(data.Ts5 >= 0.5 & data.VPD > 0 & data.VPD <= max_VPD & data.Ta > 0 & data.PAR > 20 & ~isnan(data.VPD) & ~isnan(GEPraw)& data.Ustar > Ustar_th);
+resid_GEP_Tsdiv = GEPraw(ind_GEP_resid2) ./ P.GEP_PAR_Ts(ind_GEP_resid2);
+
+resid_bavg4 = blockavg(data.VPD(ind_GEP_resid2), resid_GEP_Tsdiv, 0.1,5, -4);
+
+ind_use = find(resid_bavg4(:,4) > 20);
+tmp_move = resid_bavg4(ind_use,1:4); clear resid_bavg4;
+resid_bavg4 = tmp_move; clear tmp_move;
+
+% sort and take max as mean of top 2 data points:
+top_VPD_resids = sort(resid_bavg4(:,2),'descend');
+max_VPD_resid = mean(top_VPD_resids(1:2));
+
+% Normalize values by max (make go from 0 to ~1)
+resid_bavg4(:,2) = resid_bavg4(:,2)./max_VPD_resid;
+top_VPD_resids = top_VPD_resids./max_VPD_resid;
+
+% Plot raw data and bin-avg data:
+figure('Name', 'VPD vs. GEP residual'); 
+plot(data.VPD(ind_GEP_resid2),resid_GEP_Tsdiv,'bx'); hold on; grid on;
+plot(resid_bavg4(:,1),resid_bavg4(:,2),'-ro')
+
+% Find data point to start the regression relationship (the farther of the
+% two maxes on the x-axis):
+
+x1 = resid_bavg4(find(resid_bavg4(:,2) == top_VPD_resids(1,1)),1);
+x2 = resid_bavg4(find(resid_bavg4(:,2) == top_VPD_resids(2,1)),1);
+
+start_x = min([x1 x2]); clear x1 x2; 
+start_y = 1;
+start_x_ind = find(resid_bavg4(:,1) == start_x);
+
+% Find data point to end the regression relationship (farther of the two
+% mins on the x-axis):
+bot_VPD_resids = sort(resid_bavg4(:,2),'ascend');
+min_VPD_resid = mean(bot_VPD_resids(1:2));
+
+x1 =  resid_bavg4(find(resid_bavg4(:,2) == bot_VPD_resids(1,1)),1);
+x2 =  resid_bavg4(find(resid_bavg4(:,2) == bot_VPD_resids(2,1)),1);
+
+end_x = max([x1 x2]); clear x1 x2;
+end_y = min_VPD_resid;
+end_x_ind = find(resid_bavg4(:,1) == end_x);
+
+% Fit a line through the relationship:
+[m_VPD] = polyfit(resid_bavg4(start_x_ind:end_x_ind,1), resid_bavg4(start_x_ind:end_x_ind,2),1);
+
+P.GEP_PAR_Ts_VPD_test = polyval(m_VPD,test_VPD);
+
+% Plot line on residual graph
+plot(test_VPD, P.GEP_PAR_Ts_VPD_test,'Color', [0.9 0.9 0.25],'LineWidth',2)
+
+%%% Create Scaling Factor:
+VPD_sf(1:length(P.GEP_PAR_Ts),1) = NaN;
+pred_VPD_sf = polyval(m_VPD,data.VPD);
+VPD_sf = pred_VPD_sf; clear pred_VPD_sf;
+% VPD_sf(1:length(P.GEP_PAR_Ts),1) = 1;
+% VPD_sf(data.VPD > start_x,1) = data.VPD(data.VPD > start_x,1).*m_VPD(1) + m_VPD(2);
+% VPD_sf(data.VPD > start_x,1) = polyval(data.VPD > start_x,1).*m_VPD(1) + m_VPD(2);
+VPD_sf(VPD_sf < min_VPD_resid,1) = min_VPD_resid;
+VPD_sf(VPD_sf > 1,1) = 1;
+VPD_sf(isnan(VPD_sf),1) = 1;
+
+%%% Plot sf
+figure(88); 
+subplot(5,1,1);
+plot(VPD_sf,'y');
+subplot(5,1,4)
+plot(VPD_sf)
+legend('VPD sf');
+
+%%% Predicted GEP using PAR, Ts, VPD:
+P.GEP_PAR_Ts_VPD = P.GEP_PAR_Ts.*VPD_sf;
+
+%% Residual analysis with SM:
+% Again, SM_max_P is arbitrary, depending on where you want to cut the
+% comparison off at.  I usually look where the SM vs residual peaks.
+
+ind_GEP_resid3 = find(data.Ts5 >= 0.5 & data.SM <= max_SM_P & data.Ta > 0 & data.PAR > 20 & ~isnan(data.SM) & ~isnan(GEPraw) & data.Ustar > Ustar_th);
+resid_GEP_SMdiv = GEPraw(ind_GEP_resid3) ./ P.GEP_PAR_Ts_VPD(ind_GEP_resid3);
+
+%%% PLot residual w.r.t. SM:
+resid_bavg5 = blockavg(data.SM(ind_GEP_resid3), resid_GEP_SMdiv, 0.001 ,2, -2);
+% axis([0.04 max_SM 0 1])
+
+ind_use = find(resid_bavg5(:,4) > 20);
+tmp_move = resid_bavg5(ind_use,1:4); clear resid_bavg5;
+resid_bavg5 = tmp_move; clear tmp_move ind_use;
+
+% Sort residuals:
+top_SM_resids = sort(resid_bavg5(resid_bavg5(1:end,4) > 20,2),'descend');
+max_SM_resid = median(top_SM_resids(1:5));
+% orig_max_SM_resid = max_SM_resid;
+
+% Normalize by max value:
+resid_bavg5(:,2) = resid_bavg5(:,2)./max_SM_resid;
+top_SM_resids = top_SM_resids./max_SM_resid;
+% max_SM_resid = 1;
+
+figure('Name', 'SM vs. GEP residual'); 
+plot(data.SM(ind_GEP_resid3),resid_GEP_SMdiv./max_SM_resid,'bx'); hold on;
+grid on;
+plot(resid_bavg5(:,1),resid_bavg5(:,2),'-ro')
+
+% <------- Pause here to check max_SM_P:
+% Find data point to start the regression relationship (the farther of the
+% two maxes on the x-axis):
+bot_SM_resids = sort(resid_bavg5(:,2),'ascend');
+min_SM_resid = min(bot_SM_resids(1:2));
+
+x1 = resid_bavg5(find(resid_bavg5(:,2) == bot_SM_resids(1,1)),1);
+x2 = resid_bavg5(find(resid_bavg5(:,2) == bot_SM_resids(2,1)),1);
+
+start_x = min([x1 x2]); clear x1 x2; 
+% start_y = 1;
+start_x_ind = find(resid_bavg5(:,1) == start_x);
+
+% Find data point to end the regression relationship (farther of the two
+% mins on the x-axis):
+
+x1 =  resid_bavg5(find(resid_bavg5(:,2) == top_SM_resids(1,1)),1);
+x2 =  resid_bavg5(find(resid_bavg5(:,2) == top_SM_resids(2,1)),1);
+x3 =  resid_bavg5(find(resid_bavg5(:,2) == top_SM_resids(3,1)),1);
+%%%%%%%%%%%%%%%%%%
+% if strcmp(site,'TP02') == 1;
+%    end_x = median([x1 x2 x3]); 
+% else
+  end_x = min([x1 x2 x3]); 
+% end
+clear x1 x2 x3;
+%%%%%%%%%%%%%%%
+
+% end_y = min_VPD_resid;
+end_x_ind = find(resid_bavg5(:,1) == end_x);
+
+% Fit a line through the relationship:
+[m_SM] = polyfit(resid_bavg5(start_x_ind:end_x_ind,1), resid_bavg5(start_x_ind:end_x_ind,2),1);
+
+SM_sf(1:length(P.GEP_PAR_Ts_VPD),1) = NaN;
+pred_SM_sf = polyval(m_SM,data.SM);
+SM_sf = pred_SM_sf; clear pred_SM_sf;
+SM_sf(SM_sf < min_SM_resid,1) = min_SM_resid;
+SM_sf(SM_sf > 1,1) = 1;
+SM_sf(isnan(SM_sf),1) = 1;
+
+% Turn off scaling factor if slope is not as expected = no effect.
+if m_SM(1,1) <= 0;
+    SM_sf(1:length(P.GEP_PAR_Ts_VPD),1) = 1;
+    disp('SM sf slope was negative -- disabling..');
+end
+
+% Make test output (for plotting on scatterplot)
+P.GEP_PAR_Ts_VPD_SM_test = polyval(m_SM,test_SM);
+% Predict GEP using this relation:
+P.GEP_PAR_Ts_VPD_SM = P.GEP_PAR_Ts_VPD.*SM_sf;
+
+plot(test_SM, P.GEP_PAR_Ts_VPD_SM_test,'Color', [0.9 0.9 0.25],'LineWidth',2)
+
+%%% Plot sf
+figure(88); 
+subplot(5,1,1);
+plot(SM_sf,'g')
+subplot(5,1,5)
+plot(SM_sf)
+legend('SM sf')
+
+% figure(50); title('raw vs. predicted GEP');
+% plot(P.GEP_PAR_Ts_VPD_SM,'Color', [0.5 0.6 0.8]);
+
+%%%%%%% Incorporate t.v.p. into GEP gap-filling scheme: %%%%%%%%%%%%%%%
+P.pw_GEP_PAR_Ts_SM = jjb_AB_gapfill(P.GEP_PAR_Ts_VPD_SM, GEPraw, (1:1:length(P.GEP_PAR_Ts_VPD_SM))',200, 20, 'off', [], [],'rw');
+
+%%% Plot TVP
+figure('Name','GEP tvp')
+plot(P.pw_GEP_PAR_Ts_SM(:,2),'b')
+axis([0 length(P.GEP_PAR_Ts_VPD_SM) -5 5])
+
+%%% Predict GEP using previous relation and tvp:
+P.GEP_PAR_Ts_VPD_SM_pw = P.GEP_PAR_Ts_VPD_SM .* P.pw_GEP_PAR_Ts_SM(:,2);
+
+%%% Try the tvp with just the GEP-PAR relationship:
+P.pw_GEP_PAR = jjb_AB_gapfill(P.GEP_PAR, GEPraw, (1:1:length(P.GEP_PAR))',200, 20, 'off', [], []);
+%%% Predict GEP using only PAR relation and tvp:
+P.GEP_PAR_pw = P.GEP_PAR .* P.pw_GEP_PAR(:,2);
+
+%% Plot all the GEP estimations:
+figure('Name', 'GEP Estimates');
+plot(ind_GEP,GEPraw(ind_GEP),'b.');
+hold on;
+plot(P.GEP_PAR,'c-'); 
+plot(P.GEP_PAR_Ts,'g-');
+plot(P.GEP_PAR_Ts_VPD,'r-');
+plot(P.GEP_PAR_Ts_VPD_SM,'Color', [0.5 0.6 0.8]);
+plot(P.GEP_PAR_pw,'Color', [0.9 0.2 0.7]);
+plot(P.GEP_PAR_Ts_VPD_SM_pw,'Color', 'k');
+legend('raw','GEP-PAR','GEP-PAR-Ts','GEP-PAR-TS-VPD','GEP-PAR-TS-VPD-SM','GEP-PAR-pw','GEP-PAR-TS-VPD-SM-pw')
+
+%%%% Model stats for each GEP model:
+[RMSE_GEP_PAR rRMSE_GEP_PAR MAE_GEP_PAR BE_GEP_PAR] = model_stats(P.GEP_PAR, GEPraw,'off');
+[RMSE_GEP_PAR_pw rRMSE_GEP_PAR_pw MAE_GEP_PAR_pw BE_GEP_PAR_pw] = model_stats(P.GEP_PAR_pw, GEPraw,'off');
+[RMSE_GEP_PAR_Ts rRMSE_GEP_PAR_Ts MAE_GEP_PAR_Ts BE_GEP_PAR_Ts] = model_stats(P.GEP_PAR_Ts, GEPraw,'off');
+[RMSE_GEP_PAR_Ts_VPD rRMSE_GEP_PAR_Ts_VPD MAE_GEP_PAR_Ts_VPD BE_GEP_PAR_Ts_VPD] = model_stats(P.GEP_PAR_Ts_VPD, GEPraw,'off');
+[RMSE_GEP_PAR_Ts_VPD_SM rRMSE_GEP_PAR_Ts_VPD_SM MAE_GEP_PAR_Ts_VPD_SM BE_GEP_PAR_Ts_VPD_SM] = model_stats(P.GEP_PAR_Ts_VPD_SM, GEPraw,'off');
+[RMSE_GEP_PAR_Ts_VPD_SM_pw rRMSE_GEP_PAR_Ts_VPD_SM_pw MAE_GEP_PAR_Ts_VPD_SM_pw BE_GEP_PAR_Ts_VPD_SM_pw] = model_stats(P.GEP_PAR_Ts_VPD_SM_pw, GEPraw,'off');
+
+disp('RMSEs - 2=PAR_pw; 5=PAR_Ts_VPD_SM; 6=PAR_Ts_SM_VPD_pw');
+[RMSE_GEP_PAR_pw RMSE_GEP_PAR_Ts_VPD_SM RMSE_GEP_PAR_Ts_VPD_SM_pw]
+disp('BEs - 2=PAR_pw; 5=PAR_Ts_VPD_SM; 6=PAR_Ts_SM_VPD_pw');
+[BE_GEP_PAR_pw BE_GEP_PAR_Ts_VPD_SM BE_GEP_PAR_Ts_VPD_SM_pw]
+
+
+%% Clean and Fill NEE, RE, GEP:
+
+%%% Fill NEE with different models and compare:
+%%% Remove bad NEE data for nighttime (ustar below threshold):
+NEEraw = data.NEE;
+data.NEE(data.PAR < 20 & data.Ustar < Ustar_th,1) = NaN;
+
+%%% Find out what percentage of NEE data is a) measured per year,
+%%% and b) useable in parameterization per year:
+
+ctr = 1;
+for yr_ctr = 2003:1:2008
+    try
+        meas_NEE(ctr,1) = length(find(data.Year == yr_ctr & ~isnan(NEEraw)));
+        used_NEE(ctr,1) = length(find(data.Year == yr_ctr & ~isnan(data.NEE)));
+    catch
+        disp(['something went wrong figuring out proportion of NEE used, year: ' num2str(yr_ctr)]);
+        used_NEE(ctr,1) = NaN;
+        meas_NEE(ctr,1) = NaN;
+    end
+    ctr = ctr+1;
+end
+
+%%%%%%%%%%% Fill R
+R_filled(1:length(Rraw),1) = Rraw;
+ind_fillR = find(isnan(Rraw));
+R_filled(ind_fillR,1) = RE_out(ind_fillR,1);
+
+%%%%%%%%%%%%% Fill GEPs:
+GEPraw2 = R_filled - data.NEE;
+
+for num_models = 1:1:6
+GEP_filled(1:length(GEPraw),num_models) = GEPraw2;
+end;
+% Specifies where we have missing GEP data (so NaN for R or NEE)
+ind_fillGEP = find(isnan(GEPraw2));
+
+%%% Fill GEP Models:
+GEP_filled(ind_fillGEP,1) = P.GEP_PAR(ind_fillGEP,1);
+GEP_filled(ind_fillGEP,2) = P.GEP_PAR_pw(ind_fillGEP,1);
+GEP_filled(ind_fillGEP,3) = P.GEP_PAR_Ts(ind_fillGEP,1);
+GEP_filled(ind_fillGEP,4) = P.GEP_PAR_Ts_VPD(ind_fillGEP,1);
+GEP_filled(ind_fillGEP,5) = P.GEP_PAR_Ts_VPD_SM(ind_fillGEP,1);
+GEP_filled(ind_fillGEP,6) = P.GEP_PAR_Ts_VPD_SM_pw(ind_fillGEP,1);
+
+
+for num_models = 1:1:6
+% GEP_filled(data.dt < 85 | data.dt > 335 | data.PAR < 20,num_models) = 0;
+GEP_filled(data.PAR < 20 | data.Ts2 < 0.1,num_models) = 0;
+
+GEP_filled(GEP_filled(:,num_models)<0,num_models) = 0;
+end;
+
+%%% Fill NEE 
+NEE_filled(1:length(GEPraw),1:10) = NaN;
+ind_fillNEE = find(isnan(data.NEE));
+
+for i = 1:1:6
+NEE_filled(~isnan(data.NEE),i) = data.NEE(~isnan(data.NEE));
+end
+
+NEE_filled(ind_fillNEE,1) = R_filled(ind_fillNEE,1) - GEP_filled(ind_fillNEE,1);
+NEE_filled(ind_fillNEE,2) = R_filled(ind_fillNEE,1) - GEP_filled(ind_fillNEE,2);
+NEE_filled(ind_fillNEE,3) = R_filled(ind_fillNEE,1) - GEP_filled(ind_fillNEE,3);
+NEE_filled(ind_fillNEE,4) = R_filled(ind_fillNEE,1) - GEP_filled(ind_fillNEE,4);
+NEE_filled(ind_fillNEE,5) = R_filled(ind_fillNEE,1) - GEP_filled(ind_fillNEE,5);
+NEE_filled(ind_fillNEE,6) = R_filled(ind_fillNEE,1) - GEP_filled(ind_fillNEE,6);
+
+ctr = 1;
+for yr_ctr = year_start:1:year_end
+    try
+    for i = 1:1:6
+        if yr_ctr == 2003
+            ind = find(data.Year== yr_ctr);
+            NEE_filled(ind(1:8),i) = NEE_filled(ind(9),i);
+                        R_filled(ind(1:8),1) = NEE_filled(ind(9),1);
+            GEP_filled(ind(1:8),i) = GEP_filled(ind(9),i);
+        end
+        
+NEE_sums(ctr,i) = sum(NEE_filled(data.Year== yr_ctr,i)).*0.0216  ; % sums is annual sum
+GEP_sums(ctr,i) = sum(GEP_filled(data.Year== yr_ctr,i)).*0.0216  ;
+holes(ctr,i) = length(find(isnan(NEE_filled(data.Year == yr_ctr,i))));
+    end
+R_sums(ctr,1) = sum(R_filled(data.Year== yr_ctr,1)).*0.0216  ;    
+
+    catch
+         disp(['something went wrong calculating sums, year: ' num2str(yr_ctr)]);
+    NEE_sums(ctr,1:6) = NaN;
+    GEP_sums(ctr,1:6) = NaN;
+    holes(ctr,1:6) = NaN;
+    R_sums(ctr,1) = NaN;
+    end
+    ctr = ctr+1;
+end
+
+%% Save the results...somewhere.....
+GEP_type = input('Which GEP to use: 1=PAR, 2=PAR+pw, 3=PAR+Ts, 4=PAR+Ts+VPD, 5=PAR+Ts+VPD+SM, 6 = PAR+Ts+VPD+SM+pw ');
+switch GEP_type
+    case 1;          GEP_tag = 'GEP=PAR';
+    case 2;          GEP_tag = 'GEP=PAR+pw';
+    case 3;          GEP_tag = 'GEP=PAR+Ts';
+    case 4;          GEP_tag = 'GEP=PAR+Ts+VPD';  
+    case 5;          GEP_tag = 'GEP=PAR+Ts+VPD+SM';          
+    case 6;          GEP_tag = 'GEP=PAR+Ts+VPD+SM+pw';          
+end
+
+master.data.Year = data.Year;
+
+master.data.NEE_filled = NEE_filled(:,GEP_type);
+master.data.GEP_filled = GEP_filled(:,GEP_type);
+master.data.RE_filled = R_filled(:,1);
+
+master.data.R_est_Ts = R.est_Ts;       
+master.data.R_est_Ts_rw = R.est_Ts_rw;
+master.data.R_est_Ts_SM = R.est_Ts_SM; 
+master.data.R_est_Ts_SM_rw = R.est_Ts_SM_rw;
+
+master.data.P_GEP_PAR = P.GEP_PAR;
+master.data.P_GEP_PAR_pw = P.GEP_PAR_pw;
+master.data.P_GEP_PAR_Ts = P.GEP_PAR_Ts;
+master.data.P_GEP_PAR_Ts_VPD = P.GEP_PAR_Ts_VPD;
+master.data.P_GEP_PAR_Ts_VPD_SM = P.GEP_PAR_Ts_VPD_SM;
+master.data.P_GEP_PAR_Ts_VPD_SM_pw = P.GEP_PAR_Ts_VPD_SM_pw;
+
+save([save_path site '_GapFilled_' num2str(year_start) '_' num2str(year_end) '_' RE_tag '_' GEP_tag '_ust_th = ' num2str(Ustar_th) '.mat'],'master');
+disp('done!');
+
+ctr = 1;
+for yr_ctr = year_start:1:year_end
+    
+disp(['year = ' num2str(yr_ctr) ': NEE = ' num2str(NEE_sums(ctr,GEP_type)) ' ; RE = ' num2str(R_sums(ctr,1)) ' ; GEP = ' num2str(GEP_sums(ctr,GEP_type))]);
+    
+    
+    ctr = ctr+1;
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

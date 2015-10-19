@@ -1,0 +1,77 @@
+function [mov_avg] = jjb_mov_avg(data_in,winsize, st_option,lag_option)
+%% This function performs a moving average on a dataset with a given window
+%%% size for averaging.  The input 'st_option' is a string indicating
+%%% whether the start of the moving average assumes 0s for data before it
+%%% or not
+%%% (i.e. 'on' -- elements 1..windowsize-1 will be the sum of
+%%% (1..i)./windowsize, or
+%%% 'off' first windowsize-1 elements will be the same number, average of
+%%% (1..windowsize)./windowsize
+%%% option 'taper' tapers the end so that the window is smaller on either
+%%% end of the data.
+%%% if lag_option is 'on' the average value will be the average value of
+%%% i-windowsize:i.
+%%% if lag_option is 'off', the average will be centered around value i.
+
+
+%% Set defaults
+if nargin == 2;
+    st_option = 'off';
+    lag_option = 'off';
+end
+if isempty(st_option)
+    st_option = 'off';
+end
+if isempty(lag_option)
+    lag_option = 'off';
+end
+
+
+%%
+switch lag_option
+    case 'on'
+
+        switch st_option
+            %%% This will take care of values 1:windowsize
+            case 'on'
+                mov_avg(1:winsize,1) = sum(data_in(1:winsize,1))./winsize;
+
+            case 'off'
+                for j = 1:1:winsize
+                    mov_avg(j,1) = cumsum(data_in(1:j,1))./winsize;
+                end
+        end
+        %%% This will take care of the rest of the values:
+
+        for i = winsize+1:1:length(data_in)
+            mov_avg(i,1) = sum(data_in(i-winsize+1:i,1))./winsize;
+        end
+
+    case 'off'
+
+        if rem(length(data_in),winsize) == 0;
+            winsize = winsize -1 ;
+            disp(['changing window size to ' num2str(winsize) ]);
+        else
+            
+        end
+
+%         winsize_adj(1:length(data_in),1) = NaN;
+        winsize_st = (0:1:floor(winsize./2))';
+        winsize_adj(1:length(winsize_st),1) = winsize_st;
+        winsize_adj(length(winsize_st)+1:length(data_in)-length(,1) = floor(winsize(end)./2);
+        
+        winsize_adj(length(data_in)-length(winsize(st)+1:length(data_in)
+
+        %%% This will take care of the rest of the values:
+        
+        for i = 1:1:length(data_in)
+            
+            mov_avg(i,1) = sum(data_in(i-winsize_adj(i):i+winsize_adj(i),1))./((winsize_adj(i).*2)+1);
+        end
+end
+            
+            
+            
+            
+            

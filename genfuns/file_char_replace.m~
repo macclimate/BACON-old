@@ -1,0 +1,43 @@
+function [] = file_char_replace(file_in,char_out,char_in)
+% This function opens the desired file, making replacement to a given
+% character type.
+% file_in - file to load
+% char_out - Character to remove
+% char_in - Character to replace removed character ('') to replace with
+% nothing
+%%% Created Jan 27, 2009 by JJB:
+
+[pathstr, name, ext, versn] = fileparts(file_in);
+name = ['rep_' name];
+file_out = fullfile(pathstr, [name ext versn]);
+
+% Copy file
+% copyfile(file_in, copy_file);
+
+fid_in = fopen(file_in,'r');
+fid_out = fopen(file_out,'w');
+
+eofstat = 0;
+
+while eofstat == 0;
+    %%% Read line of data from file
+    tline = fgets(fid_in);
+    %%% Replace characters:
+    out_cols = find(tline == char_out);
+    tline(out_cols) = char_in;
+    
+    fprintf(fid_out,'%s',tline);
+    
+    clear tline;
+    eofstat = feof(fid_in);
+end
+
+% Save file:
+fclose(fid_in)
+fclose(fid_out)
+
+
+
+
+
+

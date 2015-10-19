@@ -1,0 +1,84 @@
+function [] = colorguide()
+% colorguide.m
+% usage: colorguide
+% This function plots the resulting colors from the combinations of Red,  
+% Green and Blue colors. 
+
+% for green = 0:0.02:1
+%
+%     if red + green <= 1
+%     blue = jjb_round(1-red -green,2);
+%
+%     xvert = [blue blue+0.02 blue+0.02 blue] + (red/2);
+%     yvert = [red red red-0.02 red-0.02];
+%     C = [red green blue];
+% p = patch(xvert, yvert,C);hold on;
+%
+%
+%     else
+%     end
+%
+%
+% end
+% end
+interv = 0.1;
+f1 = figure('Name','Colorguide');
+for red = 0:interv:1
+    
+    for green = 0:interv:1
+        
+        for blue = 0:interv:1
+%             if red + green + blue <= 1
+                %     blue = jjb_round(1-red -green,2);
+                
+                xvert = [blue   blue+interv blue+interv blue        blue+interv     blue+interv     blue            blue] - interv/2;
+                yvert = [green  green       green       green       green+interv    green+interv    green+interv    green+interv]  - interv/2;
+                zvert = [red    red         red+interv  red+interv  red             red+interv      red+interv      red]  - interv/2;
+                
+%                 C = [red green blue];
+%                 p = patch(xvert, yvert, zvert,C);hold on;
+patchinfo.Vertices = [xvert' yvert' zvert'];
+patchinfo.Faces = [1 2 3 4; 2 5 6 3; 3 6 7 4; 5 6 7 8; 1 4 7 8; 1 2 5 8];
+patchinfo.FaceColor = [red green blue];
+subplot(221);
+             p = patch(patchinfo);hold on;
+subplot(222);
+             p = patch(patchinfo);hold on;        
+             subplot(223);
+             p = patch(patchinfo);hold on;
+subplot(224);
+             p = patch(patchinfo);hold on;     
+             
+% view(3)   
+                
+%             else
+%             end
+            
+        end
+    end
+end
+angl = [45:90:360];
+
+figure(f1);
+
+for i = 1:1:4
+subplot(2,2,i);
+xlabel('Blue');
+ylabel('Green');
+zlabel('Red');
+axis([-0.05 1.05 -0.05 1.05 -0.05 1.05])
+view([angl(i) 30])
+end
+% subplot(122);
+% xlabel('Blue');
+% ylabel('Green');
+% zlabel('Red');
+% view([45 30])
+% axis([-0.05 1.05 -0.05 1.05 -0.05 1.05])
+
+
+
+
+
+
+end

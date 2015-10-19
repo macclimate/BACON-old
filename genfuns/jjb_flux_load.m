@@ -1,0 +1,307 @@
+function [vars_out] = jjb_flux_load(program, year, site, flux_source, met_source)
+%% jjb_flux_load
+%%% Loads desired variables, needed for flux calculations.
+
+%% Declare Paths
+
+% if ispc == 1
+%     loadstart = 'C:/HOME/';
+% else
+%     if exist('/home/brodeujj/') == 7;
+%     loadstart = '/home/brodeujj/';
+%     else
+%     loadstart = '/home/jayb/';
+%     end
+% end
+loadstart = addpath_loadstart;
+
+%%% Processed Met
+if strcmp(year,'2007') == 1 && (strcmp(site, 'TP39') ~= 1 || strcmp(site, 'TP74') ~= 1 || strcmp(site, 'TP89') ~= 1); %% Loads cleaned files for the year 2007 (produced with metclean):
+    load_path_metproc = ([loadstart 'Matlab/Data/Met/Filled3a/' site '/' site '_' year '.']);
+else
+    load_path_metproc = ([loadstart 'Matlab/Data/Met/Organized2/' site '/Column/30min/' site '_' year '.']);
+end
+hdr_path_metproc = ([loadstart 'Matlab/Data/Met/Raw1/Docs/' site '_OutputTemplate.csv']);
+
+%%% Master Flux and Master Met
+load_path_master = ([loadstart 'Matlab/Data/Flux/OPEC/Organized2/' site '/Column/' site '_' year '.']);
+hdr_path_master = ([loadstart 'Matlab/Data/Flux/OPEC/Organized2/Docs/' site '_FluxColumns.csv']);
+
+%%% Processed OPEC
+hdr_path_OPECproc = ([loadstart 'Matlab/Data/Flux/OPEC/Organized2/Docs/OPEC_30min_header.csv']);
+load_path_OPECproc = ([loadstart 'Matlab/Data/Flux/OPEC/Cleaned3/' site '/Column/' site '_HHdata_' year '.']);
+
+%%% Processed CPEC
+load_path_CPECproc = ([loadstart 'Matlab/Data/Flux/CPEC/' site '/HH_fluxes/']);
+
+%%% Calculated OPEC Variables path
+calc_path = ([loadstart 'Matlab/Data/Flux/OPEC/Calculated5/' site '/' site '_' year '_']);
+calc_path_met = ([loadstart 'Matlab/Data/Met/Calculated4/' site '/' site '_' year '_']);
+
+%%% Cleaned OPEC Variables path
+clean_path = ([loadstart 'Matlab/Data/Flux/OPEC/Cleaned3/' site '/' site '_' year '_']);
+
+%%% Path for filled OPEC variables
+filled_path = ([loadstart 'Matlab/Data/Flux/OPEC/Filled4/' site '/' site '_' year '_']);
+
+
+%% Load Header Files
+%%% Tracker for Processed Met Files
+[hdr_cell_metproc] = jjb_hdr_read(hdr_path_metproc,',',3);
+%%% Tracker for Master Flux and Master Met Files
+[hdr_cell_flux]  = jjb_hdr_read(hdr_path_master,',',2);
+%%% Tracker for Processed OPEC Files
+[hdr_cell_OPEC] = jjb_hdr_read(hdr_path_OPECproc,',',2);
+
+%% Load Flux variables
+switch flux_source
+
+    %%% For case where flux files are to be loaded from the master files
+    case 'master'
+        FC = jjb_load_var(hdr_cell_flux, load_path_master, 'CO2Flux_Top');
+        ustar = jjb_load_var(hdr_cell_flux, load_path_master, 'UStar');
+        Hs_orig = jjb_load_var(hdr_cell_flux, load_path_master, 'SensibleHeatFlux'); %%% Sensible Heat Flux
+        LE_orig = jjb_load_var(hdr_cell_flux, load_path_master, 'LatentHeatFlux'); %%% Latent Heat Flux
+
+        CO2_top = jjb_load_var(hdr_cell_flux, load_path_master,'CO2_AbvCnpy');
+        CO2_cpy = jjb_load_var(hdr_cell_flux, load_path_master,'CO2_Cnpy');
+
+        Jt = load([calc_path 'Jt.dat']);
+        G0 = load([calc_path_met 'g0.dat']);
+
+        %         Pres = load([filled_path 'pres_cl.dat']);
+
+        %%% For case where flux files are to be loaded from the processed files
+    case 'processed'
+
+        if site == '1'
+            FC = load([load_path_CPECproc 'Fc' year(3:4) '.dat']);
+            ustar = load([load_path_CPECproc 'ustr' year(3:4) '.dat']);
+            Hs_orig = load([load_path_CPECproc 'Hs' year(3:4) '.dat']);
+            LE_orig = load([load_path_CPECproc 'LE' year(3:4) '.dat']);
+
+            CO2_top = load([load_path_CPECproc 'CO2' year(3:4) '.dat']);
+            CO2_cpy = jjb_load_var(hdr_cell_metproc, load_path_metproc,'CO2_Cnpy');
+            %%% Avoids loading calculated files if they haven't been
+            %%% calculated yet
+            if strcmp(program,'EB') == 1
+                Jt = load([calc_path 'Jt.dat']);
+                G0 = load([calc_path_met 'g0.dat']);
+            end
+            %             Pres = load([filled_path 'pres_cl.dat']);
+
+        else
+            FC = jjb_load_var(hdr_cell_OPEC, load_path_OPECproc, 'Fc_wpl');
+            ustar = jjb_load_var(hdr_cell_OPEC, load_path_OPECproc, 'u_star');
+            Hs_orig = jjb_load_var(hdr_cell_OPEC, load_path_OPECproc, 'Hs'); %%% Sensible Heat Flux
+            LE_orig = jjb_load_var(hdr_cell_OPEC, load_path_OPECproc, 'LE_wpl'); %%% Latent Heat Flux
+
+            CO2_top = jjb_load_var(hdr_cell_OPEC, load_path_OPECproc,'co2_Avg');
+            CO2_cpy = jjb_load_var(hdr_cell_OPEC, load_path_OPECproc,'co2stor_Avg');
+            %%% Avoids loading calculated files if they haven't been
+            %%% calculated yet
+            if strcmp(program,'EB') == 1
+                Jt = load([calc_path 'Jt.dat']);
+                G0 = load([calc_path_met 'g0.dat']);
+            end
+            %             Pres = load([filled_path 'pres_cl.dat']);
+
+        end
+
+end
+
+%% Load Met Variables
+
+switch met_source
+    case 'master'
+
+        T_air = jjb_load_var(hdr_cell_flux, load_path_master, 'AirTemp_AbvCnpy');
+        PAR = jjb_load_var(hdr_cell_flux, load_path_master, 'DownPAR_AbvCnpy');
+        PAR_up = jjb_load_var(hdr_cell_flux, load_path_master, 'UpPAR_AbvCnpy');
+        WS = jjb_load_var(hdr_cell_flux, load_path_master, 'WindSpd');
+        SM5a = jjb_load_var(hdr_cell_flux, load_path_master, 'SM_A_5cm');
+        Rn = jjb_load_var(hdr_cell_flux, load_path_master, 'NetRad_AbvCnpy');
+        Wdir = jjb_load_var(hdr_cell_flux, load_path_master, 'WindDir');
+        RH = jjb_load_var(hdr_cell_flux, load_path_master, 'RelHum_AbvCnpy');
+        if site == '1'
+            RHc = jjb_load_var(hdr_cell_flux, load_path_master, 'RelHum_Cnpy');
+        else
+            RHc(1:length(RH),1) = NaN;
+        end
+        %         if exist([calc_path_met 'Ts.dat'])
+        %             Ts = load([calc_path_met 'Ts.dat']);
+        %         end
+
+        Ts2a = jjb_load_var(hdr_cell_flux, load_path_master, 'SoilTemp_A_2cm');
+        Ts2b = jjb_load_var(hdr_cell_flux, load_path_master, 'SoilTemp_B_2cm');
+        Ts5a = jjb_load_var(hdr_cell_flux, load_path_master, 'SoilTemp_A_5cm');
+        Ts5b = jjb_load_var(hdr_cell_flux, load_path_master, 'SoilTemp_B_5cm');
+        Ts10a = jjb_load_var(hdr_cell_flux, load_path_master, 'SoilTemp_A_10cm');
+        Ts10b = jjb_load_var(hdr_cell_flux, load_path_master, 'SoilTemp_B_10cm');
+        Ts20a = jjb_load_var(hdr_cell_flux, load_path_master, 'SoilTemp_A_20cm');
+        Ts20b = jjb_load_var(hdr_cell_flux, load_path_master, 'SoilTemp_B_20cm');
+        Ts50a = jjb_load_var(hdr_cell_flux, load_path_master, 'SoilTemp_A_50cm');
+        Ts50b = jjb_load_var(hdr_cell_flux, load_path_master, 'SoilTemp_B_50cm');
+        Ts100a = jjb_load_var(hdr_cell_flux, load_path_master, 'SoilTemp_A_100cm');
+        Ts100b = jjb_load_var(hdr_cell_flux, load_path_master, 'SoilTemp_B_100cm');
+        PPT = jjb_load_var(hdr_cell_flux, load_path_master, 'Precipitation');
+
+
+
+        SM5a = jjb_load_var(hdr_cell_flux, load_path_master, 'SM_A_5cm');
+        SM5b = jjb_load_var(hdr_cell_flux, load_path_master, 'SM_B_5cm');
+        SM10a = jjb_load_var(hdr_cell_flux, load_path_master, 'SM_A_10cm');
+        SM10b = jjb_load_var(hdr_cell_flux, load_path_master, 'SM_B_10cm');
+        SM20a = jjb_load_var(hdr_cell_flux, load_path_master, 'SM_A_20cm');
+        SM20b = jjb_load_var(hdr_cell_flux, load_path_master, 'SM_B_20cm');
+
+        SM50a = jjb_load_var(hdr_cell_flux, load_path_master, 'SM_A_50cm');
+        SM50b = jjb_load_var(hdr_cell_flux, load_path_master, 'SM_B_50cm');
+        SM100a = jjb_load_var(hdr_cell_flux, load_path_master, 'SM_A_100cm');
+        SM100b = jjb_load_var(hdr_cell_flux, load_path_master, 'SM_B_100cm');
+
+        if site == '1'
+
+            SHF1 = jjb_load_var(hdr_cell_flux, load_path_master, 'SoilHeatFlux');
+            SHF2 = jjb_load_var(hdr_cell_flux, load_path_master, 'SoilHeatFlux');
+
+        else
+
+            SHF1 = jjb_load_var(hdr_cell_flux, load_path_master, 'SoilHeatFlux_1');
+            SHF2 = jjb_load_var(hdr_cell_flux, load_path_master, 'SoilHeatFlux_2');
+
+        end
+
+        APR = jjb_load_var(hdr_cell_flux, load_path_master, 'Pressure');
+
+
+    case 'processed'
+
+        T_air = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'AirTemp_AbvCnpy');
+        PAR = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'DownPAR_AbvCnpy'); %%% PPFD down (umol m^-2 s^-1)
+        PAR_up = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'UpPAR_AbvCnpy');
+        WS = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'WindSpd'); %%% Wind Speed
+        SM5a = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'SM_A_5cm'); %%% Soil Moisture
+        Rn = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'NetRad_AbvCnpy'); %%% Net Radiation
+        Wdir = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'WindDir'); %%% Wind direction
+        RH = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'RelHum_AbvCnpy'); %%% RH
+        if site == 1
+            RHc = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'RelHum_Cnpy');
+        else
+            RHc(1:length(RH),1) = NaN;
+        end;
+        Ts2a = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'SoilTemp_A_2cm');
+        Ts2b = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'SoilTemp_B_2cm');
+        Ts5a = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'SoilTemp_A_5cm');
+        Ts5b = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'SoilTemp_B_5cm');
+        Ts10a = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'SoilTemp_A_10cm');
+        Ts10b = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'SoilTemp_B_10cm');
+        Ts20a = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'SoilTemp_A_20cm');
+        Ts20b = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'SoilTemp_B_20cm');
+        Ts50a = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'SoilTemp_A_50cm');
+        Ts50b = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'SoilTemp_B_50cm');
+        Ts100a = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'SoilTemp_A_100cm');
+        Ts100b = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'SoilTemp_B_100cm');
+
+
+
+
+
+        SM5a = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'SM_A_5cm');
+        SM5b = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'SM_B_5cm');
+        SM10a = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'SM_A_10cm');
+        SM10b = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'SM_B_10cm');
+        SM20a = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'SM_A_20cm');
+        SM20b = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'SM_B_20cm');
+        SM50a = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'SM_A_50cm');
+        SM50b = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'SM_B_50cm');
+
+        try
+            SM100a = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'SM_A_100cm');
+        catch
+            SM100a(1:length(SM20a),1) = NaN;
+            disp('SM100a not found')
+        end
+
+        try
+            SM100b = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'SM_B_100cm');
+        catch
+            if site =='2'
+                SM100b = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'SM_B_80-100cm');
+                disp('SM100b replaced with SM80-100b');
+            else
+                SM100b(1:length(SM20a),1) = NaN;
+            end
+        end
+
+        if site == '1'
+            SHF1 = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'SoilHeatFlux_HFT_1');
+            SHF2 = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'SoilHeatFlux_HFT_2');
+
+        else
+            SHF1 = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'SoilHeatFlux_1');
+            SHF2 = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'SoilHeatFlux_2');
+        end
+
+        if site == '1'
+            APR = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'Pressure');
+        else
+            APR = load([filled_path 'pres_cl.dat']);
+        end
+
+        if site == '1'
+            if strcmp(year, '2007') == 1;
+                PPT = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'CS_Rain'); % M1 - RMY_Rain, CS_Rain %M4 - Rain
+            else
+                PPT = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'RMY_Rain');
+            end
+        elseif site == '4'
+            PPT = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'Rain');
+        else
+            PPT(1:length(T_air),1) = NaN;
+        end
+
+end
+
+
+        %         Ts = load([calc_path_met 'Ts.dat']);
+        %         Ts2a = jjb_load_var(hdr_cell_metproc, load_path_metproc, 'SoilTemp_A_2cm'); %%% Soil Temperature at 2cm
+
+
+
+        switch program
+            case 'SHF'
+                vars_out = [Ts2a Ts2b Ts5a Ts5b SHF1 SHF2];
+            case 'Storage'
+                vars_out = [T_air CO2_top CO2_cpy];
+            case 'Resp'
+                vars_out = [T_air PAR FC ustar];
+            case 'Photosynth'
+                vars_out = [T_air PAR SM5a SM5b SM10a SM10b SM20a SM20b ustar];
+            case 'Fluxes'
+                vars_out = [T_air PAR WS Rn SM5a SM5b SM10a SM10b SM20a SM20b ustar Hs_orig LE_orig];
+            case 'Analysis'%  1    2  3   4   5    6    7     8     9     10    11    12      13     14  15  16  17   18   19     20  21
+                vars_out = [T_air PAR WS Rn SM5a SM5b SM10a SM10b SM20a SM20b ustar Hs_orig LE_orig Wdir RH RHc Ts5a Ts5b PAR_up APR PPT];
+
+            case 'HR'
+                vars_out = [SM10a SM10b SM20a SM20b SM50a SM50b SM100a SM100b];
+            case 'Fill'
+                vars_out = [PAR PAR_up];
+            case 'EB'
+                vars_out = [Hs_orig LE_orig Jt G0 Rn];
+            case 'Ts'
+                vars_out = [Ts2a Ts2b Ts5a Ts5b Ts10a Ts10b Ts20a Ts20b Ts50a Ts50b Ts100a Ts100b];
+
+            case 'Class'
+                vars_out = [];
+                
+            case 'Soil' 
+                vars_out = [Ts2a Ts2b Ts5a Ts5b Ts10a Ts10b SM5a SM5b SM10a SM10b SM20a SM20b];
+                
+            case '1A'
+                vars_out = [SM5a SM10a SM100a SM5b SM10b SM50b Ts2a Ts20a Ts100a PAR PAR_up T_air WS Wdir];
+                
+        end
+
+
+

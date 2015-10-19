@@ -1,0 +1,79 @@
+function [final] = params(year, site, program)
+%% OPEC_params.m
+%%% This function serves as a central source of parameters for use in all
+%%% scripts operating on OPEC data
+
+%%
+switch site
+
+    %%%%%%%%%%%% MET 1 PARAMETERS
+    case '1'
+        switch year
+
+            case '2002'
+            case '2003'
+            case '2004'
+            case '2005'
+                z = 1; ztop = 1; zcpy = 1; col_flag = 2;
+            case '2006'
+            case '2007'
+        end
+
+        %%%%%%%%%%%% MET 2 PARAMETERS
+    case '2'
+        switch year
+
+            case '2002'
+            case '2003'
+            case '2004'
+            case '2005'
+                % CO2 Storage
+                z = 15; ztop = 9.2; zcpy = 5.8; col_flag = 2;
+                % Respiration
+                gsstart = 90; gsend = 304; NEE_cap = 7; ustar_crit = 0.1;
+                % Photosynthesis
+                Qthresh = 10; Awa = 0.62; ka = 0.540; kh = 0.756; alpha = 0.03;
+                
+            case '2006'
+            case '2007'
+        end
+
+        %%%%%%%%%%%% MET 3 PARAMETERS
+    case '3'
+
+        switch year
+            case '2002'
+            case '2003'
+            case '2004'
+            case '2005'
+                z = 12; ztop = 6; zcpy = 6; col_flag = 2;
+            case '2006'
+            case '2007'
+        end
+
+        %%%%%%%%%%%% MET 4 PARAMETERS
+    case '4'
+
+        switch year
+            case '2002'
+            case '2003'
+            case '2004'
+            case '2005'
+                z = 3; ztop = NaN; zcpy = Nan; col_flag = 1;
+            case '2006'
+            case '2007'
+        end
+
+end
+
+%% This Section controls the parameters outputted, based on which program calls it
+switch program
+    case 'Resp'
+        final = [gsstart gsend NEE_cap ustar_crit];
+    case 'Met'
+        final = []
+    case 'CO2_storage'
+        final = [z ztop zcpy col_flag];
+    case 'Photosynth'
+        final = [Qthresh Awa ka kh alpha gsstart gsend];
+end

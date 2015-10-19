@@ -1,0 +1,41 @@
+function [dsum wsum msum ssum ysum] = jjb_time_summing(data_in, scaling_factor)
+if nargin == 1;
+    scaling_factor = 1;
+end
+%%% Note - this script is not set to handle NANs
+if length(data_in) == 17520
+days_in_m = jjb_days_in_month(2003);
+elseif length(data_in) == 17568
+    days_in_m = jjb_days_in_month(2004);
+end
+days_in_month = (cumsum([0; days_in_m(1:11)])+1).*48 - 47;
+days_in_month = [days_in_month; length(data_in)];
+% Step 1 - daily_averaging:
+rs_d = reshape(data_in,48,[]);
+dsum = (nansum(rs_d,1));
+dsum = dsum.*scaling_factor;
+clear rs_d
+% Step 2 - Weekly averaging:
+a = rem(length(data_in),(48*7));
+data_in_tmp = data_in(1:end-a);
+rs_w = reshape(data_in_tmp,48.*7,[]);
+wsum = (nansum(rs_w))';
+wsum = wsum.*scaling_factor;
+
+clear rs_m
+% Step 3 - Monthly Averaging:
+for i = 1:1:12
+    msum(i,1) = nansum(data_in(days_in_month(i):days_in_month(i+1),1));
+end
+msum = msum.*scaling_factor;
+
+% Step 4 - Seasonal Averaging
+ssum(1,1) = nansum(data_in(1:4380,1));
+ssum(2,1) = nansum(data_in(4381:8761,1));
+ssum(3,1) = nansum(data_in(8762:13142,1));
+ssum(4,1) = nansum(data_in(13143:end,1));
+ssum = ssum.*scaling_factor;
+
+% Step 5 - Annual Mean:
+ysum = nansum(data_in(:,1));
+ysum = ysum.*scaling_factor;

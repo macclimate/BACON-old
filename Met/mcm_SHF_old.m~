@@ -1,0 +1,88 @@
+function [] = mcm_SHF(year, site)
+% Loads SHF from /Cleaned3 directory.
+% Loads met from /Final_filled directory
+
+loadstart = addpath_loadstart;
+if ischar(year) == false
+    year = num2str(year);
+end
+
+%% Output location -- always the same
+cleaned_path = ([loadstart 'Matlab/Data/Met/Final_Cleaned/']);
+
+filled_path = ([loadstart 'Matlab/Data/Met/Final_Filled/']);
+calc_path = ([loadstart 'Matlab/Data/Met/Calculated4/']);
+% SHF_header = jjb_hdr_read([loadstart 'Matlab/Data/Met/Raw1/Docs/' site '_OutputTemplate.csv'],',',3);
+
+%% Load needed variables %%%%%%%%%%%%%%%%%%%%%%%%%
+[junk(:,1) junk(:,2) junk(:,3) dt]  = jjb_makedate(str2double(year),30);
+z = 0.03; %% Soil Heat Flux probes at 3 cm
+delta_t = 1800; %% Half hour data
+
+% Site Specific Coefficients and Operations %%%%%%%%%%%%%%%%%%%%%%%%%%
+[param]=params(year, site, 'SHF');
+theta_w = param(:,1); theta_m = param(:,2); theta_o = param(:,3);
+
+
+%% Load variables:
+cleaned = load([cleaned_path site '/' site '_met_cleaned_' year '.mat']);
+
+
+
+if strcmp(site, 'TP39') == 1;
+SHF1 = jjb_load_var(SHF_header, SHF_load_path, 'SoilHeatFlux_HFT_1',2);
+SHF2 = jjb_load_var(SHF_header, SHF_load_path, 'SoilHeatFlux_HFT_2',2);
+else
+SHF1 = jjb_load_var(SHF_header, SHF_load_path, 'SoilHeatFlux_1',2);
+SHF2 = jjb_load_var(SHF_header, SHF_load_path, 'SoilHeatFlux_2',2);
+end
+Ts2 = load([met_load_path 'Ts2']);     Ts5 = load([met_load_path 'Ts5']);
+
+%% Fill in Gaps for specific years:
+good_shf1 = find(~isnan(SHF1)==1);
+good_shf2 = find(~isnan(SHF2)==1);
+%%% Average both SHF if both numbers exist
+[junka junkb common] = intersect(good_shf1, good_shf2);
+
+Gavg(1:1:length(dt),1) = NaN;
+Gavg(good_shf1,1) = SHF1(good_shf1);  %% put in good numbers for SHF1
+Gavg(good_shf2,1) = SHF2(good_shf2);  %% put in good numbers for SHF2
+Gavg(common,1) = (SHF1(common)+ SHF2(common))./2; % put in average when both are present
+
+%% Shift soil temperature to calculate dT/dt..
+ind_dt(:,1) = 2:length(Ts2);
+dTs = Ts2(ind_dt,1) - Ts2(ind_dt-1,1);
+
+%% Calculations
+M(1:1:length(dTs)) = NaN;
+Cs = 2.*theta_m + 2.5.*theta_o + 4.18.*theta_w;
+
+M = (z.*Cs.*(dTs./delta_t))*1.0e6;        %%%in W^m-2
+M = [M(1) ;M(1:end)];
+
+G0 = Gavg + M;
+
+%%%% Simple cleaning:
+G0(G0 <-50 | G0 > 200) = NaN;
+G0_m1 = G0(2:length(G0));
+G0_diff = G0(1:length(G0)-1) - G0_m1;
+G0(abs(G0_diff)>75,1) = NaN;
+
+%%% Fill small gaps
+G0 = jjb_interp_gap(G0,dt,3);
+
+% save ([met_calc_path 'Ts.dat'],'Ts','-ASCII');
+save ([met_calc_path 'soil_Hstor.dat'],'M','-ASCII');
+save ([met_calc_path 'g0.dat'],'G0','-ASCII');
+
+figure (1)
+clf;
+h1 = plot(dt,G0,'b');
+hold on;
+h2 = plot(dt,Ts2,'r');
+ylabel('Soil Heat Flux (Wm_2); Soil Temperature (^oC)')
+xlabel('Day of Year')
+legend([h1 h2], 'g0', 'Ts2')
+axis ([0 365 min(G0) max(G0)]);
+% print('-dill',[fig_path 'SoilHeatFlux']);
+% print('-dtiff',[fig_path 'SoilHeatFlux']);

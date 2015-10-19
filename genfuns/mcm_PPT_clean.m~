@@ -1,0 +1,118 @@
+function [] = mcm_PPT_clean(year)
+%% This function is meant to be run on organized TP_PPT (Fish Hatchery)
+%%% data, with the only needed input being 'year' (string format)
+%%%
+%%% Created Jan 23, 2009 by JJB
+%%% Revision History:
+%%%
+%%%
+loadstart = addpath_loadstart;
+if ischar(year) == false
+year = num2str(year);
+end
+
+% Change these paths if output_header changes in subsequent years
+% defaults:
+hdr_path = [loadstart 'Matlab/Data/Met/Raw1/Docs/TP_PPT_OutputTemplate.csv'];
+        PPT_string = 'GN_Precip';
+        PPT_tx_string = 'TX_Rain';
+switch year
+    case '2008'
+        hdr_path = [loadstart 'Matlab/Data/Met/Raw1/Docs/TP_PPT_OutputTemplate.csv'];
+        PPT_string = 'GN_Precip';
+        PPT_tx_string = 'TX_Rain';
+    case '2009'
+% Add stuff in here is titles/ header files change...     
+end
+
+% Load Header:
+[hdr_cell] = jjb_hdr_read(hdr_path, ',', 3);
+
+load_path = [loadstart 'Matlab/Data/Met/Organized2/TP_PPT/Column/30min/TP_PPT_' year '.'];
+% Load PPT data:
+[PPT] = jjb_load_var(hdr_cell, load_path, PPT_string);
+[PPT_tx] = jjb_load_var(hdr_cell, load_path, PPT_tx_string);
+
+%%
+
+figure(1)
+clf
+plot(PPT)
+title('Input Data')
+
+% Offset PPT by 1 and compare the two to get 1/2 hour accumulation numbers
+PPT = [PPT; NaN];
+PPT_offset(1:length(PPT),1) = [NaN; PPT(1:length(PPT)-1)];
+event = PPT - PPT_offset;
+gaps = find(isnan(event(2:length(event)-1)));
+% Plot to inspect
+figure(2); clf;
+plot(event); hold on;
+title('1/2hour event-based');
+plot(gaps,zeros(length(gaps)),'rx')
+
+
+% 
+%% Clean up Data:
+%%% Clean step 1 -- remove up-spikes occuring before a large downspike (emptying bucket)
+% lag event by 1 point.
+
+event_m(1:length(event),1) = [ event(2:length(event)); NaN];
+error1 = find(event > 4 & event_m < -20);
+eventc1 = event;
+eventc1(error1,1) = 0;
+eventc1(eventc1 > 30,1) = 0;
+% figure(2);
+% plot(eventc1,'r');
+
+%%% Clean step 3 -- remove any data less than 0:
+% eventc2 = eventc1;
+% eventc2(eventc2 < 0,1) = 0;
+% plot(eventc2,'g')
+
+eventc3 = eventc1;
+eventc3(eventc3 < 0.08,1) = 0;
+figure(2)
+plot(eventc3, 'c')
+legend('raw','gaps', 'cleaned')
+axis([1 17568 -10 40])
+
+
+% event(isnan(event),1) = 0; 
+% cum_event(:,1) = cumsum(event);
+
+% eventc2(isnan(eventc2),1) = 0;
+% cum_eventc2(:,1) = cumsum(eventc2);
+
+%%% Final step -- replace NaNs with 0 to make cumulative graph:
+eventc3(isnan(eventc3),1) = 0;
+cum_eventc3(:,1) = cumsum(eventc3);
+
+figure(3); clf
+plot(cum_eventc3,'g'); hold on;
+plot(gaps, cum_eventc3(gaps),'rx')
+% title('processed cumulative output')
+% legend('cumulative PPT','gaps');
+
+% Re-arrange to proper length:
+PPT_out = eventc3(1:length(eventc3)-1);
+cum_PPT_out = cum_eventc3(1:length(cum_eventc3)-1);
+
+
+%% Tx Instruments Guage:
+figure(4); clf
+plot(PPT_tx);
+gaps_tx = find(isnan(PPT_tx));
+PPT_tx(PPT_tx > 30,1) = 0;
+PPT_tx(isnan(PPT_tx),1) = 0;
+cum_PPT_tx = cumsum(PPT_tx);
+
+figure(3); 
+plot(cum_PPT_tx,'b');
+plot(gaps_tx, cum_PPT_tx(gaps_tx),'rx')
+title('processed cumulative output')
+legend('cumulative PPT','gaps', 'Tx Rain Guage');
+
+%% Output Cleaned Data
+save([loadstart 'Matlab/Data/Met/Cleaned3/TP_PPT/' PPT_string '_' year '.dat'],'PPT_out','-ASCII');
+save([loadstart 'Matlab/Data/Met/Cleaned3/TP_PPT/' PPT_string '_' year '.dat'],'PPT_out','-ASCII');

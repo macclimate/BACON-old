@@ -1,0 +1,312 @@
+function [std_pred f_fit f_std] = NEE_random_error_estimator_GAP(data, Ustar_th, plot_flag, NEE_method)
+%%% This function uses the same methodology that is used in v6, but allows
+%%% any method of NEE prediction to produce residuals that are used in
+%%% quantifying the relationship between Ts,PAR and NEE measurement error.
+if isempty(plot_flag)
+    plot_flag = 0;
+end
+
+% Calculate VPD if it doesn't exist
+if isfield(data,'VPD')==0;
+    data.VPD = VPD_calc(data.RH, data.Ta);
+end
+% Calculate GDD if it doesn't exist:
+if isfield(data,'GDD')==0;
+    [junk data.GDD] = GDD_calc(data.Ta,10,48,[]);
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Set the u* threshold (if it's not externally set);
+% Do nothing if it already exists in the data file:
+if isfield(data,'Ustar_th')==1
+else
+    % If the field is empty and argin is empty, calculate it with JJB
+    % method:
+    if isempty(Ustar_th)
+        data.Ustar_th = mcm_Ustar_th_JJB(data,0);
+    else
+        % If the argin is a constant value, use it for the entire year:
+        if numel(Ustar_th) == 1
+            data.Ustar_th(1:length(data.Year),1) = Ustar_th;
+        else
+            data.Ustar_th = Ustar_th;
+        end
+    end
+end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+NEE_method = lower(NEE_method);
+%% &&&&&&&&&&&&&&&&&& MAIN SECTION &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+%%% Each method has to output: Error_all, PAR_all, Ts_all
+switch NEE_method
+    case 'sitespec'
+        %%%%%%%%%%%%%%%%%%%%%%%% RE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %%% Relationship for Respiration (i.e. Nighttime and Non-Growing Season)
+%         ind_param_RE = find((data.Ustar >= data.Ustar_th & ~isnan(data.Ts5) & ~isnan(data.NEE) & data.PAR < 15) |... % growing season
+%             (data.Ustar >= data.Ustar_th & ~isnan(data.NEE) & data.Ts5 < -1  ) );                                   % non-growing season
+ind_param_RE = find(data.Ustar >= data.Ustar_th & data.RE_flag == 2 & ~isnan(data.Ts5.*data.NEE));
+        X_in = [data.Ts5(ind_param_RE) data.SM_a(ind_param_RE) data.PAR(ind_param_RE)];
+        Y_in = data.NEE(ind_param_RE);
+        stdev_in = ones(length(X_in),1);
+        %%% Replaced data.SM with NaNs... not needed
+        X_eval = [data.Ts5 NaN.*ones(length(data.Ts5),1) data.PAR];
+        options.costfun ='OLS'; options.min_method ='NM'; options.f_coeff = [NaN NaN NaN];
+        [c_hat_RE, y_hat_RE, pred_RE, stats_RE, sigma_RE, err_RE, exitflag_RE, num_iter_RE] = ...
+            fitresp([9 0.2 12], 'fitresp_2A', X_in, Y_in, X_eval, stdev_in, options);
+        %%%%%%%%%%%%%%%%%%%%%%%% GEP %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %%% Calculate GEP from NEE and R:
+        GEPraw = pred_RE - data.NEE;
+        flag_gs = zeros(length(GEPraw),1); % variable to keep track of what is growing season and what isn't
+        %%% Model GEP based on PAR, Ts, Ta, VPD,
+%         ind_param_GEP = find(data.Ts5 >= -1 & data.VPD > 0 & data.Ta > -5 & data.PAR > 20 & ~isnan(GEPraw) & data.Ustar > data.Ustar_th ...
+%             & data.dt > 95 & data.dt < 325 & data.GDD > 8);
+        ind_param_GEP = find(~isnan(GEPraw.*data.Ts5.*data.PAR) & data.GEP_flag==2 & data.VPD > 0 & data.Ustar > data.Ustar_th);      
+        options.costfun ='OLS'; options.min_method ='NM'; options.f_coeff = NaN.*ones(1,6);
+        [junk1, y_hat_GEPL6, pred_GEPL6, junk1 junk3, junk4, junk5, junk6] = ...
+            fitGEP([0.05 35 2 4 -2 -0.8], 'fitGEP_1H1_2L6', [data.PAR(ind_param_GEP) data.Ts5(ind_param_GEP) data.VPD(ind_param_GEP)], ...
+            GEPraw(ind_param_GEP), [data.PAR data.Ts5 data.VPD], [], options);
+%         ind_GEP = find(data.PAR >= 20 & ((data.dt > 85 & data.dt < 330 & (data.GDD > 8 | data.Ts5 >= 1 & data.Ta > 2)) ...
+%             | data.dt > 330 & data.Ts5 >= 1.25 & data.Ta > 2));
+        ind_GEP = find(data.GEP_flag>=1);
+
+        clear junk;
+        pred_GEP(1:length(data.Year),1)= 0;
+        pred_GEP(ind_GEP,1) = pred_GEPL6(ind_GEP,1);
+        %%%%%%%%%%%%%%%%%%%%%%%% Expected NEE: %%%%%%%%%%%%%%%%%%%%%%%%%%%
+        NEE_model = pred_RE - pred_GEP;
+        ind_comp_RE = find(~isnan(data.NEE.*NEE_model) & pred_GEP == 0 & data.Ustar > data.Ustar_th);
+        Error_NEE_RE = NEE_model(ind_comp_RE) - data.NEE(ind_comp_RE);
+        ind_comp_GEP = find(~isnan(data.NEE.*NEE_model) & pred_GEP > 0);
+        Error_NEE_GEP = NEE_model(ind_comp_GEP) - data.NEE(ind_comp_GEP);
+        PAR_RE = data.PAR(ind_comp_RE);
+        PAR_GEP = data.PAR(ind_comp_GEP);
+        Ts_RE = data.Ts5(ind_comp_RE);
+        Ts_GEP = data.Ts5(ind_comp_GEP);
+        %
+        Error_all = [Error_NEE_RE; Error_NEE_GEP];
+        PAR_all = [PAR_RE; PAR_GEP];
+        Ts_all = [Ts_RE; Ts_GEP];
+        
+    case 'fcrn'
+        Rraw = NaN.*ones(length(data.NEE),1);
+%         ind_param_RE = find((data.Ustar >= data.Ustar_th & ~isnan(data.Ts5) & ~isnan(data.NEE) & data.PAR < 15) |... % growing season
+%             (data.Ustar >= data.Ustar_th & ~isnan(data.NEE) & data.Ts5 < -1  ) );                                   % non-growing season
+        ind_param_RE = find(data.Ustar >= data.Ustar_th & data.RE_flag == 2 & ~isnan(data.Ts5.*data.NEE));
+
+        Rraw(ind_param_RE,1) = data.NEE(ind_param_RE);
+        X_in = [data.Ts5(ind_param_RE) data.SM_a(ind_param_RE) data.PAR(ind_param_RE)];
+        Y_in = data.NEE(ind_param_RE);
+        stdev_in = ones(length(X_in),1);
+        %%% Replaced data.SM with NaNs... not needed
+        X_eval = [data.Ts5 NaN.*ones(length(data.Ts5),1) data.PAR];
+        options.costfun ='OLS'; options.min_method ='NM'; options.f_coeff = [NaN NaN NaN];
+        [c_hat_RE, y_hat_RE, pred_RE, stats_RE, sigma_RE, err_RE, exitflag_RE, num_iter_RE] = ...
+            fitresp([9 0.2 12], 'fitresp_2A', X_in, Y_in, X_eval, stdev_in, options);
+        %%% Calculate Time-varying-parameter:
+        rw = jjb_AB_gapfill(pred_RE, Rraw, [],200, 10, 'off', [], [], 'rw');
+        %%% Adjust modeled RE by TVP:
+        pred_RE = pred_RE.*rw(:,2);
+        %%%%%%%%%%%%%%%%%%%%%%%% GEP %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %%% Calculate GEP from NEE and R:
+        GEPraw = pred_RE - data.NEE;
+        flag_gs = zeros(length(GEPraw),1); % variable to keep track of what is growing season and what isn't
+        %%% Model GEP based on PAR, Ts, Ta, VPD,
+%         ind_param_GEP = find(data.Ts5 >= -1 & data.VPD > 0 & data.Ta > -5 & data.PAR > 20 & ~isnan(GEPraw) & data.Ustar > data.Ustar_th ...
+%             & data.dt > 95 & data.dt < 325 & data.GDD > 8);
+        ind_param_GEP = find(~isnan(GEPraw.*data.Ts5.*data.PAR) & data.GEP_flag==2 & data.VPD > 0 & data.Ustar > data.Ustar_th);      
+
+        options.costfun ='OLS'; options.min_method ='NM'; options.f_coeff = NaN.*ones(1,2);
+        [junk1, y_hat_GEP, pred_GEP, junk1 junk3, junk4, junk5, junk6] = ...
+            fitGEP([0.05 35], 'fitGEP_1H1', data.PAR(ind_param_GEP), ...
+            GEPraw(ind_param_GEP), data.PAR, [], options);
+        %%% Calculate Time-varying-parameter:
+        pw = jjb_AB_gapfill(pred_GEP, GEPraw, [],200, 10, 'off', [], [], 'rw');
+        %%% Adjust modeled GEP by TVP:
+        pred_GEP = pred_GEP.*pw(:,2);
+        %%%%%%%%%%%%%%%%%%%%%%%% Expected NEE: %%%%%%%%%%%%%%%%%%%%%%%%%%%
+        NEE_model = pred_RE - pred_GEP;
+        ind_comp_RE = find(~isnan(data.NEE.*NEE_model) & pred_GEP == 0 & data.Ustar > data.Ustar_th);
+        Error_NEE_RE = NEE_model(ind_comp_RE) - data.NEE(ind_comp_RE);
+        ind_comp_GEP = find(~isnan(data.NEE.*NEE_model) & pred_GEP > 0);
+        Error_NEE_GEP = NEE_model(ind_comp_GEP) - data.NEE(ind_comp_GEP);
+        PAR_RE = data.PAR(ind_comp_RE);
+        PAR_GEP = data.PAR(ind_comp_GEP);
+        Ts_RE = data.Ts5(ind_comp_RE);
+        Ts_GEP = data.Ts5(ind_comp_GEP);
+        %
+        Error_all = [Error_NEE_RE; Error_NEE_GEP];
+        PAR_all = [PAR_RE; PAR_GEP];
+        Ts_all = [Ts_RE; Ts_GEP];
+        
+    case 'howland'
+%         ind_param_RE = find((data.Ustar >= data.Ustar_th & ~isnan(data.Ts5) & ~isnan(data.NEE) & data.PAR < 15) |... % growing season
+%             (data.Ustar >= data.Ustar_th & ~isnan(data.NEE) & data.Ts5 < -1  ) );                                   % non-growing season
+        ind_param_RE = find(data.Ustar >= data.Ustar_th & data.RE_flag == 2 & ~isnan(data.Ts5.*data.NEE));
+
+        %%% Set up fourier parameters
+        e = 2.*pi().*data.dt(ind_param_RE,1)./365;
+        cos_e = cos(e);
+        sin_e = sin(e);
+        cos_2e = cos(2.*e);
+        sin_2e = sin(2.*e);
+        %%% Run regression:
+        X = [ones(length(cos_e),1) cos_e sin_e cos_2e sin_2e];
+        [b,bint,r,rint,stats] = regress_analysis(data.NEE(ind_param_RE),X,0.05);
+        %%% Predict Respiration:
+        e_dt = 2.*pi().*data.dt./365;
+        pred_RE = b(1) + b(2).*cos(e_dt) + b(3).*sin(e_dt) + b(4).*cos(2.*e_dt) + b(5).*sin(2.*e_dt);
+        %%%%%%%%%%%%%%%%%%%%%%%% GEP %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %%% Calculate GEP from NEE and R:
+        GEPraw = pred_RE - data.NEE;
+        flag_gs = zeros(length(GEPraw),1); % variable to keep track of what is growing season and what isn't
+        %%% Model GEP based on PAR, Ts, Ta, VPD,
+%         ind_param_GEP = find(data.Ts5 >= -1 & data.VPD > 0 & data.Ta > -5 & data.PAR > 20 & ~isnan(GEPraw) & data.Ustar > data.Ustar_th ...
+%             & data.dt > 95 & data.dt < 325 & data.GDD > 8);
+        ind_param_GEP = find(~isnan(GEPraw.*data.Ts5.*data.PAR) & data.GEP_flag==2 & data.VPD > 0 & data.Ustar > data.Ustar_th);      
+
+        options.costfun ='OLS'; options.min_method ='NM'; options.f_coeff = NaN.*ones(1,2);
+        [junk1, y_hat_GEP, pred_GEP, junk1 junk3, junk4, junk5, junk6] = ...
+            fitGEP([0.05 35], 'fitGEP_1H1', data.PAR(ind_param_GEP), ...
+            GEPraw(ind_param_GEP), data.PAR, [], options);
+        %%% Calculate Time-varying-parameter:
+        pw = jjb_AB_gapfill(pred_GEP, GEPraw, [],200, 10, 'off', [], [], 'rw');
+        %%% Adjust modeled GEP by TVP:
+        pred_GEP = pred_GEP.*pw(:,2);
+        %%%%%%%%%%%%%%%%%%%%%%%% Expected NEE: %%%%%%%%%%%%%%%%%%%%%%%%%%%
+        NEE_model = pred_RE - pred_GEP;
+        ind_comp_RE = find(~isnan(data.NEE.*NEE_model) & pred_GEP == 0 & data.Ustar > data.Ustar_th);
+        Error_NEE_RE = NEE_model(ind_comp_RE) - data.NEE(ind_comp_RE);
+        ind_comp_GEP = find(~isnan(data.NEE.*NEE_model) & pred_GEP > 0);
+        Error_NEE_GEP = NEE_model(ind_comp_GEP) - data.NEE(ind_comp_GEP);
+        PAR_RE = data.PAR(ind_comp_RE);
+        PAR_GEP = data.PAR(ind_comp_GEP);
+        Ts_RE = data.Ts5(ind_comp_RE);
+        Ts_GEP = data.Ts5(ind_comp_GEP);
+        %
+        Error_all = [Error_NEE_RE; Error_NEE_GEP];
+        PAR_all = [PAR_RE; PAR_GEP];
+        Ts_all = [Ts_RE; Ts_GEP];
+        
+    case 'reich' % Use the newly-coined (by me) paired-observation+
+        % We'll use GEP and RE flags to keep from making big mistakes
+        % Look for similar conditions any time within +/- 7 days
+        Error_all = [];
+        Ts_all = [];
+        NEE_all = [];
+        PAR_all = [];
+        Ts_tol = 1;
+        SM_tol = 0.01;
+        PAR_tol = 200;
+        Ta_tol = 2.5;
+        VPD_tol = 0.3;
+        for i = 1:1:length(data.NEE)-146
+            % Only calculate if data exists at i:
+            if ~isnan(data.Ts5(i,1).*data.SM_a_filled(i,1).*data.PAR(i,1).*data.Ta(i,1).*data.VPD(i,1).*data.NEE(i,1))
+                ind_main = [(i+1:i+2) (i+45:i+49) (i+93:i+97) (i+141:i+145)]';
+                % Differences for next 2 half-hours, and the following 2 days at the same time of day:
+                %                 tmp_diff_Ts = data.Ts5(i,1) - data.Ts5(ind_main,1);
+                %                 tmp_diff_SM = data.SM_a_filled(i,1) - data.SM_a_filled(ind_main,1);
+                %                 tmp_diff_PAR = data.PAR(i,1) - data.PAR(ind_main,1);
+                %                 tmp_diff_Ta = data.Ta(i,1) - data.Ta(ind_main,1);
+                %                 tmp_diff_VPD = data.VPD(i,1) - data.VPD(ind_main,1);
+                %                 tmp_diff_NEE = data.NEE(i,1) - data.NEE(ind_main,1);
+                % Try using indexes instead of differences and then
+                % indexing:
+                ind_diff_Ts = abs(data.Ts5(i,1) - data.Ts5(ind_main,1))<Ts_tol ;
+                ind_diff_SM = abs(data.SM_a_filled(i,1) - data.SM_a_filled(ind_main,1))<SM_tol;
+                ind_diff_PAR = abs(data.PAR(i,1) - data.PAR(ind_main,1))<PAR_tol;
+                ind_diff_Ta = abs(data.Ta(i,1) - data.Ta(ind_main,1))<Ta_tol;
+                ind_diff_VPD = abs(data.VPD(i,1) - data.VPD(ind_main,1))<VPD_tol;
+                ind_diff_NEE = ~isnan(data.NEE(ind_main,1));
+                data.RE_flag(isnan(data.RE_flag)==1)= 0;
+                ind_RE = data.RE_flag(ind_main,1)==data.RE_flag(i,1);
+                
+                inds_all = [ind_diff_Ts ind_diff_SM ind_diff_PAR ind_diff_Ta ind_diff_VPD ind_diff_NEE ind_RE];
+                
+                
+                rows_to_add = find(prod(double(inds_all),2)==1);
+                
+                if ~isempty(rows_to_add)
+                    Ts_all = [Ts_all; mean([repmat(data.Ts5(i,1),length(rows_to_add),1) data.Ts5(ind_main(rows_to_add))],2)];
+                    PAR_all = [PAR_all;mean([repmat(data.PAR(i,1),length(rows_to_add),1) data.PAR(ind_main(rows_to_add))],2)];
+                    NEE_all = [NEE_all;mean([repmat(data.NEE(i,1),length(rows_to_add),1) data.NEE(ind_main(rows_to_add))],2)];
+                    Error_all = [Error_all; (data.NEE(i,1)-data.NEE(ind_main(rows_to_add))) ];
+                end
+                
+            end
+        end
+        
+    case 'lrc'
+        [final_out f_out] = mcm_Gapfill_LRC_JJB1_noVPD(data, 0, 0);
+        NEE_model = final_out.master.NEE_pred;
+        pred_GEP =  final_out.master.GEP_pred;
+        pred_RE =  final_out.master.RE_pred;
+        ind_comp_RE = find(~isnan(data.NEE.*NEE_model) & pred_GEP == 0 & data.Ustar > data.Ustar_th);
+        Error_NEE_RE = NEE_model(ind_comp_RE) - data.NEE(ind_comp_RE);
+        ind_comp_GEP = find(~isnan(data.NEE.*NEE_model) & pred_GEP > 0);
+        Error_NEE_GEP = NEE_model(ind_comp_GEP) - data.NEE(ind_comp_GEP);
+        PAR_RE = data.PAR(ind_comp_RE);
+        PAR_GEP = data.PAR(ind_comp_GEP);
+        Ts_RE = data.Ts5(ind_comp_RE);
+        Ts_GEP = data.Ts5(ind_comp_GEP);
+        %
+        Error_all = [Error_NEE_RE; Error_NEE_GEP];
+        PAR_all = [PAR_RE; PAR_GEP];
+        Ts_all = [Ts_RE; Ts_GEP];
+end
+
+%%% Right now, stick with consistent bin sizes:
+PAR_bins = [0 20 100:150:2200 3000]';
+Ts_bins = [-20 -6:1.5:22 26]';
+%%% Rows are Ts Bins
+%%% Columns are PAR Bins
+for i_Ts = 1:1:length(Ts_bins)-1
+    
+    for i_PAR =  1:1:length(PAR_bins)-1
+        ind = find(PAR_all >= PAR_bins(i_PAR) & PAR_all < PAR_bins(i_PAR+1) ...
+            & Ts_all >= Ts_bins(i_Ts) & Ts_all < Ts_bins(i_Ts+1));
+        num_pts(i_Ts,i_PAR) = length(ind);
+        Error_std(i_Ts,i_PAR) = std(Error_all(ind,1));
+        Ts_mid(i_Ts,i_PAR) = median(Ts_all(ind));
+        PAR_mid(i_Ts,i_PAR) = median(PAR_all(ind));
+        
+        clear ind;
+    end
+end
+PAR_plot = PAR_mid(:);
+Ts_plot = Ts_mid(:);
+std_plot = Error_std(:);
+num_pts = num_pts(:);
+ind_plot = find(~isnan(PAR_plot.*Ts_plot.*std_plot)& num_pts > 20);
+%% &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+
+%%% Fit a Linear 2-D regression to the data in Ts and PAR dimensions:
+polymodel = polyfitn([Ts_plot(ind_plot) PAR_plot(ind_plot)],std_plot(ind_plot),[0 0; 1 0; 0 1]);
+coeff = polymodel.Coefficients;
+std_est = coeff(1) + Ts_plot.*coeff(2) + PAR_plot.*coeff(3);
+std_mesh = reshape(std_est,size(Ts_mid,1),[]);
+
+if plot_flag == 1
+    f_fit = figure('Name', 'std vs. Ts, PAR') ;clf
+    plot3(Ts_plot(ind_plot),PAR_plot(ind_plot),std_plot(ind_plot),'o','MarkerFaceColor','b','MarkerEdgeColor','k','MarkerSize',4);
+    hold on; grid on;
+    mesh(Ts_mid,PAR_mid,std_mesh);
+    axis([-5 25 0 2500 0 8])
+    title('std vs. Ts, PAR');
+    zlabel('\sigma_{NEE}');
+    ylabel('PAR - binned');
+    xlabel('Ts - binned');
+else
+    f_fit = [];
+end
+
+%% Predict std for every data point:
+std_pred = coeff(1) + data.Ts5.*coeff(2) + data.PAR.*coeff(3);
+std_pred(std_pred<0,1) = 0;
+if plot_flag == 1;
+    f_std = figure('Name','Predicted Std');
+    plot(std_pred); 
+    ylabel('Predicted \sigma_{NEE}');
+    title('Predicted \sigma_{NEE}');
+    else
+    f_fit = [];
+end

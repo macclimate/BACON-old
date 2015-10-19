@@ -1,0 +1,96 @@
+%% Subfunction to load and separate files:
+function [varnames, file_TV, data] = OPEC_load_all(loadpath)
+fid = fopen(loadpath);
+
+%%%%%%%%%%%% Gets Header and variable names
+for i = 1:4
+    clear tline;
+  tline = fgets(fid);
+  %%% This loop writes a header file into cell format from the original
+  %%% data file
+  if i == 2
+    tline(tline == '"') = ''; % take out the quotation marks.
+    coms = find(tline == ','); % find commas
+    num_vars = length(coms) + 1;
+    
+    coms = [0 coms length(tline)+1];
+%      hdr = cellstr(tline(1:coms(1)-1));
+      for ctr = 1:1:length(coms)-1
+          varnames{ctr,1} = cellstr(tline(coms(ctr)+1:coms(ctr+1)-1));
+      end
+  end
+end
+
+%%% Make Format:
+format_string = '%s';
+for k = 2:1:num_vars
+    format_string = [format_string ' %n'];
+end
+
+eofstat = 0;
+row_ctr = 1;
+clear tmp_data;
+
+while eofstat == 0;
+    try
+        pntr_pos = ftell(fid); % Tells us where the counter is at before it tries textscan
+        
+        tmp_data = textscan(fid, format_string, 200, 'Delimiter',',','EmptyValue', NaN, 'CommentStyle', {'-1.#','D'});%,'CommentStyle',{'-1.#','D'});
+        rows_to_add = length(tmp_data{1,1});
+        timestamp(row_ctr:row_ctr+rows_to_add-1,:) = char(tmp_data{1,1});
+        
+        for k = 2:1:length(tmp_data)
+            if length(tmp_data{1,k}) < rows_to_add
+                tmp_switch = tmp_data{1,k};
+                tmp_switch = [tmp_switch; NaN.*ones(rows_to_add - length(tmp_data{1,k}))];
+                tmp_data{1,k} = tmp_switch;
+                clear tmp_switch;
+            end
+            
+            data(row_ctr:row_ctr+rows_to_add-1,k) = tmp_data{1,k}; % we'll add the timevector back in later..
+        end
+        row_ctr = row_ctr + rows_to_add;
+        clear tmp_data rows_to_add;
+        eofstat = feof(fid);
+        
+    catch
+%         disp(row_ctr);
+        disp(['error starting at line ' num2str(row_ctr) ', skipping this line..']);
+        
+        fseek(fid, pntr_pos, 'bof');
+        junk = fgets(fid); % advances the pointer to the next line and tries again
+        clear junk;
+        
+    end
+        
+    
+end
+fclose(fid);
+
+    %%% Convert time_stamp into a timevector
+    try
+    file_TV(:,1) = JJB_DL2Datenum(str2num(timestamp(:,1:4)), str2num(timestamp(:,6:7)), ...
+        str2num(timestamp(:,9:10)), str2num(timestamp(:,12:13)), str2num(timestamp(:,15:16)), 00);
+    catch
+        %%% THis part fixes cases where a #IND gets put in the timestamp
+        %%% (don't know why);
+        for k = 1:1:length(timestamp)
+            ind(k,1) = strncmp(timestamp(k,:),'20',2);
+        end
+        good_rows = find(ind == 1);
+        timestamp_tmp = timestamp(good_rows,:);
+        timestamp = timestamp_tmp;
+        clear timestamp_tmp;
+        
+      file_TV(:,1) = JJB_DL2Datenum(str2num(timestamp(:,1:4)), str2num(timestamp(:,6:7)), ...
+        str2num(timestamp(:,9:10)), str2num(timestamp(:,12:13)), str2num(timestamp(:,15:16)), 00);
+      data_tmp = data(good_rows,:); clear data;
+      data = data_tmp
+        
+        
+        disp('whoops!');
+%         s = input('here');
+    end
+        
+        
+ file_TV = (round(file_TV.*100000))./100000;

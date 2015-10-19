@@ -1,0 +1,113 @@
+% This script is designed to calculate the daily averages of the efflux for
+% all chambers. 
+% Designed on February 26, 2009 for undergraduate thesis work. 
+
+% --- get time ---
+days = 1;
+
+%%%%%%%%%%%%% 2008 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% --- get time vector ---
+load decdoy_00.txt;
+dt = decdoy_00;
+TimeX = dt;
+
+load 'C:\DATA\condensed\output_2009.dat';
+
+cleaned_Ch1 = output_2009(:,16);
+cleaned_Ch1(cleaned_Ch1==0,1) = NaN;
+
+cleaned_Ch2 = output_2009(:,26);
+cleaned_Ch2(cleaned_Ch2==0,1) = NaN;
+
+cleaned_Ch3 = output_2009(:,36);
+cleaned_Ch3(cleaned_Ch3==0,1) = NaN;
+
+cleaned_Ch4 = output_2009(:,46);
+cleaned_Ch4(cleaned_Ch4==0,1) = NaN;
+
+
+% Calculate daily mean values
+% --- get Efflux, umol CO2 m-2 s-1 ---
+cleaned_Ch1 =  cleaned_Ch1; % umol CO2 m-2 s-1 
+[cleaned_Ch1sum,cleaned_Ch1mean,TimeX] = integzBC1(dt(~isnan(cleaned_Ch1)),cleaned_Ch1(~isnan(cleaned_Ch1)),1:365,days); 
+cleaned_Ch1Mean	=	cleaned_Ch1mean'; 
+save 'C:\DATA\condensed\daily\cleaned_Ch1_DM.dat'  cleaned_Ch1Mean   -ASCII
+
+% --- get NEP, g C m-2 day-1 ---
+cleaned_Ch1 =  cleaned_Ch1; % umol CO2 m-2 s-1 
+cleaned_Ch1 =  cleaned_Ch1 * 1.0368 ; % gm C m-2 hhour-1 
+[cleaned_Ch1sum,cleaned_Ch1mean,TimeX] = integzBC1(dt(~isnan(cleaned_Ch1)),cleaned_Ch1(~isnan(cleaned_Ch1)),1:365,days); 
+cleaned_Ch1Mean	=	cleaned_Ch1mean'; 
+save 'C:\DATA\condensed\daily\cleaned_Ch1gmC_DM.dat'  cleaned_Ch1Mean   -ASCII
+
+% --- get EFlux, umol CO2 m-2 s-1 ---
+cleaned_Ch2  =  cleaned_Ch2 ; % umol CO2 m-2 s-1 
+[cleaned_Ch2sum,cleaned_Ch2mean,TimeX] = integzBC1(dt(~isnan(cleaned_Ch2)),cleaned_Ch2(~isnan(cleaned_Ch2)),1:365,days); 
+cleaned_Ch2Mean	=	cleaned_Ch2mean'; 
+save 'C:\DATA\condensed\daily\cleaned_Ch2_DM.dat'  cleaned_Ch2Mean   -ASCII
+
+% --- get NEP, g C m-2 day-1 ---
+cleaned_Ch2 =  cleaned_Ch2; % umol CO2 m-2 s-1 
+cleaned_Ch2 =  cleaned_Ch2 * 1.0368 ; % gm C m-2 hhour-1 
+[cleaned_Ch2sum,cleaned_Ch2mean,TimeX] = integzBC1(dt(~isnan(cleaned_Ch2)),cleaned_Ch2(~isnan(cleaned_Ch2)),1:365,days); 
+cleaned_Ch2Mean	=	cleaned_Ch2mean'; 
+save 'C:\DATA\condensed\daily\cleaned_Ch2gmC_DM.dat'  cleaned_Ch2Mean   -ASCII
+
+% --- get EFlux, umol CO2 m-2 s-1 ---
+cleaned_Ch3 =  cleaned_Ch3; % umol CO2 m-2 s-1 
+[cleaned_Ch3sum,cleaned_Ch3mean,TimeX] = integzBC1(dt(~isnan(cleaned_Ch3)),cleaned_Ch3(~isnan(cleaned_Ch3)),1:365,days); 
+cleaned_Ch3Mean	=	cleaned_Ch3mean'; 
+save 'C:\DATA\condensed\daily\cleaned_Ch3_DM.dat'  cleaned_Ch3Mean   -ASCII
+
+% --- get NEP, g C m-2 day-1 ---
+cleaned_Ch3 =  cleaned_Ch3; % umol CO2 m-2 s-1 
+cleaned_Ch3 =  cleaned_Ch3 * 1.0368 ; % gm C m-2 hhour-1 
+[cleaned_Ch3sum,cleaned_Ch3mean,TimeX] = integzBC1(dt(~isnan(cleaned_Ch3)),cleaned_Ch3(~isnan(cleaned_Ch3)),1:365,days); 
+cleaned_Ch3Mean	=	cleaned_Ch3mean'; 
+save 'C:\DATA\condensed\daily\cleaned_Ch3gmC_DM.dat'  cleaned_Ch3Mean   -ASCII
+
+% --- get EFlux, umol CO2 m-2 s-1 ---
+cleaned_Ch4 =  cleaned_Ch4; % umol CO2 m-2 s-1 
+[cleaned_Ch4sum,cleaned_Ch4mean,TimeX] = integzBC1(dt(~isnan(cleaned_Ch4)),cleaned_Ch4(~isnan(cleaned_Ch4)),1:365,days); 
+cleaned_Ch4Mean	=	cleaned_Ch4mean'; 
+save 'C:\DATA\condensed\daily\cleaned_Ch4_DM.dat'  cleaned_Ch4Mean   -ASCII
+
+% --- get NEP, g C m-2 day-1 ---
+cleaned_Ch4 =  cleaned_Ch4; % umol CO2 m-2 s-1 
+cleaned_Ch4 =  cleaned_Ch4 * 1.0368 ; % gm C m-2 hhour-1 
+[cleaned_Ch4sum,cleaned_Ch4mean,TimeX] = integzBC1(dt(~isnan(cleaned_Ch4)),cleaned_Ch4(~isnan(cleaned_Ch4)),1:365,days); 
+cleaned_Ch4Mean	=	cleaned_Ch4mean'; 
+save 'C:\DATA\condensed\daily\cleaned_Ch4gmC_DM.dat'  cleaned_Ch4Mean   -ASCII
+
+%% Plot and see the data
+
+load 'C:\DATA\condensed\daily\cleaned_Ch1gmC_DM.dat';
+load 'C:\DATA\condensed\daily\cleaned_Ch2gmC_DM.dat';
+load 'C:\DATA\condensed\daily\cleaned_Ch3gmC_DM.dat';
+load 'C:\DATA\condensed\daily\cleaned_Ch4gmC_DM.dat';
+
+figure (1);
+hold on;
+plot (cleaned_Ch1gmC_DM, 'r','LineWidth',2);
+plot (cleaned_Ch2gmC_DM, 'b','LineWidth',2);
+%plot (cleaned_Ch3gmC_DM, 'g','LineWidth',2);
+plot (cleaned_Ch4gmC_DM, 'c','LineWidth',2);
+title('Daily Average of Soil CO2 Efflux, JD 214 to 350')
+legend('Ch SE','Ch SW', 'Ch NW',1);
+AXIS([214 365 -2 7]);
+xlabel 'DOY';
+ylabel 'Soil CO2 Efflux (g C m-2 d-1)';
+
+%% Plot the cummulative data based on daily averages
+
+figure (2);
+hold on;
+title 'Cumulative Soil CO2 Efflux';
+plot (cumsum(cleaned_Ch1gmC_DM(~isnan(cleaned_Ch1gmC_DM))),'r','LineWidth',2);
+plot (cumsum(cleaned_Ch2gmC_DM(~isnan(cleaned_Ch2gmC_DM))),'b','LineWidth',2);
+%plot (cumsum(cleaned_Ch3gmC_DM(~isnan(cleaned_Ch3gmC_DM))),'g','LineWidth',2);
+plot (cumsum(cleaned_Ch4gmC_DM(~isnan(cleaned_Ch4gmC_DM))),'c','LineWidth',2);
+legend('Ch SE','Ch SW','Ch NE', 'Ch NW',2);
+AXIS([0 150 0 550]);
+xlabel 'DOY';
+ylabel 'Cumulative Soil CO2 Efflux (g C m-2 d-1)';

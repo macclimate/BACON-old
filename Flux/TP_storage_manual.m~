@@ -1,0 +1,282 @@
+function [] = TP_storage_manual(year, site)
+if isstr(year);
+else
+    year = num2str(year);
+end
+
+
+loadstart = addpath_loadstart;
+
+load_path_filled = ([loadstart 'Matlab/Data/Met/Final_Filled/' site '/' site '_' year '.']);
+load_path_cleaned = ([loadstart 'Matlab/Data/Met/Cleaned3/' site '/' site '_' year '.']);
+
+switch site 
+    case 'TP74'
+load_path_CPEC = ([loadstart 'Matlab/Data/Flux/CPEC/' site '/Organized/' site '_' year]);
+    case 'TP39'
+load_path_CPEC = ([loadstart 'Matlab/Data/Flux/CPEC/' site '/HH_fluxes/']);
+end
+
+
+save_path = ([loadstart 'Matlab/Data/Flux/Final_Calculated/' site '/' site '_' year ]);
+
+param_path = [loadstart 'Matlab/Data/Met/Calculated4/Docs/'];
+hdr_cleaned = jjb_hdr_read([loadstart 'Matlab/Data/Met/Raw1/Docs/' site '_OutputTemplate.csv'],',',3);
+
+
+
+%% Parameters:
+[junk(:,1) junk(:,2) junk(:,3) dt]  = jjb_makedate(str2double(year),30);
+param = params(year, num2str(site), 'CO2_storage');
+z = param(:,1);     ztop = param(:,2);   zcpy = param(:,3);
+col_flag = param(:,4);
+Ma = 28.97; % approx molar mass of dry air:
+rho_a = 1200;  % approx density of dry air (g/m3)
+
+try
+    Storage_params = dlmread([param_path 'TP_Storage_params.csv'],',');
+catch
+    Storage_params = [] ;
+end
+
+%% Load Variables;
+%CO2 Concentrations:
+[Y junk1 junk2 junk3] = jjb_makedate(str2num(year),30);
+
+try
+CO2_cpy = jjb_load_var(hdr_cleaned, load_path_cleaned, 'CO2_Cnpy',2);
+catch
+    CO2_cpy = NaN.*ones(length(Y),1);
+end
+    
+    
+    
+CO2_top(1:length(CO2_cpy),1) = NaN;
+try
+tmp_CO2_top = load([load_path_CPEC 'CO2' year(3:4) '.dat']);
+catch
+    tmp_CO2_top = load([load_path_CPEC '.CO2']);
+end
+    
+CO2_top(1:length(tmp_CO2_top),1) = tmp_CO2_top(1:length(tmp_CO2_top),1) ;
+
+
+
+
+% FC:
+
+FC(1:length(CO2_cpy),1) = NaN;
+try
+tmp_FC = load([load_path_CPEC 'Fc' year(3:4) '.dat']);
+catch
+    tmp_FC = load([load_path_CPEC '.Fc']);
+end
+FC(1:length(tmp_FC),1) = tmp_FC(1:length(tmp_FC),1) ;
+
+% Ta and APR:
+Ta = load([load_path_filled 'Ta']);
+APR = load([load_path_filled 'APR']);
+
+%% Initial Clean on CO2_top and FC 
+%%% They may have come directly from the flux proc program:
+%     real_spikes_1h = jjb_find_spike2(dcdt_1h, 15,2,st_pt);
+% spikes_FC = jjb_find_spike2(FC, 15,2,[]);
+% FC(spikes_FC,1) = NaN;
+
+CO2_top(CO2_top < 330 | CO2_top > 600,1) = NaN;
+FC(FC < - 40 | FC > 25,1) = NaN;
+
+
+%% DO HEAT STORAGE FIRST:
+
+%%% Shift Temperature data by one point and take difference to get dT/dt
+%%% Also cuts off the extra data point that is created by adding NaN
+T1top = [NaN; Ta(1:length(Ta)-1)];
+T2top = [Ta(1:length(Ta)-1) ; NaN];
+
+%%% Heat Storage
+dTdt = T1top-T2top;
+Jt(:,1) = 22.25.*0.6.*dTdt +1.66;    %% Blanken et al. (1997)
+Jt(1,1) = Jt(2,1); Jt(length(dt),1) = Jt(length(dt)-1,1);
+%%% Fill small gaps with linear interp:
+[Jtfill] = jjb_interp_gap(Jt,dt, 3);
+
+%% CO2 STORAGE:
+
+%%% Shift CO2_top data by one point and take difference to get dc/dt
+%%% Also cuts off the extra data point that is created by adding NaN
+c1top = [NaN; CO2_top(1:length(CO2_top)-1)];
+c2top = [CO2_top(1:length(CO2_top)-1) ; NaN];
+c1cpy = [NaN; CO2_cpy(1:length(CO2_cpy)-1)];
+c2cpy = [CO2_cpy(1:length(CO2_cpy)-1) ; NaN];
+
+%%%%%%%%%%%%%%%%%%%%% 1-height %%%%%%%%%%%%%%%%%%%%
+%%% Calculate CO2 storage in column below system: One-Height approach
+%%%*** Note the output of this is in umol/mol NOT IN mg/m^3 ***********
+% dcdt_1h(:,1) = (c2top-c1top).*(z/1800);
+dcdt_1h(:,1) = (c2top-c1top).*rho_a./Ma.*z./1800;
+
+%%%%%%%%%%%%%%%%% 2-height %%%%%%%%%%%%%%%%%%%%%%%%%%
+
+if col_flag == 2 % Calculate for the top and bottom halves
+    %%% top
+    dcdt_top = (c2top-c1top).*rho_a./Ma.*ztop./1800;
+
+    %%% bottom
+    dcdt_cpy = (c2cpy-c1cpy).*rho_a./Ma.*zcpy./1800;   %%
+elseif col_flag == 1;
+    dcdt_top(1:length(dt),1) = NaN;
+    dcdt_cpy(1:length(dt),1) = NaN;
+end
+
+%%% Add top and bottom storages
+dcdt_2h(:,1) = dcdt_top + dcdt_cpy;  %% 2-height storage in umol/mol m^-2s^-1
+
+%% Remove outliers
+
+try
+    right_row = find(Storage_params(:,1) == str2num(site(3:4)) & Storage_params(:,2) == str2num(year));
+
+    dcdt_1h(dcdt_1h < Storage_params(right_row,3) | dcdt_1h > Storage_params(right_row,4)) = NaN;
+    dcdt_2h(dcdt_2h < Storage_params(right_row,3) | dcdt_2h > Storage_params(right_row,4)) = NaN;
+    st_pt = Storage_params(right_row,5);
+    st_pt2 = Storage_params(right_row,6);
+
+    z = Storage_params(right_row,7);
+    sdev = Storage_params(right_row,8);
+    switch site
+        case 'TP74'
+            dcdt_1h(
+            
+    end
+    real_spikes_1h = jjb_find_spike2(dcdt_1h, z,sdev,st_pt);
+    if strcmp(site,'TP02')~=1
+        real_spikes_2h = jjb_find_spike2(dcdt_2h, z,sdev,st_pt2);
+    else
+        real_spikes_2h(1:length(real_spikes_1h),1) = 0;
+    end
+
+catch
+
+    % real_spikes_1h = jjb_find_spike2(dcdt_1h, 15,1.5,[]);
+    % real_spikes_2h = jjb_find_spike2(dcdt_2h, 15,1.5,[]);
+    % real_spikes_1h = jjb_find_spike2(dcdt_1h, 8,1,[]);
+    % real_spikes_2h = jjb_find_spike2(dcdt_2h, 15,1,[]);
+    real_spikes_1h = jjb_find_spike2(dcdt_1h, 8,1,[]);
+    real_spikes_2h = jjb_find_spike2(dcdt_2h, 15,1,[]);
+
+end
+
+dcdt_1h(abs(real_spikes_1h) ==1,1) = NaN;
+dcdt_2h(abs(real_spikes_2h) ==1,1) = NaN;
+
+%%% Tracker:
+dcdt1h_tracker(1:length(dt),1) = 0; dcdt1h_tracker(~isnan(dcdt_1h),1) = 1;
+dcdt2h_tracker(1:length(dt),1) = 0; dcdt2h_tracker(~isnan(dcdt_2h),1) = 1;
+
+%%% Fill gaps in 2h from 1h
+ind_fill_ok = find(isnan(dcdt_2h) & ~isnan(dcdt_1h));
+
+dcdt_2h(ind_fill_ok,1) = dcdt_1h(ind_fill_ok,1);
+dcdt2h_tracker(ind_fill_ok,1) = 1;
+
+%% Fill small gaps by linear interpolation
+
+[dcdt_2hfill] = jjb_interp_gap(dcdt_2h,dt, 3);
+ind_interp_2h = find(~isnan(dcdt_2hfill) & isnan(dcdt_2h));
+dcdt2h_tracker(ind_interp_2h,1) = 2;
+
+[dcdt_1hfill] = jjb_interp_gap(dcdt_1h,dt, 3);
+ind_interp_1h = find(~isnan(dcdt_1hfill) & isnan(dcdt_1h));
+dcdt1h_tracker(ind_interp_1h,1) = 2;
+
+
+gaps = length(find(isnan(dcdt_2hfill)));
+FCgaps = length(find(isnan(FC)));
+topgaps = length(find(isnan(CO2_top)));
+Tagaps = length(find(isnan(Ta)));
+Jtgaps = length(find(isnan(Jtfill)));
+FCdtgaps = length(find(isnan(FC) & isnan(dcdt_2hfill) ));
+
+disp(['we have : ' num2str(gaps) ' gaps in storage data!']);
+disp(['we have : ' num2str(topgaps) ' gaps in CO2_top data!']);
+disp(['we have : ' num2str(FCgaps) ' gaps in FC data!']);
+disp(['we have : ' num2str(Tagaps) ' gaps in Ta data!']);
+disp(['we have : ' num2str(Jtgaps) ' gaps in Jt data!']);
+disp(['we have : ' num2str(FCdtgaps) ' coincident gaps between FC and dcdt data!']);
+
+temp_NEE = [FC' ; dcdt_2hfill'];
+NEE = (sum(temp_NEE))';
+
+%%% Clean out spikes in NEE:
+switch site
+    case 'TP74'
+        NEE(NEE < -25 | NEE > 15) = NaN; 
+        NEE((dt < 80 | dt > 335) & abs(NEE) > 6,1) = NaN; 
+    real_spikes_NEE = jjb_find_spike2(NEE,5,0.5,2376);
+    case 'TP39'
+     real_spikes_NEE = jjb_find_spike2(NEE, 10,1.5,[]); %985 is a good starting pt in 2008 for TP39
+  NEE(NEE < -35 | NEE > 25) = NaN;  
+  NEE((dt < 80 | dt > 335) & abs(NEE) > 8,1) = NaN; 
+end
+  
+    NEE(abs(real_spikes_NEE)==1,1) = NaN;
+
+    NEEgaps = length(find(isnan(NEE)));
+    disp(['we have : ' num2str(NEEgaps) ' gaps in NEE data!']);
+    
+%% Plot Some data:
+%%% Figure 2 - Storage Comparisons
+
+figure (2); clf
+subplot(2,1,1)
+hold on;
+plot (dcdt_2hfill,'b')
+plot (dcdt_2h,'r')
+legend ('Filled', 'Raw');
+title ('CO2 storage (raw vs filled) 2-height');
+ylabel ('CO2 Storage (mg m^-^2 s^-^1)')
+axis([0 365 min(dcdt_2hfill) max(dcdt_2hfill)]);
+
+subplot(2,1,2)
+hold on;
+plot (dt,dcdt_1hfill,'g')
+plot (dt,dcdt_2hfill,'b')
+legend ('1-height', '2-height');
+title ('CO2 storage (filled) 1-height vs 2-height');
+ylabel ('CO2 Storage (mg m^-^2 s^-^1)');
+xlabel ('Day of Year');
+axis([0 365 min(dcdt_2hfill) max(dcdt_2hfill)]);
+
+
+figure(3); clf
+
+plot(dt,FC,'k'); hold on;
+plot(dt,NEE,'b'); hold on;
+title('raw NEE')
+legend('NEE','FC');
+axis([0 366 -40 40]); 
+
+figure(4)
+plot(CO2_top,'b'); hold on;
+plot(CO2_cpy,'r'); hold on;
+
+figure(5)
+plot(Jt,'g');
+
+%% SAVE Variables
+% temp_dcdt_1h = data(yr_ctr).dcdt_1h;         temp_dcdt_2h = data(yr_ctr).dcdt_2h; 
+% temp_dcdt_2hfill = data(yr_ctr).dcdt_2hfill; temp_dcdt_1hfill = data(yr_ctr).dcdt_1hfill; 
+% temp_Jt = data(yr_ctr).Jtfill; temp_NEE = data(yr_ctr).NEE; 
+
+
+%%% Raw dcdt in umol/mol m^-2s^-1
+save ([save_path 'dcdt_1h.dat'],'dcdt_1hfill','-ASCII');
+save ([save_path 'dcdt_2h.dat'],'dcdt_2hfill','-ASCII');
+
+save ([save_path 'Jt.dat'],'Jt','-ASCII');
+save ([save_path 'NEE_raw.dat'],'NEE','-ASCII');
+
+% %%% save tracker files:
+% save([tracker_path 'dcdt_1h_tracker.dat'],'dcdt1h_tracker');
+% save([tracker_path 'dcdt_2h_tracker.dat'],'dcdt2h_tracker');

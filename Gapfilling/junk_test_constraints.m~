@@ -1,0 +1,528 @@
+function [] = junk_test_constraints()
+
+year_start = 2003;
+year_end = 2009;
+site = 'TP39';
+
+%%% Paths:
+ls = addpath_loadstart;
+load_path = [ls 'Matlab/Data/Master_Files/' site '/'];
+save_path = [ls 'Matlab/Data/Flux/Gapfilling/Gapfilling_test_20100811/'];
+footprint_path = [ls 'Matlab/Data/Flux/Footprint/'];
+
+%%% Load gapfilling file and make appropriate adjustments:
+load([load_path site '_gapfill_data_in.mat']);
+%%% trim data to fit with the years selected:
+data = trim_data_files(data,year_start, year_end);
+%%% Calculate VPD from RH and Ta:
+data.VPD = VPD_calc(data.RH, data.Ta);
+[junk, data.GDD] = GDD_calc(data.Ta,10,48,year_start:1:year_end);
+data.SM = data.SM_a_filled; %clear SM;
+%%% Add a tag for the site name:
+data.site = site;
+%%% Load the footprint flag file:
+% load([footprint_path site '_footprint_flag.mat'])
+orig_NEE = data.NEE;
+
+S = (lines(10) + gray(10))/2;
+clrs = colormap(S);
+% options to be set:
+% 1. footprint
+% (0 = none, 1 = Scheupp, 2 = Hsieh)
+% (160 = Scheupp, XCrit = 0.6; 170 = Scheupp, XCrit = 0.7; 180 = Scheupp, XCrit = 0.8)
+% (260 = Hsieh, XCrit = 0.6; 270 = Hsieh, XCrit = 0.7; 280 = Hsieh, XCrit = 0.8)
+
+% 2. Respiration model:
+% 2a -options.RE.model(1A, 1B, 2A.. etc etc) - (FCRN does it FCRN way)
+% 2b - options.RE.costfun ('WSS','OLS' or 'MAWE')
+% 2c - options.RE.min_method ('NM', LM' or 'SA')
+% 2d - options.RE.f_coeff
+
+% 3. GEP model:
+% 3a -options.GEP.model(1A, 1B, 2A.. etc etc) - (FCRN does it FCRN way)
+% 3b - options.GEP.costfun ('WSS','OLS' or 'MAWE')
+% 3d - options.GEP.f_coeff
+
+
+% All-years vs individual-years
+
+% options.costfun = {'WSS';'OLS';'MAWE'};
+% options.min_method = {'NM';'LM'};
+options.RE.costfun ='WSS'; options.RE.min_method ='NMC';
+options.GEP.costfun ='WSS'; options.GEP.min_method ='NMC';
+
+%%% Respiration Options:
+options.RE.model = {'fitresp_1A'; 'fitresp_1B'; 'fitresp_2A'; 'fitresp_2B'; ...
+    'fitresp_3A'; 'fitresp_3B'; 'fitresp_3C'; 'fitresp_7A'; 'fitresp_2A'};
+options.RE.SMflag = [0;1;0;1;0;1;1;1]; % specifies which functions use SM function
+options.RE.start_coeffs = {[908,286,233];[1743,305,232,0.17,7.57];...
+    [11.4,0.17,15.8];[12,0.05,12,8,180];...%[16.2,0.167,16.8,0.012,11.1];...
+    [2.62,3.41];[3.06,3.53,0.044,16.08];[2.55,3.62,0.0256,-0.573];...
+    [6.31,0.13,1.42,-3.64]; [11.4,0.17,15.8]};
+
+
+%%% GEP Options:
+options.GEP.model = {'PAR_tvp';'all_tvp'; 'all'};
+options.GEP.start_coeffs = [0.05 40 2 0.5 -2 -0.8 8 180];
+options.GEP.lbound = [0.01 20 1 0.1 -4 -3   0  5];
+options.GEP.ubound = [0.15 60 8 1   -1 -0.5 30 400];
+%%% Footprint Options:
+options.FP.model = {'none';'Schuepp';'Schuepp';'Schuepp'; 'Hsieh'; 'Hsieh'; 'Hsieh'};
+options.FP.XCrit = [0;0.6; 0.7; 0.8;0.6; 0.7; 0.8];
+%%% Data Aggregation Options:
+options.param = {'all_yrs'; 'indiv_yrs'};
+options.Ustar_th = [0.3; 0.325; 0.35; 0.25];
+% options.binavg = {'off';'on'};
+options.datacut = {'off';'on'};
+
+%%% Other settings: %%%%%
+Ustar_th = 0.325;
+fn_ctr = 4; %length(options.RE.model)
+fn_name = char(options.RE.model(fn_ctr,1));
+data.NEE = orig_NEE;
+%%% Random Error
+data.NEEstd = NEE_random_error_estimator_v3(data, [], Ustar_th,0);
+%%% Respiration
+Rraw(1:length(data.NEE),1) = NaN;
+RE_model(1:length(data.NEE),1) = NaN;
+
+%%% Find periods when measured NEE is acceptable to use as raw RE:
+ind_Rraw = find((data.Ustar >= Ustar_th & ~isnan(data.NEE) & data.PAR < 15 ) |... % growing season
+    (data.Ustar >= Ustar_th & ~isnan(data.NEE) & ((data.dt < 85 | data.dt > 335) & data.Ts5 < 0.2)) );                             % non-growing season
+Rraw(ind_Rraw) = data.NEE(ind_Rraw);
+
+ind_param(1).RE_all = find((data.Ustar >= Ustar_th & ~isnan(data.Ts5) & ~isnan(data.SM) & ~isnan(data.NEE) & data.PAR < 15) |... % growing season
+    (data.Ustar >= Ustar_th & ~isnan(data.NEE) & ~isnan(data.SM) & ((data.dt < 85 | data.dt > 335) & data.Ts5 < 0.2)  ) );  % non-growing season
+
+starting_coeffs = [13,0.1,12,4,100];
+options.RE.lbound = [5,0.1,5,0,5];
+options.RE.ubound = [13,0.3,20,20,400];
+i1_values = [10:2:28]';
+i4_values = [0:1.5:13.5]';
+
+
+
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% We need give thorough investigation to the relationships between the
+% coefficients -- perhaps we can fix one or two values (or constrain them
+% to a small space), to avoid equifinality problems. Do this by
+% constraining in a grid pattern
+stats_out = [];
+coeffs_out = [];
+err_out = [];
+flags_out = [];
+sums_out = [];
+for i1 = 1:1:10
+        for i4 = 1:1:10 
+options.RE.ubound(1) = i1_values(i1);%[5,0.1,5,0,5];
+options.RE.lbound(4) = i4_values(i4);%[13,0.3,20,20,400];
+options.RE.f_coeff = NaN.*ones(1,5);
+[c_hat(1).REall, y_hat(1).REall, y_pred(1).REall, stats(1).REall, sigma(1).REall, err(1).REall, exitflag(1).REall, num_iter(1).REall] = ...
+    fitresp(starting_coeffs, 'fitresp_2B', [data.Ts5(ind_param(1).RE_all) data.SM(ind_param(1).RE_all)] , data.NEE(ind_param(1).RE_all), [data.Ts5 data.SM], data.NEEstd(ind_param(1).RE_all), options.RE);
+ctr = 1;
+for yr = 2003:1:2009
+   RE_sum_tmp(1,ctr) = sum(y_pred(1).REall(data.Year== yr)).*0.0216;
+    ctr = ctr +1;
+end
+
+
+coeffs_out = [coeffs_out; c_hat(1).REall];
+stats_out = [stats_out; [stats(1).REall.RMSE stats(1).REall.BE stats(1).REall.R2]];
+err_out = [err_out; err(1).REall];
+flags_out = [flags_out; [i1_values(i1) i4_values(i4)]];
+sums_out = [sums_out; RE_sum_tmp];
+clear RE_sum_tmp;
+        end
+end
+
+
+
+
+disp('done');
+
+figure(1);clf;figure(7);clf;
+for i1 = 1:1:10
+    figure(1);
+h1(i1) = plot3(coeffs_out((i1*10)-9:(i1*10),1), coeffs_out((i1*10)-9:(i1*10),4),sums_out((i1*10)-9:(i1*10),3), ...
+    'ko','MarkerFaceColor',clrs(i1,:),'MarkerEdgeColor',clrs(i1,:), 'MarkerSize',50/(i1*1.5)); hold on;
+figure(7)
+h1(i1) = plot3(coeffs_out((i1*10)-9:(i1*10),1), coeffs_out((i1*10)-9:(i1*10),4),sums_out((i1*10)-9:(i1*10),5), ...
+    'ko','MarkerFaceColor',clrs(i1,:),'MarkerEdgeColor',clrs(i1,:), 'MarkerSize',50/(i1*1.5)); hold on;
+end
+figure(1);
+ylabel('SM(1)','FontSize',18);
+xlabel('Ts(1)','FontSize',18);
+zlabel('RE - 2005','FontSize',18);
+legend(h1, num2str((1:1:10)'))
+grid on;
+set(gca,'FontSize',18);
+print('-dpng','/home/brodeujj/Matlab/Figs/SiteSpec/Ts1vsSM1_2005.png')
+figure(7);
+ylabel('SM(1)','FontSize',18);
+xlabel('Ts(1)','FontSize',18);
+zlabel('RE - 2007','FontSize',18);
+legend(h1, num2str((1:1:10)'))
+grid on;
+set(gca,'FontSize',18);
+print('-dpng','/home/brodeujj/Matlab/Figs/SiteSpec/Ts1vsSM1_2007.png')
+
+
+[B ix] = sort(abs(stats_out(:,2)),'ascend');
+c_BE = coeffs_out(ix,:);
+[B_err ix_err] = sort(err_out,'ascend');
+c_err = coeffs_out(ix_err,:);
+
+
+figure(3);clf;
+for yr_ctr = 1:1:7
+figure(3);
+    subplot(3,3,yr_ctr)
+hist(sums_out(:,yr_ctr))
+title(num2str(2002+yr_ctr))
+set(gca,'FontSize',18)
+end
+print('-dpng','/home/brodeujj/Matlab/Figs/SiteSpec/REsums_histos.png')
+
+
+
+figure(4);clf;
+boxplot(sums_out)
+set(gca,'FontSize',18)
+grid on;
+set(gca,'XTick',(1:1:7)');
+set(gca,'XTickLabel',{'2003';'2004';'2005';'2006';'2007';'2008';'2009'},'FontSize',18);
+print('-dpng','/home/brodeujj/Matlab/Figs/SiteSpec/REsums_boxplots.png')
+
+
+figure(6);clf;
+plot3(coeffs_out(:,1),coeffs_out(:,4),sums_out(:,3),'k.');
+grid on;
+xlabel('Ts(1)');
+ylabel('SM(1)');
+zlabel('RE - 2005');
+
+
+%
+% RE_lbounds = [0:1:10];
+% RE_ubounds = 20*ones(1,length(RE_lbounds));
+% 
+% total_ctr = 1;
+% tic;
+% Ustar_th = 0.325;
+% fn_ctr = 4; %length(options.RE.model)
+% fn_name = char(options.RE.model(fn_ctr,1));
+% SM_flag = 1;
+% starting_coeffs = options.RE.start_coeffs{fn_ctr,1};
+% num_coeffs = length(starting_coeffs);
+% options.binavg = {'off'};
+% fp_ctr = 1;
+% binavg_ctr = 1;
+% datacut_ctr = 1;
+% 
+% data.NEE = orig_NEE;
+% 
+% 
+% %%% Estimate std associated with each measurement of NEE:
+% % data.NEEstd = NEE_random_error_estimator(data, [], Ustar_th,0);
+% data.NEEstd = NEE_random_error_estimator_v3(data, [], Ustar_th,0);
+% 
+% %                     close all;
+% %%%%%%%%%%%%%%%%% RESPIRATION %%%%%%%%%%%%%%%%%%%%%%%%%
+% Rraw(1:length(data.NEE),1) = NaN;
+% RE_model(1:length(data.NEE),1) = NaN;
+% 
+% %%% Find periods when measured NEE is acceptable to use as raw RE:
+% ind_Rraw = find((data.Ustar >= Ustar_th & ~isnan(data.NEE) & data.PAR < 15 ) |... % growing season
+%     (data.Ustar >= Ustar_th & ~isnan(data.NEE) & ((data.dt < 85 | data.dt > 335) & data.Ts5 < 0.2)) );                             % non-growing season
+% Rraw(ind_Rraw) = data.NEE(ind_Rraw);
+% 
+% ind_param(1).RE_all = find((data.Ustar >= Ustar_th & ~isnan(data.Ts5) & ~isnan(data.SM) & ~isnan(data.NEE) & data.PAR < 15) |... % growing season
+%     (data.Ustar >= Ustar_th & ~isnan(data.NEE) & ~isnan(data.SM) & ((data.dt < 85 | data.dt > 335) & data.Ts5 < 0.2)  ) );  % non-growing season
+% %%% Run the model:
+% %%% Reset the fixed coefficients to make sure no values
+% %%% are fixed.
+% stats_out = [];
+% coeffs_out = [];
+% err_out = [];
+% for k = 1:1:length(RE_lbounds)
+%     options.RE.lbound(4) = RE_lbounds(k);
+%     options.RE.ubound(4) = RE_ubounds(k);
+% %     starting_coeffs(4) = mean([RE_lbounds(k); RE_ubounds(k)]);
+% %     starting_coeffs(5) = 100;
+% options.RE.f_coeff = NaN.*ones(1,num_coeffs);
+% [c_hat(k).REall, y_hat(1).REall, y_pred(1).REall, stats(k).REall, sigma(1).REall, err(k).REall, exitflag(1).REall, num_iter(1).REall] = ...
+%     fitresp(starting_coeffs, fn_name, [data.Ts5(ind_param(1).RE_all) data.SM(ind_param(1).RE_all)] , data.NEE(ind_param(1).RE_all), [data.Ts5 data.SM], data.NEEstd(ind_param(1).RE_all), options.RE);
+% coeffs_out = [coeffs_out; c_hat(k).REall];
+% stats_out = [stats_out; [stats(k).REall.RMSE stats(k).REall.BE stats(k).REall.R2]];
+% err_out(k,1) = err(k).REall;
+% end
+% 
+% if SM_flag == 1
+%     %%% Fix coefficients for the year-to-year runs:
+%     fixed_RE_SM_coeffs = [NaN.*ones(1,num_coeffs-2) c_hat(1).REall(1,num_coeffs-1:num_coeffs)];
+%     starting_coeffs2 = starting_coeffs(1:num_coeffs-2);
+% else
+%     fixed_RE_SM_coeffs = NaN.*ones(1,num_coeffs);
+%     starting_coeffs2 = starting_coeffs;
+% end
+% %%% Cycle through years:
+% ctr = 1;
+% for year = year_start:1:year_end
+%     % index
+%     ind_param(ctr).RE = find((data.Year == year &data.Ustar >= Ustar_th & ~isnan(data.Ts5) & ~isnan(data.SM) & ~isnan(data.NEE) & data.PAR < 15 ) |... % growing season
+%         (data.Year == year & data.Ustar >= Ustar_th & ~isnan(data.NEE) & ~isnan(data.SM) & ((data.dt < 85 | data.dt > 335) & data.Ts5 < 0.2)  ) );                                   % non-growing season
+%     %%% Block Average (if activated), but this will only work in cases where we're using a Ts-only function:
+%     %%% Even in this case, we have to make our estimated error equal to 1 for all entries:
+%     if strcmp(binavg_name,'on') == 1
+%         RE_bavg = jjb_blockavg(data.Ts5(ind_param(ctr).RE),data.NEE(ind_param(ctr).RE),0.5,20, -10);
+%         ind_ok_RE = find(~isnan(RE_bavg(:,1).*RE_bavg(:,2)) & RE_bavg(:,4)>10);
+%         X_in(ctr).RE = RE_bavg(ind_ok_RE,1);
+%         X_eval = data.Ts5(data.Year == year);
+%         RE_in = RE_bavg(ind_ok_RE,2);
+%         %                             %%% Block average NEEstd:
+%         %                             RE_bavg2 = jjb_blockavg(data.Ts5(ind_param(ctr).RE),data.NEEstd(ind_param(ctr).RE),0.5,20, -10);
+%         %                             ind_ok_RE2 = find(~isnan(RE_bavg2(:,1).*RE_bavg2(:,2)) & RE_bavg2(:,4)>10);
+%         error_in = ones(length(X_in(ctr).RE),1); % no measure of error when block averaging:
+%     else
+%         X_in(ctr).RE = [data.Ts5(ind_param(ctr).RE) data.SM(ind_param(ctr).RE)];
+%         X_eval = [data.Ts5(data.Year == year) data.SM(data.Year == year)];
+%         RE_in = data.NEE(ind_param(ctr).RE);
+%         error_in = data.NEEstd(ind_param(ctr).RE);
+%     end
+%     
+%     % run minimization:
+%     options.RE.f_coeff = fixed_RE_SM_coeffs;
+%     [c_hat(ctr).RE, y_hat(ctr).RE, y_pred(ctr).RE, stats(ctr).RE, sigma(ctr).RE, err(ctr).RE, exitflag(ctr).RE, num_iter(ctr).RE] = ...
+%         fitresp(starting_coeffs2, fn_name, X_in(ctr).RE , RE_in, X_eval, error_in, options.RE);
+%     
+%     %%% Fill the modeled RE data with predicted values:
+%     RE_model(data.Year == year,1) = y_pred(ctr).RE;
+%     ctr = ctr+1;
+% end
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 
+% %                     %%%%%%%%%%%%%%%%%%%%% PHOTOSYNTHESIS %%%%%%%%%%%%%%%%%%
+% %                     clear X_eval;
+% %                     GEPraw = RE_model - data.NEE;
+% %                     %%% Set GEP to zero when PAR < 15:
+% %                     GEPraw(data.PAR < 15) = NaN;
+% %                     GEP_model = zeros(length(GEPraw),1);
+% %                     GEP_pred = NaN.*ones(length(GEPraw),1);
+% %                     %%% Index for all hhours available for parameterization of an all-years
+% %                     %%% relationship:
+% %                     ind_param(1).GEPall = find(data.Ts5 > 2 & data.Ta > 2 & data.PAR > 20 & ~isnan(GEPraw) & ~isnan(data.NEEstd) & ~isnan(data.SM) & data.VPD > 0 & data.Ustar > Ustar_th);
+% %                     X_in_GEP = [data.PAR(ind_param(1).GEPall) data.Ts5(ind_param(1).GEPall) data.VPD(ind_param(1).GEPall) data.SM(ind_param(1).GEPall)];
+% %                     X_eval = [data.PAR data.Ts5 data.VPD data.SM];
+% %                     %%% Run all-years parameterization:
+% %                     options.GEP.f_coeff = NaN.*ones(1,8);
+% %                     [c_hat(1).GEPall, y_hat(1).GEPall, y_pred(1).GEPall, stats(1).GEPall, sigma(1).GEPall, err(1).GEPall, exitflag(1).GEPall, num_iter(1).GEPall] = ...
+% %                         fitGEP(options.GEP.start_coeffs, 'fitGEP_1H1_3L6', X_in_GEP ,GEPraw(ind_param(1).GEPall),  X_eval, data.NEEstd(ind_param(1).GEPall), options.GEP);
+% %                     %%% Fix the coefficients for environmental scaling variables:
+% %                     GEP_fixed_coeffs = c_hat(1).GEPall(3:end);
+% %                     options.GEP.f_coeff = [NaN NaN GEP_fixed_coeffs];
+% %                     starting_coeffs3 = options.GEP.start_coeffs(1:2);
+% %                     %%% Run through each year, finding suitable data for parameterization in given year:
+% %                     clear X_in_GEP X_eval;
+% %                     ctr = 1;
+% %                     for year = year_start:1:year_end
+% %                         %%% Index of good data to use for model parameterization:
+% %                         ind_param(ctr).GEP = find(data.Ts5 > 2 & data.Ta > 2 & data.PAR > 15 & ~isnan(GEPraw) & data.Year == year & ~isnan(data.NEEstd) ...
+% %                             & ~isnan(data.SM) & data.VPD > 0);
+% %                         X_in_GEP = [data.PAR(ind_param(ctr).GEP) data.Ts5(ind_param(ctr).GEP) data.VPD(ind_param(ctr).GEP) data.SM(ind_param(ctr).GEP)];
+% %                         X_eval = [data.PAR(data.Year == year) data.Ts5(data.Year == year) data.VPD(data.Year == year) data.SM(data.Year == year)];
+% %                         %%% use fitGEP_1H1_3L6 function with fixed scalars to get coefficients for GEP relationship:
+% %                         [c_hat(ctr).GEP, y_hat(ctr).GEP, y_pred(ctr).GEP, stats(ctr).GEP, sigma(ctr).GEP, err(ctr).GEP, exitflag(ctr).GEP, num_iter(ctr).GEP] = ...
+% %                             fitGEP(starting_coeffs3, 'fitGEP_1H1_3L6', X_in_GEP,GEPraw(ind_param(ctr).GEP),  X_eval, data.NEEstd(ind_param(ctr).GEP), options.GEP);
+% %                         %%% Predict GEP:
+% %                         GEP_pred(data.Year == year,1) = y_pred(ctr).GEP;
+% %                         ctr = ctr+1;
+% %                     end
+% %                     %%% Clean up any problems that may exist in the data:
+% %                     ind_GEP = find(data.PAR >= 15 & ((data.dt > 85 & data.dt < 330 & (data.GDD > 8 | data.Ts5 >= 1 & data.Ta > 2)) ...
+% %                         | data.dt > 330 & data.Ts5 >= 1.25 & data.Ta > 2));
+% %
+% %                     %%% GEP_model is the final modeled GEP timeseries.
+% %                     GEP_model(ind_GEP) = GEP_pred(ind_GEP);
+% %
+% %                     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %                     %%% Added Aug 13, 2010 by JJB -- Added in for a 9th type of respiration function:
+% %                     %%% Correct the logistic Ts function by
+% %                     %%% time-varying parameter (TVP):
+% %                     if fn_ctr == 9
+% %                         pw = jjb_AB_gapfill(GEP_model, GEPraw, [],200, 10, 'off', [], [], 'rw');
+% %                        %%% Adjust modeled RE by TVP:
+% %                     GEP_model = GEP_model.*pw(:,2);
+% %                     clear pw;
+% %                     end
+% %                     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %                     %%%%%%%%%%%%%%%%%%%%% NEE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %                     %%% Clean NEE (ustar filtering):
+% %                     NEE_raw = data.NEE;
+% %                     %                     NEE_model = NaN.*ones(length(NEE_raw),1);
+% %                     NEE_clean = NEE_raw;
+% %                     NEE_clean(data.PAR < 15 & data.Ustar < Ustar_th,1) = NaN;
+% %                     %%% Fill RE - Use raw data when Ustar > threshold; otherwise, use model+tvp
+% %                     RE_filled(1:length(Rraw),1) = RE_model;
+% %                     RE_filled(~isnan(Rraw) & data.Ustar > Ustar_th,1) = Rraw(~isnan(Rraw) & data.Ustar > Ustar_th,1);
+% %                     %%% Fill GEP:
+% %                     % start with filled GEP equal to all zeroes
+% %                     GEP_filled = zeros(length(GEPraw),1);
+% %                     % fill any nans in GEPraw with GEP_model:
+% %                     GEPraw(GEPraw < 0) = NaN;
+% %                     GEP_filled_tmp = GEPraw;
+% %                     GEP_filled_tmp(isnan(GEPraw),1) = GEP_model(isnan(GEPraw),1);
+% % %                   GEPraw(isnan(GEPraw) | GEPraw < 0,1) = GEP_model(isnan(GEPraw) | GEPraw < 0,1);
+% %                     % Now, substitute GEPraw into GEP_filled when applicable (set by ind_GEP)
+% %                     ind_GEP = find(data.PAR >= 15 & ((data.dt > 85 & data.dt < 330 & (data.GDD > 8 | data.Ts5 >= 1 & data.Ta > 2)) ...
+% %                         | data.dt > 330 & data.Ts5 >= 1.25 & data.Ta > 2));
+% %                     GEP_filled(ind_GEP) = GEP_filled_tmp(ind_GEP);
+% %                     %%% Fill NEE:
+% %                     NEE_filled = NEE_clean;
+% %                     NEE_filled(isnan(NEE_filled),1) = RE_filled(isnan(NEE_filled),1) - GEP_filled(isnan(NEE_filled),1);
+% %                     NEE_model = RE_model - GEP_model;
+% %
+% %                     %%%%%%%%%%%%%% SUMMING & STATS %%%%%%%%%%%%%%%
+% %                     ctr = 1;
+% %                     for yr_ctr = year_start:1:year_end
+% %                         NEE_sum(ctr,1) = sum(NEE_filled(data.Year== yr_ctr,1)).*0.0216  ; % sums is annual sum
+% %                         GEP_sum(ctr,1) = sum(GEP_filled(data.Year== yr_ctr,1)).*0.0216  ;
+% %                         RE_sum(ctr,1) = sum(RE_filled(data.Year== yr_ctr,1)).*0.0216  ;
+% %                         GEP_model_sum(ctr,1) = sum(GEP_model(data.Year== yr_ctr,1)).*0.0216;
+% %                         RE_model_sum(ctr,1) = sum(RE_model(data.Year== yr_ctr,1)).*0.0216;
+% %                         NEE_model_sum(ctr,1) = sum(NEE_model(data.Year== yr_ctr,1)).*0.0216;
+% %                         Year_record(ctr,1) = mode(data.Year(data.Year== yr_ctr));
+% %                         [stats(ctr).REmodel.RMSE stats(ctr).REmodel.rRMSE stats(ctr).REmodel.MAE stats(ctr).REmodel.BE stats(ctr).REmodel.R2] ...
+% %                             = model_stats(RE_model(data.Year == yr_ctr), Rraw(data.Year == yr_ctr), 'off');
+% %                         [stats(ctr).GEPmodel.RMSE stats(ctr).GEPmodel.rRMSE stats(ctr).GEPmodel.MAE stats(ctr).GEPmodel.BE stats(ctr).GEPmodel.R2] ...
+% %                             = model_stats(GEP_model(data.Year == yr_ctr), GEPraw(data.Year == yr_ctr), 'off');
+% %                         [stats(ctr).NEEmodel.RMSE stats(ctr).NEEmodel.rRMSE stats(ctr).NEEmodel.MAE stats(ctr).NEEmodel.BE stats(ctr).NEEmodel.R2] ...
+% %                             = model_stats(NEE_model(data.Year == yr_ctr), NEE_clean(data.Year == yr_ctr), 'off');
+% %                         [stats(ctr).NEEfilled.RMSE stats(ctr).NEEfilled.rRMSE stats(ctr).NEEfilled.MAE stats(ctr).NEEfilled.BE stats(ctr).NEEfilled.R2] ...
+% %                             = model_stats(NEE_filled(data.Year == yr_ctr), NEE_clean(data.Year == yr_ctr), 'off');
+% %
+% %                         %%% Gaps in data:
+% %                             indRE = find(data.Year== yr_ctr & RE_filled == RE_model);
+% %                             indGEP = find(data.Year== yr_ctr & GEP_filled == GEP_model);
+% %                             indNEE = find(data.Year== yr_ctr & NEE_filled == NEE_model);
+% %                             num_filled.RE(ctr,1) = length(indRE);
+% %                             num_filled.RE(ctr,2) = length(indRE)./length(data.Year == yr_ctr);
+% %                             num_filled.GEP(ctr,1) = length(indGEP);
+% %                             num_filled.GEP(ctr,2) = length(indGEP)./length(data.Year == yr_ctr & GEP_filled > 0);
+% %                             num_filled.NEE(ctr,1) = length(indNEE);
+% %                             num_filled.NEE(ctr,2) = length(indNEE)./length(data.Year == yr_ctr);
+% %                         clear indRE indGEP indNEE
+% %
+% %                         ctr = ctr+1;
+% %                     end
+% %                     %%%%%%%%%%% OUTPUT PREPARATION %%%%%%%%%%%%%%%%%%%%%%%
+% %                     %%% Output Data:
+% %                     output.data = [data.Year NEE_clean NEE_filled NEE_model GEPraw GEP_filled GEP_model...
+% %                         Rraw RE_filled RE_model ];
+% %                     output.data_labels = {'Year'; 'NEE_clean'; 'NEE_filled'; 'NEE_model'; 'GEP_raw'; ...
+% %                         'GEP_filled'; 'GEP_model'; 'Rraw'; 'RE_filled'; 'RE_model'};
+% %                     %%% Other data:
+% %                     output.ind_param = ind_param;
+% %                     output.ind_Rraw  = ind_Rraw;
+% %                     output.y_hat = y_hat;
+% %                     output.X_in = X_in;
+% %                     %%% Sums
+% %                     output.sums = [Year_record NEE_sum NEE_model_sum GEP_sum GEP_model_sum RE_sum RE_model_sum];
+% %                     output.sums_labels = {'Year';'NEE_sum'; 'NEE_model_sum'; 'GEP_sum'; 'GEP_model_sum'; 'RE_sum'; 'RE_model_sum'};
+% %                     %%% Reorganize Stats
+% %                     output.stats.REall = jjb_stats2array(stats, 'REall');
+% %                     output.stats.REmodel = jjb_stats2array(stats, 'REmodel');
+% %                     output.stats.RE = jjb_stats2array(stats, 'RE');
+% %                     output.stats.GEPall = jjb_stats2array(stats, 'GEPall');
+% %                     output.stats.GEPmodel = jjb_stats2array(stats, 'GEPmodel');
+% %                     output.stats.GEP = jjb_stats2array(stats, 'GEP');
+% %                     output.stats.NEEmodel = jjb_stats2array(stats, 'NEEmodel');
+% % %                     output.stats.NEE = jjb_stats2array(stats, 'NEE');
+% %                     %%% Reorganize Coefficient values:
+% %                     output.coeff.REall = jjb_coeff2array(c_hat, 'REall');
+% %                     output.coeff.RE = jjb_coeff2array(c_hat, 'RE');
+% %                     output.coeff.GEPall = jjb_coeff2array(c_hat, 'GEPall');
+% %                     output.coeff.GEP = jjb_coeff2array(c_hat, 'GEP');
+% %                     %%% Exitflag and number of iterations:
+% %                     output.exitflag.REall = jjb_coeff2array(exitflag,'REall');
+% %                     output.exitflag.RE = jjb_coeff2array(exitflag,'RE');
+% %                     output.exitflag.GEP = jjb_coeff2array(exitflag,'GEP');
+% %                     output.exitflag.GEPall = jjb_coeff2array(exitflag,'GEPall');
+% %                     output.num_iter.REall = jjb_coeff2array(num_iter,'REall');
+% %                     output.num_iter.RE = jjb_coeff2array(num_iter,'RE');
+% %                     output.num_iter.GEP = jjb_coeff2array(num_iter,'GEP');
+% %                     output.num_iter.GEPall = jjb_coeff2array(num_iter,'GEPall');
+% %                     %%% Number of gaps filled:
+% %                     output.num_filled = num_filled;
+% %
+% %
+% %                     %%% Add details about the simulation:
+% %                     output.details = {'Function' fn_name ; 'SM_flag' SM_flag;...
+% %                         'Ustar_th' Ustar_th; 'fpmodel' fpmodel_name; 'fpxcrit' fpxcrit_value;...
+% %                         'Bin Avg' binavg_name; 'Data Cut' datacut_name};
+% %                     %%% Save long-output data:
+% %                     save([save_path numeric_name '.mat'],'output');
+% %
+% %                     %%%%%%%% Make short-output data: %%%%%%%%%%%%%%%%%%%%%
+% %                     tmp_output = output;
+% %                     clear output;
+% %                     output.sums = tmp_output.sums;
+% %                     output.sums_labels = tmp_output.sums_labels;
+% %                     output.stats = tmp_output.stats;
+% %                     output.coeff = tmp_output.coeff;
+% %                     output.exitflag = tmp_output.exitflag;
+% %                     output.num_iter = tmp_output.num_iter;
+% %                     output.details = tmp_output.details;
+% %                     output.num_filled = num_filled;
+% %
+% %                     output.ind_param(1).RE_all = tmp_output.ind_param(1).RE_all;
+% %                     %%% Save short-output data:
+% %                     save([save_path numeric_name 's.mat'],'output');
+% %                     clear numeric_name data.NEEstd Rraw RE_model ind* c_hat y_hat y_pred
+% %                     clear stats sigma err exitflag num_iter fixed_RE_SM_coeffs starting_coeffs2
+% %                     clear RE_bavg X_in* X_eval* RE_in error_in GEPraw GEP_model GEP_pred
+% %                     clear GEP_fixed_coeffs NEEraw NEE_clean NEE_filled *_model RE_filled
+% %                     clear GEP_filled *_sum output starting_coeffs3 tmp_output GEP_filled_tmp num_filled
+% %                     %%%%
+% %                     telapsed = toc;
+% %                     disp([num2str(total_ctr) ' simulations done in ' num2str(telapsed) 'sec.'])
+% %                     %%%%
+% %                     total_ctr = total_ctr+1;
+% %                 end
+% %             end
+% %         end
+% %     end
+% % end
+end
+
+
+%% Subfunctions %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%% Converts stats structure to an array
+function [array_out] = jjb_stats2array(struct_in, tag)
+for i = 1:1:length(struct_in)
+    if isfield(struct_in(i),tag)==1
+        eval(['empty_flag = isempty(struct_in(i).' tag ');']);
+        if empty_flag == 0
+            eval(['fnames = fieldnames(struct_in(i).' tag ');']);
+            for j = 1:1:length(fnames)
+                eval(['array_out(i,j) = struct_in(i).' tag '.' char(fnames(j,1)) ';']);
+            end
+        end
+    else
+    end
+end
+end
+
+%%% Converts coefficient structure to an array
+function [array_out] = jjb_coeff2array(struct_in, tag)
+for i = 1:1:length(struct_in)
+    if isfield(struct_in(i),tag)==1
+        eval(['empty_flag = isempty(struct_in(i).' tag ');']);
+        if empty_flag == 0
+            eval(['array_out(i,:) = struct_in(i).' tag '(1,:);']);
+        end
+    else
+    end
+end
+end
+

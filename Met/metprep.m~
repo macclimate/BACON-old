@@ -1,0 +1,134 @@
+function [] = metprep(start_datenum, end_datenum, site)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%********* metprep *************%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% This function creates daily data files with 1/2hr averages of air
+%%% temperature and air pressure, for use with CPEC flux calculation.  Air
+%%% temperature and air pressure data are loaded as column vectors from the
+%%% appropriate location, and merged with a matrix of necessary date
+%%% inputs.  
+%%%
+%%% NOTE** Before using this script, double check with 
+%%% "Met1Output_Columns_YYYY.txt" to assure that the output extensions for
+%%% each variable are still correct
+%%%
+%%% Usage: metprep(datenum(YYYY,MM,DD), datenum(YYYY,MM,DD))
+%%%                             |                     |
+%%%                         start date            end date
+%%%
+%%% Created July 17, 2007 by JJB as a modification of tp_processing2,
+%%% written by Josh McClaren.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+loadstart = addpath_loadstart;
+%%% The default site is Met 1
+if nargin == 2
+site = '1';
+else
+    if ischar(site) ==false;
+        site = num2str(site);
+    end
+end
+%%%% Determines the year in which data is being used
+datetag = datestr(start_datenum,31);
+yr = datetag(1:4);
+
+%% Make 1/2 hour column vectors for all time variables...
+tv = make_tv(str2double(yr),30);
+%%% Create Month, Day, HH, MM, SS and time column vectors
+dates = datevec(tv);    % Make datevec from TV
+dates(2:length(dates),2:3) = dates(1:length(dates)-1,2:3);  % Shift 1 spot to make 0030 first entry for each day
+
+month = dates(:,2);       % Pick out Month Column
+day = dates(:,3);       % Pick out day column
+HH = dates(:,4);    
+MM = dates(:,5);    
+SS(1:length(tv),1) = 0;   
+
+time = (1:1:length(tv))';
+
+[year JD HHMM dt]  = jjb_makedate(str2double(yr),30);
+%% Declare paths
+%%% Met data paths
+% load_path_met = (['C:/Home/Matlab/Data/Met/Organized2/Met' site '/Column/30min/Met' site '_' yr '.']);
+load_path_met = ([loadstart 'Matlab/Data/Met/Cleaned3/' site '/' site '_' yr '.']);
+
+hdr_path_met = ([loadstart 'Matlab/Data/Met/Raw1/Docs/' site '_OutputTemplate.csv']);
+
+flux_filled_path = ([loadstart 'Matlab/Data/Flux/CPEC/' site '/HH_fluxes/' site '_' yr '_']);
+
+save_path = ([loadstart 'Matlab/Data/Flux/CPEC/' site '/met_prep/' yr '/']);
+
+%%% Add 0.208 to the start date so first data entry for that day = 30 min
+start_datenum_adj = start_datenum+0.0208; 
+
+%% Loading 30-minute variables %%%%%%%%%%%%%%%%%%%%%%
+%%% Load Header FIle
+[hdr_cell_met] = jjb_hdr_read(hdr_path_met,',',3);
+
+T_air = jjb_load_var(hdr_cell_met, load_path_met, 'AirTemp_AbvCnpy');
+Pres =  jjb_load_var(hdr_cell_met, load_path_met, 'Pressure');
+
+%%% Clean variables (in the future, have cleaning done before this point)
+
+Pres(Pres < 95 | Pres > 103) = NaN;
+Pres = jjb_interp_gap(Pres,dt,3);
+Pres(isnan(Pres)) = 99;
+
+T_air(T_air < -40 | T_air > 45) = NaN;
+T_air = jjb_interp_gap(T_air,dt,3);
+T_air = interp_nan(dt,T_air);
+
+%% Save Pressure File
+save ([flux_filled_path 'pres_cl.dat'],'Pres','-ASCII');
+save ([flux_filled_path 'T_air_cl.dat'],'T_air','-ASCII');
+  
+%% Put all variables together in one matrix
+
+master = [year month day JD HH MM SS time T_air Pres];
+clear year month day JD HH MM SS time T_air Pres;
+
+%%%%%%%%%%%%%%%%% Find start and end rows %%%%%%%%%%%%%%
+% Round the tv data to assure a match in timevectors
+tv_round = (floor(tv.*10000))./10000;
+
+start_row = find (tv_round == start_datenum_adj);
+end_row = find (tv_round == end_datenum+1);
+num_rows = end_row - start_row;
+
+
+%%%%%%%%%%%%%% Organize data for output %%%%%%%%%%%%%%%%%%%%%
+% Create Header 
+header='year	month	day	JD	HH	MM	SS	time	airTCtop	Presure';
+ctr = start_row; %% Place Counter
+temp_yrstr = yr(1,3:4);  %%% two-digit year string (e.g. '06')
+
+%%%%%%%%%% Run loop to write separate file for each day %%%%%%%%%%%%%%%
+for i = 1:48:num_rows
+    hhour(1:48,1:10) = master(ctr:ctr+47,1:10);
+    hhour = hhour';
+    
+    % Create the filename 
+    temp_daystr = create_label(master(ctr+1,3),2); %%% two-digit day string (e.g. '16')
+    temp_monthstr = create_label(master(ctr+1,2),2); %%% two-digit year string (e.g. '09')
+    
+    fname = ['meteo' temp_daystr temp_monthstr temp_yrstr '.dat'];
+    
+    %%% Write the Header to the file
+    fid = fopen([save_path fname],'w');
+    fprintf(fid,'%s/n',header);
+    fclose(fid);
+    
+    %%% Write Data to file
+    fid = fopen([save_path fname],'a');
+    fprintf(fid, '%4i/t%02i/t%02i/t%02i/t%02i/t%02i/t%1i/t%02i/t%6.3f/t%6.3f/n', hhour);
+    fclose(fid);
+    
+    ctr = ctr + 48;
+    
+    clear temp_daystr temp_monthstr hhour fname;
+end
+
+  
+    
+    
+    
+

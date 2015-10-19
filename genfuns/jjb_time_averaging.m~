@@ -1,0 +1,49 @@
+function [davg wavg mavg savg yavg] = jjb_time_averaging(data_in, scaling_factor, pts_per_day)
+%%% jjb_time_averaging.m
+%%% This function calculates the daily, weekly, monthly, seasonal and
+%%% annual means of an inputted annual half-hourly datafile.
+
+if nargin == 1;
+    scaling_factor = 1;
+    pts_per_day = 48; % half-hourly is default
+end
+%%% Note - this script is not set to handle NANs
+if length(data_in)/pts_per_day == 365
+days_in_m = jjb_days_in_month(2003);
+elseif length(data_in)/pts_per_day == 366
+    days_in_m = jjb_days_in_month(2004);
+end
+
+days_in_month = (cumsum([0; days_in_m(1:11)])+1).*pts_per_day - (pts_per_day-1) ;
+days_in_month = [days_in_month; length(data_in)./pts_per_day];
+% Step 1 - daily_averaging:
+rs_d = reshape(data_in,pts_per_day,[]);
+davg = (nanmean(rs_d,1))';
+davg = davg.*scaling_factor;
+
+clear rs_d
+% Step 2 - Weekly averaging:
+a = rem(length(data_in),(pts_per_day*7));
+data_in_tmp = data_in(1:end-a);
+rs_w = reshape(data_in_tmp,pts_per_day.*7,[]);
+wavg = (nanmean(rs_w))';
+wavg = wavg.*scaling_factor;
+
+clear rs_m
+% Step 3 - Monthly Averaging:
+for i = 1:1:12
+    mavg(i,1) = nanmean(data_in(days_in_month(i):days_in_month(i+1),1));
+end
+mavg = mavg.*scaling_factor;
+
+% Step 4 - Seasonal Averaging
+seas_starts = (1:17520/4:15000)';]
+seas_starts(2:4) = round(
+seas_ends = [seas_starts(2:4)-1; length(data_in)];
+savg(1,1) = nanmean(data_in(1:(91.25*pts_per_day),1));
+savg(2,1) = nanmean(data_in((91.25*pts_per_day)+1:(182.5*pts_per_day),1));
+savg(3,1) = nanmean(data_in((182.5*pts_per_day)+1:(273.75*pts_per_day),1));
+savg(4,1) = nanmean(data_in((273.75*pts_per_day)+1:end,1));
+savg = savg*scaling_factor;
+% Step 5 - Annual Mean:
+yavg = nanmean(data_in(:,1)).*scaling_factor;

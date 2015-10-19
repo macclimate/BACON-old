@@ -1,0 +1,20 @@
+d = dir('/1/fielddata/Matlab/Figs/Gapfilling/');
+cd '/1/fielddata/Matlab/Figs/Gapfilling/';
+
+for i = 3:1:length(d)
+    [pathstr, name, ext, versn] = fileparts(d(i).name);
+    if strcmp(ext,'.pdf')==1
+    else
+        
+%         d(i).name = regexprep(d(i).name, '(', '\(');
+%         d(i).name = regexprep(d(i).name, ')', '\)');
+        name = regexprep(name, '($', '\(');
+%         name = regexprep(name, ')', '\)');   
+%         ext = regexprep(ext, '(', '\(');
+%         ext = regexprep(ext, ')', '\)');           
+%        unix(['mv ' d(i).name ' ' name ext '.pdf']);
+[status1,result1] = unix(['rename -v ''s/\($/\</'' ' d(i).name]);
+       [status,result] = unix(['mv ' d(i).name ' ' name ext '.pdf'],'-echo');
+    end
+    
+end

@@ -1,0 +1,141 @@
+ls = addpath_loadstart;
+
+load([ls 'Matlab/Data/Master_Files/TP39/TP39_AA_analysis_data.mat']);
+data.NEP = data.NEE.*-1;
+
+figure(1);clf;
+plot(data.NEP(data.Year == 2003));
+grid on;
+hold on;
+plot(data.NEP(data.Year == 2004),'r');
+plot(data.NEP(data.Year == 2005),'g');
+plot(data.NEP(data.Year == 2006),'Color',[0.7 0.7 0.7]);
+plot(data.NEP(data.Year == 2007),'m');
+plot(data.NEP(data.Year == 2008),'y');
+plot(data.NEP(data.Year == 2009),'c');
+
+year_start = 2003;
+year_end = 2009;
+Ustar_th = 0.325;
+site = 'TP39';
+data = trim_data_files(data,year_start, year_end);
+data.VPD = VPD_calc(data.RH, data.Ta);
+[~, data.GDD] = GDD_calc(data.Ta,10,48,year_start:1:year_end);
+%%% Make a single SM index from a and b pits - use Pit A first, since at
+%%% all sites it is the more dependable pit:
+% SM(1:length(data.SM_a),1) = NaN;
+% SM(isnan(SM),1) = data.SM_a(isnan(SM),1);
+% SM(isnan(SM),1) = data.SM_b(isnan(SM),1);
+data.SM = data.SM_a_filled; %clear SM;
+%%% Add a tag for the site name:
+data.site = site;
+data.NEEstd = NEE_random_error_estimator_v2(data, [], Ustar_th);
+close all
+clrs = [1 0 0; 0.5 0.7 0; 0 1 0; 0.8 0.5 0.7; 0 0 1; 0.2 0.1 0.1; ...
+    1 1 0; 0.4 0.5 0.1; 1 0 1; 0.9 0.9 0.4; 0 1 1; 0.4 0.8 0.1];
+
+
+    ind_param(1).RE_all = find((data.Ustar >= Ustar_th & ~isnan(data.Ts5) & ~isnan(data.SM) & ~isnan(data.NEE) & data.PAR < 15) |... % growing season
+        (data.Ustar >= Ustar_th & ~isnan(data.NEE) & ~isnan(data.SM) & ((data.dt < 85 | data.dt > 335) & data.Ts5 < 0.2)  ) );                                   % non-growing season
+options.costfun ='WSS'; options.min_method ='NM';
+[c_hat(1).RE1all, y_hat(1).RE1all, y_pred(1).RE1all, stats(1).RE1all, sigma(1).RE1all, err(1).RE1all, exitflag(1).RE1all, num_iter(1).RE1all] = ...
+    fitresp([2 3 8 180], 'fitresp_3B', [data.Ts5(ind_param(1).RE_all) data.SM(ind_param(1).RE_all)] , data.NEE(ind_param(1).RE_all), [data.Ts5 data.SM], data.NEEstd(ind_param(1).RE_all), options);
+    fixed_RE_SM_coeffs = [NaN NaN c_hat(1).RE1all(3:4)];
+    starting_coeffs = [2 3];
+
+
+
+
+
+
+figure(2);clf;
+figure(3);clf;
+figure(4);clf;
+figure(5);clf;
+
+ctr = 1;
+for year = 2003:1:2009
+        ind_param(ctr).RE = find((data.Year == year &data.Ustar >= Ustar_th & ~isnan(data.Ts5) & ~isnan(data.SM) & ~isnan(data.NEE) & data.PAR < 15 ) |... % growing season
+            (data.Year == year & data.Ustar >= Ustar_th & ~isnan(data.NEE) & ~isnan(data.SM) & ((data.dt < 85 | data.dt > 335) & data.Ts5 < 0.2)  ) );                                   % non-growing season
+    options.costfun ='WSS'; options.min_method ='NM';
+    [c_hat(ctr).RE, y_hat(ctr).RE, y_pred(ctr).RE, stats(ctr).RE, sigma(ctr).RE, err(ctr).RE, exitflag(ctr).RE, num_iter(ctr).RE] = ...
+        fitresp([2 3], 'fitresp_3A', [data.Ts5(ind_param(ctr).RE) data.SM(ind_param(ctr).RE)] , data.NEE(ind_param(ctr).RE), [data.Ts5(data.Year == year) data.SM(data.Year == year)], data.NEEstd(ind_param(ctr).RE), options);
+
+     options.costfun ='WSS'; options.min_method ='NM'; options.f_coeff = fixed_RE_SM_coeffs;
+    [c_hat(ctr).RE2, y_hat(ctr).RE2, y_pred(ctr).RE2, stats(ctr).RE2, sigma(ctr).RE2, err(ctr).RE2, exitflag(ctr).RE2, num_iter(ctr).RE2] = ...
+        fitresp([starting_coeffs], 'fitresp_3B', [data.Ts5(ind_param(ctr).RE) data.SM(ind_param(ctr).RE)] , data.NEE(ind_param(ctr).RE), [data.Ts5(data.Year == year) data.SM(data.Year == year)], data.NEEstd(ind_param(ctr).RE), options);
+   
+    annual_RE_Ts(ctr,1) = nansum(y_pred(ctr).RE).*0.0216;
+    annual_RE_TsSM(ctr,1) = nansum(y_pred(ctr).RE2).*0.0216;
+    
+    
+    [x_out, y_out] = plot_TsQ10(c_hat(ctr).RE, 0);
+        figure(2);
+plot(x_out, y_out, 'Color',clrs(ctr,:)); hold on;
+    
+    
+    if year == 2008;
+        figure(4);
+        plot(data.Ts5(ind_param(ctr).RE),data.NEE(ind_param(ctr).RE),'k.');hold on;
+        plot(x_out, y_out, 'Color','k'); hold on;
+        plot(data.Ts5(ind_param(ctr).RE),y_hat(ctr).RE2,'ro','MarkerFaceColor','r')
+    grid on;
+    figure(5);
+    plot(ind_param(ctr).RE-(17520*4)-17568,data.NEE(ind_param(ctr).RE),'k.');hold on;
+    plot(y_pred(ctr).RE,'b');
+    
+    end
+
+    clear x_out y_out;
+        [x_out, y_out] = plot_TsQ10(c_hat(ctr).RE2(1:2), 0);
+        figure(3);
+plot(x_out, y_out, 'Color',clrs(ctr,:)); hold on;
+%     if year == 2007;
+%         figure(4);
+%         plot(x_out, y_out, 'Color','b'); hold on;
+%         grid on;
+%     end
+
+
+    clear x_out y_out;
+
+    
+        ctr = ctr+1;
+end
+
+legend(num2str((2003:1:2009)'),2)
+
+
+for year = 2003:1:2009
+   figure('Name',num2str(year));clf;
+   plot_data = data.NEE(data.Year == year);
+   plot_Ustar = data.Ustar(data.Year == year);
+   plot_PAR = data.PAR(data.Year == year);
+   ind = find(plot_PAR > 15 | (plot_PAR < 15 & plot_Ustar > Ustar_th ));
+   plot(ind, plot_data(ind).*-1,'k.');hold on;
+   plot(data.NEE_filled_PI_pref(data.Year==year).*-1,'b-');
+   clear ind plot_*;
+end
+
+close all;
+ctr = 1;
+for year = 2003:1:2009
+    final_data = NaN.*ones(yr_length(year,30),1);
+   figure(1)
+   plot_data = data.NEE(data.Year == year);
+   plot_Ustar = data.Ustar(data.Year == year);
+   plot_PAR = data.PAR(data.Year == year);
+   ind = find(plot_PAR > 15 | (plot_PAR < 15 & plot_Ustar > Ustar_th ));
+   final_data(ind) = plot_data(ind);
+   fill_in_data = data.NEE_filled_PI_pref(data.Year == year);
+   final_data(isnan(final_data)) = fill_in_data(isnan(final_data));
+   
+   plot(cumsum(final_data.*-0.0216),'Color',clrs(ctr,:));hold on;
+%    plot(ind, plot_data(ind).*-1,'k.');hold on;
+%    plot(data.NEE_filled_PI_pref(data.Year==year).*-1,'b-');
+   clear ind plot_* final_data fill_in_data;
+   ctr = ctr+1;
+end
+legend(num2str((2003:1:2009)'),2)
+grid on;
+set(gca,'YMinorGrid','on');

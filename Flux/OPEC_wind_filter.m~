@@ -1,0 +1,32 @@
+function [NEE_out] = OPEC_wind_filter(site, NEE_in, WS, WDir)
+%%% This function filters out NEE according to wind speed and wind
+%%% directions that are not favourable for measurement.
+ind = find(~isnan(WDir.*WS));
+
+figure('Name', 'Wind Histogram'); clf
+hist(WDir(ind));
+
+figure('Name', 'Wind Rose'); clf
+wind_rose(WDir(ind),WS(ind))
+
+wdk = params(2003, site ,'WDir'); % the '2003' doesn't matter.
+
+NEE_out = NEE_in;
+NEE_out(WS(:,1) < 0.5 & ~isnan(WS),1) = NaN;
+NEE_out(WDir(:,1) < wdk(1) | WDir(:,1) > wdk(2), 1) = NaN;
+
+ind_blank = find(WS(:,1) < 0.5 | (WDir(:,1) < wdk(1) | WDir(:,1) > wdk(2)));
+
+WS(ind_blank) = NaN;
+WDir(ind_blank) = NaN;
+
+ind_use = find(~isnan(WS) & ~isnan(WDi
+
+
+figure('Name', 'NEE wind filtering'); clf
+plot(NEE_in(:,1),'-','Color',[0.8 0.8 0.8]); hold on;
+plot(NEE_out(:,1), '-', 'Color',[0.1 0 1]);
+legend('unfiltered', 'filtered');
+
+figure('Name','Filtered Winds');clf
+wind_rose(WDir(ind_use),WS(ind_use))
