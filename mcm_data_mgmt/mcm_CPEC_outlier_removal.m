@@ -22,14 +22,14 @@ switch var_type
             case 'TP02'
                 top_cut = 15; bot_cut = -30; z = 5; win_size = 30; sdev_mult = 3;
             case 'TPD'
-                top_cut = 25; bot_cut = -45; z = 5; win_size = 30; sdev_mult = 3;                
+                top_cut = 25; bot_cut = -45; z = 5; win_size = 30; sdev_mult = 3;
                 
         end
         
     case 'H'
         switch site
             case 'TP39'
-                top_cut = 800; bot_cut = -200; z = 9; win_size = 30; sdev_mult = 3;
+                top_cut = 800; bot_cut = -200; z = 15; win_size = 30; sdev_mult = 3;
             case 'TP74'
                 top_cut = 700; bot_cut = -100; z = 9; win_size = 30; sdev_mult = 3;
             case 'TP89'
@@ -43,7 +43,7 @@ switch var_type
     case 'LE'
         switch site
             case 'TP39'
-                top_cut = 650; bot_cut = -100; z = 11; win_size = 30; sdev_mult = 5.5;
+                top_cut = 700; bot_cut = -100; z = 15; win_size = 30; sdev_mult = 5.5;
             case 'TP74'
                 top_cut = 650; bot_cut = -100; z = 11; win_size = 30; sdev_mult = 5.5;
             case 'TP89'
@@ -51,8 +51,8 @@ switch var_type
             case 'TP02'
                 top_cut = 650; bot_cut = -100; z = 11; win_size = 30; sdev_mult = 5.5;
             case 'TPD'
-                top_cut = 650; bot_cut = -100; z = 11; win_size = 30; sdev_mult = 5.5;
-      
+                top_cut = 650; bot_cut = -100; z = 15; win_size = 30; sdev_mult = 5.5;
+                
         end
         
     case 'ET'
@@ -72,7 +72,7 @@ switch var_type
         end
         
     case 'H_Gapfill'
-              switch site
+        switch site
             case 'TP39'
                 top_cut = 800; bot_cut = -200; %z = 9; win_size = 30; sdev_mult = 3;
             case 'TP74'
@@ -82,11 +82,11 @@ switch var_type
             case 'TP02'
                 top_cut = 500; bot_cut = -100; %z = 9; win_size = 30; sdev_mult = 3;
             case 'TPD'
-                 top_cut = 800; bot_cut = -200; %z = 11; win_size = 30; sdev_mult = 4;
-              end
-              array_out = array_in;
-              array_out(array_out<bot_cut | array_out > top_cut) = NaN;
-              return
+                top_cut = 800; bot_cut = -200; %z = 11; win_size = 30; sdev_mult = 4;
+        end
+        array_out = array_in;
+        array_out(array_out<bot_cut | array_out > top_cut) = NaN;
+        return
 end
 
 array_in(array_in > top_cut | array_in < bot_cut) = NaN;
@@ -130,7 +130,7 @@ switch var_type
     case 'LE'
         array_out = array_in; %
         %        array_out = array_clean1;
-    case 'ET' 
+    case 'ET'
         array_out = array_in;
 end
 
@@ -139,31 +139,37 @@ switch var_type
     case 'Fc'
         figure('Name', ['Spike Removal for ' var_type ' for site ' site]); clf
         plot(orig_data,'.-','Color',[0.8 0.8 0.8]); hold on;
-        plot(array_in,'r.-');
+        plot(array_in,'.-','Color',[0.3 0.3 0.3]);
         plot(array_clean2,'b.-');
         plot(array_out,'g.-');
-        legend('orig', 'first spike rem.', 'ens clean', 'final')
+        plot(find(isnan(array_out)),orig_data(isnan(array_out)==1),'ro','MarkerSize',5);
+        legend('orig', 'first spike rem.', 'ens clean', 'final', 'missing points')
         
     case 'H'
         figure('Name', ['Spike Removal for ' var_type ' for site ' site]); clf
         plot(orig_data,'.-','Color',[0.8 0.8 0.8]); hold on;
         plot(array_clean1,'b.-');
         plot(array_out,'g.-');
-        legend('orig', 'first ens clean.', 'second ens clean')
+        plot(find(isnan(array_out)),orig_data(isnan(array_out)==1),'ro','MarkerSize',5);
+        legend('orig', 'first ens clean.', 'second ens clean', 'missing points')
         
     case 'LE'
         figure('Name', ['Spike Removal for ' var_type ' for site ' site]); clf
         plot(orig_data,'.-','Color',[0.8 0.8 0.8]); hold on;
         plot(array_clean1,'b.-');
         plot(array_out,'g.-');
-        legend('orig', 'first ens clean.', 'second ens clean')
+        plot(find(isnan(array_out)),orig_data(isnan(array_out)==1),'ro','MarkerSize',5);
+        
+        legend('orig', 'first ens clean.', 'second ens clean', 'missing points')
         
     case 'ET'
         figure('Name', ['Spike Removal for ' var_type ' for site ' site]); clf
         plot(orig_data,'.-','Color',[0.8 0.8 0.8]); hold on;
         plot(array_clean1,'b.-');
         plot(array_out,'g.-');
-        legend('orig', 'first ens clean.', 'second ens clean')
+        plot(find(isnan(array_out)),orig_data(isnan(array_out)==1),'ro','MarkerSize',5);
+        
+        legend('orig', 'first ens clean.', 'second ens clean', 'missing points')
         
 end
 

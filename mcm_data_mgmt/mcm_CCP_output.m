@@ -46,6 +46,8 @@ end
 
 ls = addpath_loadstart;
 master_out_path =           [ls 'Matlab/Data/Master_Files/'];
+gdrive_path = '/home/arainlab/Google Drive/TPFS Data/CCP_Annual_Files/';
+% jjb_check_dirs([gdrive_path site],1);
 
 if isempty(CCP_out_path)==1 || isempty(master)==1
     % Declare Paths:
@@ -247,6 +249,10 @@ for j = year_start:1:year_end
     end
     
     %% Write Monthly Files:
+    disp('No Monthly Files have been created. This was discontinued by JJB on 31-Jan-2016.');
+    % ################ BLOCK COMMETED BY JJB on 31-Jan-2016 - remove the
+    % line '%{'below to re-enable
+    %{ 
     for m = 1:1:12
         clear MM_label;
         MM_label = create_label(m,2);
@@ -363,7 +369,7 @@ for j = year_start:1:year_end
         end
         clear ind_out;
     end
-    
+    %}
     %%%%%%%%%%%%%%%%%%% In Case of MCM_WX, we need to do daily and hourly
     %%%%%%%%%%%%%%%%%%% averages and output them as well
     switch site
@@ -384,6 +390,9 @@ end
 
 
 %% Try and zip the contents of the monthly files:
+% ################ BLOCK COMMETED BY JJB on 31-Jan-2016 - remove the
+    % line '%{'below to re-enable
+    %{
 disp(['Trying to zip the monthly files for the site: ' sitename_out]);
 try
     eval(['cd ' ls 'Matlab/Data/CCP/CCP_output/']);
@@ -395,7 +404,7 @@ catch
     disp(['Zipping monthly files failed for the site: ' sitename_out]);
 end
 % eval(['cd ' ls 'Matlab/Scripts/']);
-
+%}
 %% Try and zip the contents of the annual files:
 disp('Trying to zip the annual files for the site: ');
 try
@@ -404,6 +413,17 @@ try
     disp('Old zip-file removed');
     unix(['zip -r ' sitename_out '_annual.zip ' sitename_out]);
     disp(['Annual files zipped for ' sitename_out '.']);
+    try
+    %%% Upload the annual files to Google Drive
+    stat = unix(['cp -avr ' ls 'Matlab/Data/CCP/CCP_output/CCP_Annual_Files/' sitename_out '_annual.zip "' gdrive_path sitename_out '_annual.zip"']);
+     if stat ~=0
+    disp('Could not copy files to Google Drive-synced folder. Check for problems');
+     else
+    disp('Uploaded Annual CCP files to Google Drive-synced folder (/home/arainlab/Google Drive/TPFS Data/CCP_Annual_Files.).');
+     end
+    catch
+        disp('Problem copying annual files to Google Drive folder (/home/arainlab/Google Drive/TPFS Data/CCP_Annual_Files.).');
+    end
 catch
     disp(['Zipping annual files failed for the site: ' sitename_out]);
 end

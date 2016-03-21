@@ -45,13 +45,14 @@ end
 
 switch site
     
-%%    %%%%%%%%%%%% MET 1 PARAMETERS
+%%    %%%%%%%%%%%% TP39 PARAMETERS
     case 'TP39'
         theta_w = 0.13;
         theta_m = 0.01;
         theta_o = 160/1300;
         lat = dms2dec(42, 42, 35.20);
         long = dms2dec(80, 21, 26.64);
+        elev = 184;
         wdir_keep = [0 360]; % exclude angles less than first number, exclude greater than second
         %           42, 39', 39.37'' N
         %           80, 33', 34.27'' W
@@ -321,7 +322,7 @@ switch site
                 %%% This stand was selectively thinning in Winter 2012. The
                 %%% average tree height thus decreased slightly due to
                 %%% more, larger trees being removed.
-                z_meas = 28; z_tree = 23.7; % COPIED FROM 2013 - REPLACE!
+                z_meas = 28; z_tree = 24.5; % Actual measurement
                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         case '2015' %% ALL VALUES HAVE BEEN STRAIGHT-UP COPIED FROM 2013/2014!!
                 % CO2 Storage
@@ -341,7 +342,27 @@ switch site
                 %%% This stand was selectively thinning in Winter 2012. The
                 %%% average tree height thus decreased slightly due to
                 %%% more, larger trees being removed.
-                z_meas = 28; z_tree = 23.7; % COPIED FROM 2013 - REPLACE!
+                z_meas = 28; z_tree = 24.5; % COPIED FROM 2014 - REPLACE!
+                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        case '2016' %% ALL VALUES HAVE BEEN STRAIGHT-UP COPIED FROM 2015!
+                % CO2 Storage
+                z = 28; ztop = 14; zcpy = 14; col_flag = 2;
+                % Respiration
+                gsstart = 84; gsend = 331; NEE_cap = 7; ustar_crit = 0.325;
+                % Photosynthesis
+                Qthresh = 10; Awa = 0.62; ka = 0.540; kh = 0.756; alpha = 0.03;
+                % Final Flux Calculation (OPEC_Fluxes)
+                GEPcutstart = 151; GEPcutend = 273; corr_1 = 1; corr_2 = 0;
+                % Footprint Information (measurement and tree height)
+                %                 z_meas = 28; z_tree = 23.4; % z_tree is estimate only!!!!
+                %%%%% Updated information - Jan 4, 2011 by JJB: %%%%%%%%%%
+                %%% Tree height information was changed to reflect average
+                %%% height of co-dominant and dominant trees only (not
+                %%% including non-dominant trees, as was done before).
+                %%% This stand was selectively thinning in Winter 2012. The
+                %%% average tree height thus decreased slightly due to
+                %%% more, larger trees being removed.
+                z_meas = 28; z_tree = 24.5; % COPIED FROM 2015 - REPLACE!
                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
         end
@@ -353,7 +374,7 @@ switch site
         theta_o = 160/1300;
         lat = dms2dec(42, 42, 24.52);
         long = dms2dec(80, 20, 53.93);
-        
+        elev = 184;
         wdir_keep = [180 360]; % exclude angles less than first number, exclude greater than second
         %%% 'fetch' defines the dimensions of the measurement site.
         %%% Columns (shown here as rows) 1 and 2 specify the starting and
@@ -523,8 +544,7 @@ switch site
                 % Footprint Information (measurement and tree height)
                 z_meas = 20; z_tree = 13.5; % Actual measurement
             
-                %%% ALL 2014 VALUES STRAIGHT UP COPIED FROM 2013 -
-                %%% REPLACE!!
+                %%% SOME 2014 VALUES ARE STRAIGHT UP COPIED FROM 2013
                 case '2014'
                 % CO2 Storage
                 z = 20; ztop = 10; zcpy = 10; col_flag = 2;
@@ -535,7 +555,7 @@ switch site
                 % Final Flux Calculation (OPEC_Fluxes)
                 GEPcutstart = 151; GEPcutend = 273; corr_1 = 1; corr_2 = 0;
                 % Footprint Information (measurement and tree height)
-                z_meas = 20; z_tree = 13.5; % REPLACE!
+                z_meas = 20; z_tree = 14.1;  % Actual measurement
                
                 %%% ALL 2015 VALUES STRAIGHT UP COPIED FROM 2013/2014 -
                 %%% REPLACE!!
@@ -549,16 +569,30 @@ switch site
                 % Final Flux Calculation (OPEC_Fluxes)
                 GEPcutstart = 151; GEPcutend = 273; corr_1 = 1; corr_2 = 0;
                 % Footprint Information (measurement and tree height)
-                z_meas = 20; z_tree = 13.5; % REPLACE!
+                z_meas = 20; z_tree = 14.1; % COPIED FROM 2014 -- REPLACE!!
+                
+                %%% ALL 2016 VALUES STRAIGHT UP COPIED FROM 2015 - REPLACE!!
+                case '2016'
+                % CO2 Storage
+                z = 20; ztop = 10; zcpy = 10; col_flag = 2;
+                % Respiration
+                gsstart = 90; gsend = 304; NEE_cap = 7; ustar_crit = 0.25;
+                % Photosynthesis
+                Qthresh = 10; Awa = 0.62; ka = 0.540; kh = 0.756; alpha = 0.03;
+                % Final Flux Calculation (OPEC_Fluxes)
+                GEPcutstart = 151; GEPcutend = 273; corr_1 = 1; corr_2 = 0;
+                % Footprint Information (measurement and tree height)
+                z_meas = 20; z_tree = 14.1; % COPIED FROM 2015 -- REPLACE!!
         end
         
-        %%%%%%%%%%%% MET 3 PARAMETERS
+        %%%%%%%%%%%% TP89 PARAMETERS
     case 'TP89'
         theta_w  = 0.20;     % 20% water
         theta_m	= 0.01;
         theta_o  = 160/1300;
         lat = dms2dec(42, 46, 27.91);
         long = dms2dec(80, 27, 31.59);
+        elev = NaN;
         wdir_keep = [0 360]; % exclude angles less than first number, exclude greater than second
         %%% 'fetch' defines the dimensions of the measurement site.
         %%% Columns (shown here as rows) 1 and 2 specify the starting and
@@ -668,7 +702,7 @@ switch site
                 % Resp..
         end
         
-        %%%%%%%%%%%% MET 4 PARAMETERS
+        %%%%%%%%%%%% TP02 PARAMETERS
         
     case 'TP02'
         theta_w = 0.13;
@@ -676,7 +710,7 @@ switch site
         theta_o = 160/1300;
         lat = dms2dec(42,39,39.37);
         long = dms2dec(80,33,34.27);
-        
+        elev = 265;
         wdir_keep = [135 360]; % exclude angles less than first number, exclude greater than second
         %%% 'fetch' defines the dimensions of the measurement site.
         %%% Columns (shown here as rows) 1 and 2 specify the starting and
@@ -889,9 +923,9 @@ switch site
                 % In 
                 z_meas = NaN.*ones(yr_length(str2num(year),30),1);
                 z_meas(1:9827,1)=6;z_meas(9828:end)=10;                
-                z_tree = 6.*ones(yr_length(str2num(year),30),1); % 6 m is just a guess - REPLACE!!!
+                z_tree = 5.7.*ones(yr_length(str2num(year),30),1); %  % Actual measurement
                 
-                %%% ALL 2015 VALUES STRAIGHT UP COPIED FROM 2013 -
+                %%% ALL 2015 VALUES STRAIGHT UP COPIED FROM 2013/2014 -
                 %%% REPLACE!!      
                 case '2015'
                 % CO2 storage
@@ -904,9 +938,23 @@ switch site
                 GEPcutstart = 151; GEPcutend = 273; corr_1 = 1; corr_2 = 0;
                 % Footprint Information (measurement and tree height)
                 
-                z_meas = 10; z_tree = 6; % 6 m is just a guess - REPLACE!!!
+                z_meas = 10; z_tree = 5.7; % COPIED FROM 2014 - REPLACE!!!
+                
+                %%% ALL 2016 VALUES STRAIGHT UP COPIED FROM 2015 - REPLACE!!      
+                case '2016'
+                % CO2 storage
+                z = 8; ztop = 8; zcpy = 0; col_flag = 1;
+                % Respiration
+                gsstart = 90; gsend = 304; NEE_cap = 7; ustar_crit = 0.1;
+                % Photosynthesis
+                Qthresh = 10; Awa = 0.62; ka = 0.540; kh = 0.756; alpha = 0.03;
+                % Final Flux Calculation (OPEC_Fluxes)
+                GEPcutstart = 151; GEPcutend = 273; corr_1 = 1; corr_2 = 0;
+                % Footprint Information (measurement and tree height)
+                
+                z_meas = 10; z_tree = 5.7; % COPIED FROM 2015 - REPLACE!!!
         end
-        
+                
         % #################################################################
         % TPD
     case 'TPD'
@@ -917,6 +965,7 @@ switch site
         %           long = dms2dec(80,33,27.222);
         lat = 42.635312;
         long = 80.557562;
+        elev = 265;
         %
         %         wdir_keep = [135 360]; % exclude angles less than first number, exclude greater than second
         %         %%% 'fetch' defines the dimensions of the measurement site.
@@ -971,7 +1020,7 @@ switch site
                 z = 31; ztop = 20; zcpy = 11; col_flag = 2;
                 
                 % Footprint Information (measurement and tree height)
-                z_meas = 36.6; z_tree = 25.7; %% REPLACE!!
+                z_meas = 36.6; z_tree = 25.7; %%  % Actual measurement
                 
                 % Growing Season Start and End Dates:
                 gs_start = 120;
@@ -987,7 +1036,19 @@ switch site
                 
                 % Growing Season Start and End Dates:
                 gs_start = 120;
-                gs_end = 293;            
+                gs_end = 293;  
+                
+                %% ALL 2016 VALUES STRAIGHT UP COPIED FROM 2015 - REPLACE!!              
+          case '2016'
+                % CO2 storage
+                z = 31; ztop = 20; zcpy = 11; col_flag = 2;
+                
+                % Footprint Information (measurement and tree height)
+                z_meas = 36.6; z_tree = 25.7; %% REPLACE!!
+                
+                % Growing Season Start and End Dates:
+                gs_start = 120;
+                gs_end = 293;  
             otherwise
         end
         
@@ -1043,4 +1104,6 @@ switch program
         final = fetch;
     case 'GS_Dates'
         final = [gs_start gs_end];
+    case 'Location'
+        final = [lat long elev];
 end

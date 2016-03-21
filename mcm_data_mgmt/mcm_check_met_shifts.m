@@ -25,10 +25,16 @@ end
 % suntimes in UTC:
 [sunup_down] = annual_suntimes(site, year, 0);
 figure('Name','PAR, Est Suntimes');clf;
-plot(PAR);
+h1(1)=plot(PAR);
 hold on;
-plot(sunup_down.*225,'g')
-legend('PAR - in', 'Estimated suntimes (UTC)');
+h1(2)=plot(sunup_down.*225,'g')
+nans = find(isnan(PAR));
+%%% Draw indicators where data is missing
+for i = 1:1:length(nans)
+    h1(3) = plot([nans(i) nans(i)],[0 2500],'r-');
+    %  plot(pred_snoon(i)+b(i),
+end
+legend(h1,{'PAR - in', 'Estimated suntimes (UTC)','Missing Data'});
 
 %%% Go through the data day by day to try and find the suntimes.
 %%% Find the suntimes estimated by the model:
@@ -76,13 +82,23 @@ figure(findobj('Tag','Inspection'));clf
 subplot(211)
 plot(PAR,'Color',[0.9 0.9 0.9]); hold on;
 ind = find(~isnan(snoon));
-h1(1) = plot(b(ind)+snoon(ind),PAR(b(ind)+snoon(ind)),'ro');
+h1(1) = plot(b(ind)+snoon(ind),PAR(b(ind)+snoon(ind)),'bo');
 %%% Draw the modeled (expected) solar noon times with vertical green lines:
 for i = 1:1:length(pred_snoon)
     h1(2) = plot([pred_snoon(i)+b(i) pred_snoon(i)+b(i)],[0 2500],'g--');
     %  plot(pred_snoon(i)+b(i),
+    h1(3) = plot([pred_srise(i)+b(i) pred_srise(i)+b(i)],[0 150],'k--');
+    plot([pred_sset(i)+b(i) pred_sset(i)+b(i)],[0 150],'k--');
+    
 end
-legend(h1,{'Obs Solar Noon';'Pred Solar Noon'})
+nans = find(isnan(PAR));
+%%% Draw indicators where data is missing
+for i = 1:1:length(nans)
+    h1(4) = plot([nans(i) nans(i)],[0 2500],'r-');
+    %  plot(pred_snoon(i)+b(i),
+end
+
+legend(h1,{'Obs Solar Noon';'Pred Solar Noon';'Pred SRrise, SSet';'Missing Data'});
 title('uncorrected');
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% mode_noon is the mode differences between predicted and
@@ -111,8 +127,17 @@ h1(1) = plot(b(ind)+snoon(ind)+mode_noon,PAR_shift(b(ind)+snoon(ind)+mode_noon),
 
 for i = 1:1:length(pred_snoon)
     h1(2) = plot([pred_snoon(i)+b(i) pred_snoon(i)+b(i)],[0 2500],'g--');
+     h1(3) = plot([pred_srise(i)+b(i) pred_srise(i)+b(i)],[0 150],'k--');
+    plot([pred_sset(i)+b(i) pred_sset(i)+b(i)],[0 150],'k--');
+    
 end
-legend(h1,{'Obs Solar Noon';'Pred Solar Noon'})
+%%% Draw indicators where data is missing
+for i = 1:1:length(nans)
+    h1(4) = plot([nans(i) nans(i)],[0 2500],'r-');
+    %  plot(pred_snoon(i)+b(i),
+end
+
+legend(h1,{'Obs Solar Noon';'Pred Solar Noon';'Pred SRrise, SSet';'Missing Data'});
 title('corrected');
 
 %%% Split the data into 2-week segments and see what the estimates are for

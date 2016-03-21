@@ -162,6 +162,7 @@ Xpct_out.Year = year_list;
 %%% Save the Output Data:
 if save_flag == 1;
     save([save_path site '_footprint_flag.mat'],'footprint_flag');
+    save([save_path site '_XPct_out.mat'],'Xpct_out');
     disp(['footprint flag file saved as: ' save_path site '_footprint_flag.mat']);
 end
 mcm_start_mgmt;

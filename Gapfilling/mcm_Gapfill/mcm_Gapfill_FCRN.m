@@ -128,7 +128,7 @@ end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%% PHOTOSYNTHESIS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-GEPraw = RE_tvp_adj - data.NEE;
+GEPraw = RE_tvp_adj - data.NEE; % raw GEP is the difference between modeled+tvp-adjusted RE and measured NEE.
 %%% Updated May 19, 2011 by JJB:
 GEPraw(data.PAR < 15 | (data.PAR <= 150 & data.Ustar < data.Ustar_th) ) = NaN;
 %%%%%%%%%%%%%%%%%%%%%%%%%
@@ -204,8 +204,8 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%% Clean NEE (ustar filtering):
-NEE_raw = data.NEE;
-NEE_clean = NEE_raw;
+NEE_raw = data.NEE; % Raw NEE is that which is measured and footprint-filter passing
+NEE_clean = NEE_raw; 
 % NEE_clean(data.PAR < 15 & data.Ustar < data.Ustar_th,1) = NaN;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% The following was changed to 150 on May 19, 2011 by JJB
@@ -214,13 +214,13 @@ NEE_clean = NEE_raw;
 % to zero).  This change will make things more consistent between NEE and
 %  (RE_filled - GEP_filled).
 NEE_clean((data.PAR < 15 & data.Ustar < data.Ustar_th) | ...
-    (data.PAR < 150 & data.GEP_flag>=1 & data.Ustar< data.Ustar_th),1) = NaN;
+    (data.PAR < 150 & data.GEP_flag>=1 & data.Ustar< data.Ustar_th),1) = NaN; 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Fill RE - Use raw data when Ustar > threshold; otherwise, use model+tvp
 RE_filled(1:length(Rraw),1) = RE_tvp_adj;
-%%%% Uncomment this:
-RE_filled(~isnan(Rraw) & data.Ustar >= data.Ustar_th,1) = Rraw(~isnan(Rraw) & data.Ustar >= data.Ustar_th,1);
-
+%%%% modified by JJB, 20160206 so to remove Rraw<0 and replace with modeled:
+%RE_filled(~isnan(Rraw) & data.Ustar >= data.Ustar_th,1) = Rraw(~isnan(Rraw) & data.Ustar >= data.Ustar_th,1);
+RE_filled(Rraw>0,1) = Rraw(Rraw>0,1);
 %%% Fill GEP:
 GEP_filled = zeros(length(GEPraw),1);
 % fill any nans in GEPraw with GEP_model:

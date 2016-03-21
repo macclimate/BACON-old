@@ -2695,9 +2695,6 @@ for year_ctr = year_start:1:year_end
                     % Spikes in EC B 100cm
                     output([998],83) = NaN; 
                     
-                    % Spikes in CO2 canopy
-                    output([1965],86) = NaN;
-                    
                     %%%%% uncomment this if nothing has been changed as of 2016
 %                     %%% Swap reversed SW and LW data (up & down are
 %                     %%% reversed)

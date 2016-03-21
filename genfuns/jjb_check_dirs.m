@@ -49,9 +49,9 @@ for i = 1:1:length(slash)-1
             disp('Automatically creating folder (auto_flag set to 1).');
             %%% Make the directory:
             if ispc ==1
-                dos(['mkdir ' folder_name]);
+                dos(['mkdir "' folder_name '"']);
             else
-                unix(['mkdir ' folder_name]);
+                unix(['mkdir "' folder_name  '"']);
             end
         else
             resp = input('Press enter to make this directory. Enter any other key to skip > ','s');
@@ -59,9 +59,9 @@ for i = 1:1:length(slash)-1
                 %%% Make the directory:
                 if ispc ==1
                     folder_name = strrep(folder_name,'/','\');
-                    dos(['mkdir ' folder_name(1:end-1)]);
+                    dos(['mkdir "' folder_name(1:end-1)  '"']);
                 else
-                    unix(['mkdir ' folder_name]);
+                    unix(['mkdir "' folder_name '"']);
                 end
             else
                 disp(['Directory ' folder_name ' not created.']);

@@ -395,9 +395,11 @@ NEE_clean((data.PAR < 15 & data.Ustar < data.Ustar_th) | ...
 % NEE_clean = data.NEE_clean;
 %%% Fill RE - Use raw data when Ustar > threshold; otherwise, use model+tvp
 RE_filled(1:length(Rraw),1) = RE_model;
+%%%% modified by JJB, 20160206 so to remove Rraw<0 and replace with modeled:
+RE_filled(Rraw>0,1) = Rraw(Rraw>0,1);
+
 %%%% Uncomment this:
-% RE_filled(~isnan(Rraw) & data.Ustar >= data.Ustar_th,1) = Rraw(~isnan(Rraw) & data.Ustar >= data.Ustar_th,1);
-RE_filled(~isnan(Rraw),1) = Rraw(~isnan(Rraw),1);
+% RE_filled(~isnan(Rraw),1) = Rraw(~isnan(Rraw),1);
 
 %%% Fill GEP:
 % start with filled GEP equal to all zeroes

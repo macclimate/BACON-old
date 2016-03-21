@@ -150,12 +150,6 @@ save([output_path 'TP39_chamber_filled2B.mat'],'Yfill2B');
 save([output_path 'TP39_chamber_filled3B_stats.mat'],'stats_3B');
 save([output_path 'TP39_chamber_filled2B_stats.mat'],'stats_2B');
 
-
-
-
-
-
-
-
+s = dos(['cp -R "' output_path ' /home/arainlab/Google Drive/TPFS Data/"']);
 
 

@@ -104,7 +104,7 @@ for k = 1:1:length(right_rows);
     clear dots;
         
     %%%%%%%%%%% Run The Gapfilling %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    id_current = ['Working on: ' site ', ' fp ', ' ustar_tag ', ' model];
+    id_current = [site ', ' fp ', ' ustar_tag ', ' model];
     disp(['Working on: ' id_current]);
     
     try
@@ -176,5 +176,5 @@ end
 save([save_path site '_Gapfill_LE_H_default.mat'],'master');
 
 disp('done!');
-bacon;
+% bacon;
 end

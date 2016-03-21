@@ -5,22 +5,22 @@ function [] = mcm_data_compiler(year, site, data_type,quickflag)
 % - met data from the site
 % - precipitation data (from FH or wherever available)
 % - flux data (both CPEC and OPEC if available)
-
+%
 % Should have output be:
 % a) structure file separated by year and then by variable
 % b) single structure with all variables
 % c) an output file for CCP submission (can link to GUI)
-
+%
 % What we'll need:
 % 1. Filled Met - Ta, PAR, WS, WDir, RH, APR, Ts* (*if possible)
 % 2. Final_Cleaned Met - All other important variables (for gap-filling),
 % and all variables (for CCP output)
 % 3. Cleaned and Filled fluxes
-
+%
 %%%
 % First Created December 2009 by JJB
 %
-
+%
 %%% What quickflag does:
 % quickflag = 1 -- first compile operation (met + flux)
 % quickflag = -1 -- first compile, no prompts
@@ -1056,7 +1056,18 @@ else
     
     end
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %% 7. Output Results to CCP format: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% 7. Copy the /Master_Files/<site> directory to /home/arainlab/Google Drive/TPFS Data: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    if abs(quickflag)>1
+        stat = unix(['cp -vr ' master_out_path site '/ "/home/arainlab/Google Drive/TPFS Data/Master_Files/"']);
+        if stat ~=0
+            disp('Could not copy files to Google Drive-synced folder. Check for problems');
+        else
+            disp('Uploaded Master files to Google Drive-synced folder (/home/arainlab/Google Drive/TPFS Data/Master_Files).');
+        end
+    end
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% 8. Output Results to CCP format: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     if quickflag ==2
     if ~isempty(CCP_site)

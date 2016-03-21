@@ -482,12 +482,17 @@ master.labels = labels;
     clear master;
 end
 
-
-junk = input('Press Enter to Continue to Next Year');
+if quickflag == 1
+else
+    junk = input('Press Enter to Continue to Next Year');
+end
 end
 disp('done!');
-mcm_start_mgmt;    
 
+if quickflag == 1
+else
+    mcm_start_mgmt;
+end
 end
 
 function [data_out] = sf_load_from_master(year, data_in,var_name)

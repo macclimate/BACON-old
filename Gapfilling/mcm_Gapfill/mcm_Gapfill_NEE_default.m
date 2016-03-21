@@ -38,12 +38,14 @@ NEE_orig = data.NEE; %original data:
 % if exist([save_path site '_Gapfill_NEE_default_master.mat'],'file') == 2;
 %     load([save_path site '_Gapfill_NEE_default_master.mat']);
 % modified 01-May-2012
-if exist([save_path site '_Gapfill_NEE_default.mat'],'file') == 2;
+newfile_flag = 1; % JJB added this on 31-Jan-2016 - I think there are issues with loading the old file
+if exist([save_path site '_Gapfill_NEE_default.mat'],'file') == 2 && newfile_flag == 0;
     load([save_path site '_Gapfill_NEE_default.mat']); 
     taglist = master(1).taglist;
     newfile_flag = 0;
 else
     %%%% Get an output file ready:
+    disp('Preparing a new master file for gapfilling.');
     master(1).Year = data.Year;
      newfile_flag = 1;
     master(1).Year = data.Year;
@@ -352,4 +354,4 @@ end
 save([save_path site '_Gapfill_NEE_default.mat'],'master');
 
 disp('done!');
-bacon;
+% bacon;

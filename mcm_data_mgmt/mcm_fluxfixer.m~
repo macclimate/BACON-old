@@ -834,11 +834,11 @@ switch site
              % Fc Spikes
              output([2849],1) = NaN;
              % Penergy
-             output([2849],7) = NaN;
+             output([2849],7) = Nan;
              % CO2-irga Spikes
              output([1499:1501 2661 2849],17) = NaN;
              % H2O-irga Spikes
-             output([1964 1965],18) = NaN;
+             output([1964 1965],
         end
         
 end

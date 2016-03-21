@@ -1,18 +1,28 @@
-function [] = mcm_CPEC_storage(year, site, T_flag)
+function [] = mcm_CPEC_storage(year, site, T_flag, quickflag)
 %%% mcm_CPEC_storage.m
 %%%
 %%% This function calculates both heat and CO2 storage in the canopy below
 %%% CPEC systems.  Fc, CO2 concentrations, and resultant NEE are cleaned
 %%% for spikes and outputted
-
+%
 %%% This script also corrects fluxes (Fc, Hs, Htc, LE) for temperature and
 %%% pressure differences between that used by CPEC (often given a default
 %%% value) and actual data, as measured by met stations..
+% usage: mcm_CPEC_storage(year, site, T_flag)
+% T_flag: 1 for Celsius (most or all cases), 2 for Kelvin
+
 
 if nargin ==2
     T_flag = [];
+    quickflag = 0;
+elseif nargin == 3
+    quickflag = 0;
 end
 
+% if quickflag ==1
+% %     T_flag = 1;
+% %    disp('Quickflag is on for mcm_CPEC_storage. Assuming T is in Celsius'); 
+% end
 %%%%%%%%%%%%%%%%%
 [year_start year_end] = jjb_checkyear(year);
 
@@ -81,6 +91,7 @@ for year_ctr = year_start:1:year_end
     % end
     
     Ta = load_from_master(filled.master,'AirTemp_AbvCnpy');
+    
     APR = load_from_master(filled.master,'Pressure');
     [CO2_top CO2_top_col] = load_from_master(flux.master,'CO2_irga');
     [Fc Fc_col]= load_from_master(flux.master,'Fc');
@@ -89,6 +100,19 @@ for year_ctr = year_start:1:year_end
     [LE LE_col]= load_from_master(flux.master,'LE_L');
     [CPEC_Ta CPEC_Ta_col] = load_from_master(flux.master,'Tair');
     [CPEC_APR CPEC_APR_col] = load_from_master(flux.master,'BarometricP');
+    
+    %%% Added 20160130 by JJB - auto-determine Ta in C or K:
+    if nanmean(Ta) > 100 && nanmean(CPEC_Ta) > 100
+        T_flag = 2; % Kelvin
+        disp('It appears that T is in Kelvin');
+    elseif nanmean(Ta) < 100 && nanmean(CPEC_Ta) < 100
+        T_flag = 1; % Celsius
+        disp('It appears that T is in Celsius');
+    else
+        T_flag = [];
+        disp('It''s unclear what unit T is in -- investigate this.');
+    end
+    
     %%% Load CO2 canopy data:
     try
         CO2_cpy = load_from_master(cleaned.master,'CO2_Cnpy');
@@ -302,16 +326,30 @@ for year_ctr = year_start:1:year_end
     save([output_path site '_CPEC_calculated_' yr_str '.mat'],'master');
     disp(['Master file saved to ' output_path site '_CPEC_calculated_' yr_str '.mat']);
     commandwindow;
-    junk = input('Press Enter to Continue to Next Year');
+    
+    if quickflag == 1
+    else
+        junk = input('Press Enter to Continue to Next Year');
+    end
+
 end
 
 %%% Ask user if they want to run the compiler before continuing:
-commandwindow;
-disp('It is recommended that you run mcm_data_compiler at this point.');
-resp3 = input('Do you want to run mcm_data_compiler now? (y/n) > ','s');
+if quickflag == 1
+    resp3 = 'n';
+else
+    commandwindow;
+    disp('It is recommended that you run mcm_data_compiler at this point.');
+    resp3 = input('Do you want to run mcm_data_compiler now? (y/n) > ','s');
+end
+
 if strcmp(resp3,'n')==1
 else
-   mcm_data_compiler([],site,'',1); 
+    mcm_data_compiler([],site,'',1);
 end
-mcm_start_mgmt;
+
+if quickflag == 1
+else
+    mcm_start_mgmt;
+end
 

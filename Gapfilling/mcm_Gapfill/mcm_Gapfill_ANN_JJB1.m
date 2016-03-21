@@ -124,12 +124,14 @@ if debug_flag ~= 2
 % % %     nnet_RE_all = ANN_Gapfill(inputs_RE_all, target_RE, data.Year,1,30, 'nnet_RE_all');
 % % %     RE_filled_all(isnan(RE_filled_all),1) = nnet_RE_all(1).NEE_sim(isnan(RE_filled_all),1);
     nnet_RE_all2 = ANN_Gapfill(inputs_RE_all2, target_RE, data.Year,1,40, 'nnet_RE_all2');
-    RE_filled_all2(isnan(RE_filled_all2),1) = nnet_RE_all2(1).NEE_sim(isnan(RE_filled_all2),1);
+% Changed this on 20160206 (JJB) -> added  | RE_filled_all2<0 
+    RE_filled_all2(isnan(RE_filled_all2) | RE_filled_all2<0,1) = nnet_RE_all2(1).NEE_sim(isnan(RE_filled_all2) | RE_filled_all2<0,1);
     RE_pred_all2 = nnet_RE_all2(1).NEE_sim(:,1);
     
     %%% Run for Ts-only
     nnet_RE_all2_Tsonly = ANN_Gapfill(inputs_RE_all2_Tsonly, target_RE, data.Year,1,40, 'nnet_RE_all2-Tsonly');
-    RE_filled_all2(isnan(RE_filled_all2),1) = nnet_RE_all2_Tsonly(1).NEE_sim(isnan(RE_filled_all2),1);
+% Changed this on 20160206 (JJB) -> added  | RE_filled_all2<0 
+    RE_filled_all2(isnan(RE_filled_all2 | RE_filled_all2<0),1) = nnet_RE_all2_Tsonly(1).NEE_sim(isnan(RE_filled_all2) | RE_filled_all2<0,1);
     RE_pred_all2(isnan(RE_pred_all2)) = nnet_RE_all2_Tsonly(1).NEE_sim(isnan(RE_pred_all2),1);
         
 end
@@ -214,7 +216,7 @@ end;
 %% Try and get GEP estimates by using filled RE and filled NEE:
 if debug_flag ~=2
     GEP_filled = zeros(length(NEE_filled),1);
-    GEP_est = RE_filled - NEE_filled;
+    GEP_est = RE_pred - NEE_filled; % Changed this on 20160206 (JJB) - changed RE_filled to RE_pred.
 % ind_GEP = find(data.PAR >= 15 & ((data.dt > 85 & data.dt < 330 & (data.GDD > 8 | data.Ts5 >= 1 & data.Ta > 2)) ...
 %     | (data.dt > 330 | data.dt < 85) & data.Ts2 >= 1 & data.Ta > 2)); 
 ind_GEP = find(data.GEP_flag>=1);
