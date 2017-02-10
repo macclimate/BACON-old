@@ -163,7 +163,10 @@ switch site
                 %%% Shift flux data into UTC:
                 output = [NaN.*ones(9,size(output,2)); output(1:9063,1:end); ...
                     output(9065:14376,1:end); NaN.*ones(2,size(output,2)); output(14377:end-10,1:end)];
-            
+            % Fix a data offset issue, by moving data back by 1
+                    % halfhour KEEP THIS AT THE END
+                    output = [output(2:9638,:);NaN.*ones(1,size(output,2));output(9639:17520,:)];
+                
             case '2003'
                 output([2329:2337 7752:7754 9878:9924],17) = NaN;
                 %%% Shift flux data into UTC:
@@ -196,8 +199,10 @@ switch site
             catch
                disp('could not load 2004 cleaned flux data');   TP39_2004 = NaN.*ones(size(output));
             end                
-                output = [TP39_2004(end-9+1:end,1:end); output(1:end-9,1:end)];
+%                 output = [TP39_2004(end-9+1:end,1:end); output(1:end-9,1:end)];
+                output = [TP39_2004(end-8+1:end,1:end); output(1:end-8,1:end)]; % Modified by JJB to fix a time shift offset issue
 
+                
             case '2006'
             bad_CO2 = [(3094:3103)';(8061:8077)'; (12602:12609)'];
             bad_H2O = [(8061:8095)'];
@@ -212,6 +217,9 @@ switch site
             output = [TP39_2005(end-8+1:end,1:end); output(1:9652,1:end); ...
                 NaN.*ones(1,size(output,2)); output(9653:11832,1:end); output(11834:13027,1:end);...
                 NaN.*ones(1,size(output,2)); output(13028:end-9,1:end)];                
+            % fix a data offset issue, by moving data back by 1 halfhour KEEP THIS AT THE END
+            output = [output(1:6490,:);output(6492:11050,:);NaN.*ones(1,size(output,2));output(11051:end,:)];
+            
             
             case '2007'
              output(650:950,:) = NaN; % Obviously bad data (in all variables)
@@ -333,7 +341,9 @@ switch site
                 %%% timing issues (KEEP THESE LINES AT THE END OF FIXES FOR 2013)
                     output = [output(1:4274,:);output(4277:9106,:);NaN.*ones(2,size(output,2));output(9107:12924,:);output(12927:13863,:);...
                         NaN.*ones(2,size(output,2)); output(13864:17520,:)];
-        
+                        % Round 2 of fixes - found issues in the internal data logger clock
+                output = [output(1:4740,:);NaN.*ones(1,size(output,2)); output(4741:5051,:); output(5053:11533,:); output(11535:12119,:);NaN.*ones(1,size(output,2));...
+                    output(12120:17520,:)];
         case '2014'
                 % Remove bad Fc data
                 output([2010 2097 3381 3356 15737 15830 15831],1) = NaN;
@@ -386,21 +396,37 @@ switch site
  
          case '2016'
                 % Spikes in Fc 
-                output([514 736 1571:1573 1575 1957:1960 2290],1) = NaN;
+                output([514 736 1571:1573 1575 1957:1960 2290 4206 5168 6740 6754 7205 7590 8265 8320 10665 10964 11168 12357 13497 14780 17452],1) = NaN;
                 % Spikes in UStar
-                output([736],2) = NaN;
+                output([736 12540 12954 14144:14146],2) = NaN;
                 % Big spikes in Hs
-                output([412:416],3) = NaN;
+                output([412:416 2850 3779 3982 4352 5218 7137 8549:8553 9125 9374 9763 10271 11385 12513:12542 12955 12988 13132],3) = NaN;
                 % Spike in Le-L
-                output([2769 2777],5) = NaN;
+                output([2769 2777 2842 4211 5415 5793 7291 8265 8681 8727 9589 10046 11022],5) = NaN;
                 % Negative Spikes P-energy
-                output([514 736 1573 1575 1957:1960 2770:2778],7) = NaN;
+                output([514 736 1573 1575 1957:1960 2770:2778 4206 4935 5167 5168 6740 6754:6757 7205 7590 8265 8320 10387 10783 10964 12357 14780 16691 17452],7) = NaN;
+                % Tair Irregularities
+                output([736 747 1874 14423 14758],16) = NaN;
                 % CO2 irga
-                output([512 1571:1574 1957:1960 2769:2772],17) = NaN;
+                output([512 1571:1574 1957:1960 2769:2772 5933:5982 6090:6093 7088 7907 10077 10984:10986 11369 12598 12599 13229:13231 17334],17) = NaN;
+                % H20 - irga
+                output([6094 10984 11906],18) = NaN;
+                % T-s
+                output([10985 10986],22) = NaN;
                 % T - irga
-                output([512],27) = NaN;
+                output([512 5933:5994 6090:6095 7088 7907 10077 10985:10994 13229:13236 17334],27) = NaN;
                 % P - irga
-                output([512:515],28) = NaN;
+                output([512:515 5932:5982 6090:6095 6272:6275 7907 10077 10323:10409 13229:13231],28) = NaN;
+         
+            case '2017'
+                % Spikes in Fc 
+                output([161],1) = NaN;
+                % Spikes in UStar      
+                output([161],2) = NaN;
+                % Big spikes in Hs
+                output([124 130 157:161],3) = NaN;
+                 % Negative Spikes P-energy
+                output([161],7) = NaN;
                 
         end
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% TP74
@@ -557,14 +583,26 @@ switch site
                % Bad CO2 - where CO2 is flatlined around 450
                 bad_co2 = find(output(:,17) > 449.9999 & output(:,17) < 450.0001);
                 output(bad_co2,[1 17]) = NaN; % remove for Fc and CO2 concentration
+                % Fc Spikes
+                output([4121 6370 6393 6417 6633 7044 7098 7099 7505 7590 7931 8621:8624 8937 9556 9606 9611 9800 9994 10042 10781 10860 11437 11442 12204 12665 13217 13218 13255 14278 14568 16715 17435],1) = NaN;
+                % Ustar Spikes
+                output([404 3010:3055 9910 10666 13738 16622:16626 17332],2) = NaN;
+                % Hs Spikes
+                output([407 2624 2657 6660 6710 7954 8433 8624 9369 11385 11602 13134 16902],3) = NaN;
+                % Le-L Spikes
+                output([2843 4435 6137 7044 7099 7284 8265 8266 8681 9351 9586 9972 11601 11700 11900 11901 12175 12325 14772 17337],5) = NaN;
                 % P energy spike
-                output([1604:1605],7) = NaN;
+                output([1604:1605 4121 6393 7098 7099 7165 7505 7590 7931 9556 9800 9994 10042 10666 10781 10964 11437 11442 12204 13217 13218 14568 16715 17435 17483],7) = NaN;
+                % C02 irga spikes
+                output([3961:3672 4211:4220 6826 7163 7164 8996 9775 12597:12602 13217],17) = NaN;
                 % H20 irga spikes
-                output([2142:2169 2183:2185 2211],18) = NaN;
+                output([2142:2169 2183:2185 2211 6937:6952 7099 7356:7370 7539:7546 8625:8650 8864:8890 17330:17337],18) = NaN;
+                % Constant zero U,V, and W-values
+                output([2659 2660 2662:2678 2929:3049],[19:21]) = NaN;
                 % Bad T-s data
-                output([2164:2173 2179:2186 2190 2195 2198 2200 2202 2307:2308 2926:3055],22) = NaN;
-                % T-irga
-                output([2142:2169 2184 2211],27:28) = NaN;
+                output([2164:2173 2179:2186 2190 2195 2198 2200 2202 2307:2308 2926:3055 10782 13229:13232 16627:16631 16890:16960 17334:17336],22) = NaN;
+                % T & P-irga
+                output([2142:2169 2184 2211 4211 6890:6924 6937:7100 7356:7370 7537:7546 8625:8650 8864:8890 9775 9776 9832:9834 10991:10993 11359:11367 13229:13235 17334:17338],27:28) = NaN;
         end        
         
            
@@ -712,15 +750,32 @@ switch site
         
             case '2016'
               %Fc Spikes
-              output([3149],1) = NaN;
+              output([3149 5223 5413 6083 6837 7020 7376 7528 7614 7905 8237 8624 8679 8758 8813 9047 9368 9762 9850 10218 10898 10962 10964 11306 12110 12169 13034 13216 13904],1) = NaN;
+              %Ustar
+              output([4435 9368 9764 11890 11617],2) = NaN;
               %LE-L Spikes
-              output([2622 2624 2625 2628 2629],5) = NaN;
+              output([2622 2624 2625 2628 2629 3637 4197 5223 5413 7004 7528 7561 7676 9910 10615 10788 11123 13286 14421 17329],5) = NaN;
               %Penergy Spikes
-              output([3149],7) = NaN;
+              output([3149 3481 6083 6837 7020 8758 8813 9047 9368 9606 9850 10898 10964 11306 12169 13216],7) = NaN;
+              %CO2-IRGA spikes
+              output([182 7383 8852 10006 12640 14673],17) = NaN;
+              %H2O IRGA spikes
+              output([182 9778 10983:10986 15023 17332],18) = NaN;
+              %T-s spikes
+              output([1873:1880 2930:2952 9768],22) = NaN;
+              %u-std spikes
+              output([16907:16911],23) = NaN;
+              %v-std spikes
+              output([16907:16911],24) = NaN;
+              %w-std spikes
+              output([16907:16911],25) = NaN;
+              %Ts-std spikes
+              output([16907:16911],26) = NaN;
               %T IRGA spikes
-              output([325 326],27) = NaN;
+              output([325 326 10986 11376 12132],27) = NaN;
               %P IRGA spikes
-              output([182],28) = NaN;
+              output([182 7172 7173 7174 7175 7383 10983:10985],28) = NaN;
+              
           
              
         end
@@ -832,13 +887,27 @@ switch site
               
             case '2016'
              % Fc Spikes
-             output([2849],1) = NaN;
+             output([831 2002 2849 3145 3835 4197 4207 4451 4684 5211 5596 5648 6896 7857 8048 11643 12166 12559 14053],1) = NaN;
+             %Ustar
+             output([397 2658 2846 3543 3566 4030 4680 4681 9124 9368 14113 14427  17028],2) = NaN;
+             %Hs Spikes
+             output([3542 4030 14116 14417 16913 16921:16924 16928:16929 17329],3) = NaN;
+             % LE-L Spikes
+             output([1669 1670 3397 3835 4678 6953 7809 7857 7918 8097 8962 9252 9971 10074 10746 12130 12325 12609],5) = NaN;
              % Penergy
-             output([2849],7) = NaN;
+             output([2849 5211 10665 10964 11643 11685 12166 12559 12600],7) = NaN;
+             % Tair Spikes
+             output([393 2657 14125],16) = NaN;
              % CO2-irga Spikes
-             output([1499:1501 2661 2849],17) = NaN;
+             output([1499:1501 1964 1965 7378 10722 12590 12600 13835:13949 15431 16571:16695],17) = NaN;
              % H2O-irga Spikes
-             output([1964 1965],18) = NaN;
+             output([1964 1965 12590 13835:13950 16571:16695],18) = NaN;
+             % u Spikes
+             output([2658:2674 2929:2979 3542 3543 4850:4859 5831:5841 5876 5877 14113:14116 14125 14417 14428 14432:14443 15532 16085 16914 16919 17452 17453],19) = NaN;
+             % T-s Spikes
+             output([393 2657:2674 2929:2979 2989 3335:3359 3523:3532 6409:6411 13228:13231 14125 14434:14443 17205 17451],22) = NaN;
+             % T-irga Spikes
+             output([11127 11129 13835:13949],27) = NaN;
         end
         
 end

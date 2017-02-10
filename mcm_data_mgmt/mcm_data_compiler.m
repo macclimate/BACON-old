@@ -102,7 +102,8 @@ opec_final_calc_path = [ls 'Matlab/Data/Flux/OPEC/' site '/Final_Calculated/'];
 footprint_path = [ls 'Matlab/Data/Flux/Footprint/'];
 %%%% Output Paths:
 master_out_path =           [ls 'Matlab/Data/Master_Files/'];
-gdrive_path = [ls 'GDrive/Site_Data/Master_Files/Most_Recent_Data/'];
+gdrive_path = '/home/arainlab/Google Drive/TPFS Data/Master_Files/';
+
 %%%% Master Header Path:
 master_header_path = [ls 'Matlab/Config/Master_Files/']; % Added 01-May-2012
 %%%% Log Path:
@@ -931,9 +932,8 @@ else
     master.labels = header; % Overwrite the labels with the header:
     save([master_out_path site '/' site '_data_master.mat'], 'master');
     % also save a copy to the /1/fielddata/GDrive/Master Files/Most Recent Data/ Directory -- changed from /Latest_Posted_Data directory:
-    save([gdrive_path 'GDrive_' site '_data_master.mat'], 'master');
-    % A
-    
+    save([gdrive_path site '/' site '_data_master.mat'], 'master');
+    % 
     disp('Saved Master File to its directory, and the /GDrive/ directory.');
     
     master_all = master;

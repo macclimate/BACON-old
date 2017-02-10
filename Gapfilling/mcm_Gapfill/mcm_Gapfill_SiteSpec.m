@@ -1,4 +1,4 @@
-function [final_out f_out] = mcm_Gapfill_SiteSpec(data, Ustar_th, plot_flag)
+ function [final_out f_out] = mcm_Gapfill_SiteSpec(data, Ustar_th, plot_flag)
 
 %%% Pre-defined variables, mostly for plotting:
 f_out = [];

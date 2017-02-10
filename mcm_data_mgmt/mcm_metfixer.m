@@ -98,7 +98,7 @@ col_num = str2num(char(header(:,1)));
 var_names = char(header(:,2));
 %%% Minute intervals
 header_min = str2num(char(header(:,3)));
-%%% Use minute intervals to find 30-min variables only
+%%% Use minute intervals to find 30-min variables onlya
 switch site
     case 'MCM_WX'
         vars30 = find(header_min == 15);
@@ -254,7 +254,7 @@ for year_ctr = year_start:1:year_end
             %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             %%%%%%%%%%%%%%%%%%%%%%%% MCM_WX %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-             switch yr_str
+            switch yr_str
                 case '2008'
                 case '2009'
                 case '2010'
@@ -266,7 +266,7 @@ for year_ctr = year_start:1:year_end
                 case '2015'
                     output(4922:5070,16) = NaN;
                 case '2016'
-             end 
+            end
         case 'TP39_OTT'
             %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             %%%%%%%%%%%%%%%%%%%%%%%% TP39_OTT %%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -279,7 +279,7 @@ for year_ctr = year_start:1:year_end
                 case '2012'
                 case '2013'
                     % Bad offset data (missing)
-                    output(4742:4745,1) = NaN; 
+                    output(4742:4745,1) = NaN;
                 case '2014'
                 case '2015'
                 case '2016'
@@ -324,12 +324,21 @@ for year_ctr = year_start:1:year_end
                     % Bad points SM_DR_50cm
                     output([6366:6569 14431:end],4) = NaN;
                     % Bad points SM_DR2_2_0cm
-                    output([11764:12203],15) = NaN;                    
+                    output([11764:12203],15) = NaN;
                 case '2016'
+                    % TS Tr 20cm
+                    output([1677 9837],3) = NaN;
+                    % SMDR 100cm
+                    output([7926:7929 7950 7956:8151 8172:8249 8471:8669 8699:8706 ...
+                        8789:9166 9191:9195 9222:9239 9369:9562 10132:10144 13273:13283 17333],6) = NaN;
+                    % SMTR 0-30cm
+                    output([8003 8473:8553 8811:9166 9480:9492 11992:11994 12032:12047 12075:12096 12129:12143 17333],8) = NaN;
                     % SMDR 2 20cm
-                    output([1672 1963],15) = NaN;
+                    output([1672 1963 5024 6504 7155:8249 8490:9765 9999:10281 10562:12520],15) = NaN;
                     % SMDR 2 50cm
-                    output([1670 1816 1963],16) = NaN;
+                    output([1670 1816 1963 8115 8471:8669 8696:8714 8785:9562 17333],16) = NaN;
+                    % SMDR 2 5cm
+                    output([8242 8471:8669 8790:9165 9308:9369 9455:9564 10272],17) = NaN;
             end
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         case 'TP39_sapflow'
@@ -451,7 +460,7 @@ for year_ctr = year_start:1:year_end
                     % Inactive sensors (#2,#4,#6,#7,#8,#21,#22avg,#23,#24avg,#25,dr23)
                     output(:,[4 6 8 9 10 23:27 30 34 38:42 68 72 109]) = NaN;
                     % Bad sapref3avg
-                    output(6134,[5 32]) = NaN; 
+                    output(6134,[5 32]) = NaN;
                     % Bad sapref5avg
                     output(6134,[7 36]) = NaN;
                     % Non-functioning sensors (#11,#14,#16,#22max,#23hrmnmx,#24mm,#25m/mm,dr22avg)
@@ -465,21 +474,21 @@ for year_ctr = year_start:1:year_end
                     % Bad SM DR50 avg data
                     output(3022:3025,95) = NaN;
                     % Non-functioning SM sensors (#7-12 avg)
-                    output(:,101:106) = NaN; 
+                    output(:,101:106) = NaN;
                     
                     
                 case '2014'
-                   % Spikes in sensor 1
+                    % Spikes in sensor 1
                     output([1316 1323 5651 6286 6296 13872 10451 13892 15000:17520],3) = NaN;
                     
                     % Missing past 15000 - no power
                     output([15000:17520],[3 5 6 7 11 12 14 15 16 17 18 19 20 21 22 ...
                         28 29 30 31 32 33 34 35 36 37 43 44 45 46 47 48 49:71 73:79 82 83:89 ...
                         91 95:100 107 110 111:117]) = NaN;
-                     
+                    
                     % Spikes in all sensors
                     output([1323 13892],:) = NaN;
-                   
+                    
                     % Bad sensors: # 11,14,20,22,24,25,Dr22-23 (+ others)
                     output(:,[4 6 8 9 10 13 16 22 23 24 25 26 27 30 34 38 39 40 ...
                         41 42 48 54 66 70 74 76 108 109]) = NaN;
@@ -494,8 +503,8 @@ for year_ctr = year_start:1:year_end
                     output([1316:1323 6286 11490:11492 13872 ],...
                         [5 11 12 14 15 17 20 21 28 32 44 46 50 52 56 62 64 111 112 113 115]) = NaN;
                     % Bad points in # 21 sapflow data (with dip):
-                     output(1323,68) = NaN;
-                     
+                    output(1323,68) = NaN;
+                    
                     % Missing data in SFref5avg
                     output(5649:12000,7) = NaN;
                     % Missing/poor data in Sap 5 max
@@ -514,7 +523,7 @@ for year_ctr = year_start:1:year_end
                     output([14756],88:89) = NaN;
                     
                 case '2015'
-                    % *** Rachel found the following sensors to be working prior to April: 
+                    % *** Rachel found the following sensors to be working prior to April:
                     % 1,3,5,9,10,12,13,15,17,18,19
                     % After April, the following sensors are working:
                     % 1,3,9,10,12,13,15,18
@@ -526,7 +535,7 @@ for year_ctr = year_start:1:year_end
                     output([4973:4977 7246 7249 9010 11745 14230 14487 15159],5) = NaN;
                     % Inactive Sap sensors 4,6,8,16,17,19
                     output(1:end,[6,10,18,19,21,22]) = NaN;
-
+                    
                     % Repeat this for min and max, refer to inventory for
                     % working and inactive sensors
                     
@@ -557,14 +566,28 @@ for year_ctr = year_start:1:year_end
                     output([14230],52) = NaN;
                     % Spike in Sap1_8mAX
                     output([14230],62) = NaN;
-                 
-
-%                     
-%              
-                    
                     
                     
                 case '2016'
+                    % Sap Ref 1 Avg
+                    output([4210 10991 13228:13234 17332:17338],3) = NaN;
+                    % Sap Ref 3, 9, 10, 13, 15, 18 Avg
+                    output([4210 5644:5647 9832 10875 10880 10991 13228:13234 17332:17338],[5 11 12 15 17 20]) = NaN;
+                    % Sap 1 Max
+                    output([5646 17336],[28 32 44 62]) = NaN;
+                    % Sap 13 Max
+                    output([10991 13234 17336],52) = NaN;
+                    % Sap 15 Max
+                    output([11458:12214],[68 107]) = NaN;
+                    % Sap 21 Max
+                    output([10991 13234 17336],68) = NaN;
+                    % Sap 24 Max
+                    output([5827:5830 6405 6459:7261 10682 10827:10832 10875 10880 10991 11690 13227:13235 16095:16408 16529:16560 16959:17079 17336],74) = NaN;
+                    % Sap Dr 50 Avg
+                    output([9804:11869 12032:12489 12531:12969],95) = NaN;
+                    % Sap Dr 6B Avg
+                    output([5645 13228 17332:17338],111:115) = NaN;
+                    
             end
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         case 'TP74_sapflow'
@@ -613,17 +636,33 @@ for year_ctr = year_start:1:year_end
                     output([14827:14891],34) = NaN;
                     
                     
-                case '2015'  
-                % Sensors 10,11,12 are inactive 
-                % Sap_DT 5 has bad data after April
-                % Sap_DT_max 5 has bad data after April,
-                % Sap_vel 5 has bad data after April, 13+17 has bad data
-                % Sapflow 5 has bad data after April, 13+17 has bad data
-                
-                % Spike from changing sapflow sensors, shift afterwards
-                output([4984:4985 ],2:4 ) = NaN;
-                
+                case '2015'
+                    % Sensors 10,11,12 are inactive
+                    % Sap_DT 5 has bad data after April
+                    % Sap_DT_max 5 has bad data after April,
+                    % Sap_vel 5 has bad data after April, 13+17 has bad data
+                    % Sapflow 5 has bad data after April, 13+17 has bad data
+                    
+                    % Spike from changing sapflow sensors, shift afterwards
+                    output([4984:4985 ],2:4 ) = NaN;
+                    
                 case '2016'
+                    % Sensor dt Spikes
+                    output([4976 5051 9775 10282],[1:9 14:16]) = NaN;
+                    % Sensor dt Tree 9 Spikes
+                    output([5652],[9 14]) = NaN;
+                    % Sap dt Max Tree 1
+                    output([4976:5002 5051:5099 9775:9802],18) = NaN;
+                    % Sap dt Max Tree 4,8,14,15,16
+                    output([9775:9802],[21 25 31:33]) = NaN;
+                    % Sap dt Max Tree 13 & 17
+                    output([4976:5156 9775:9850],[30 34]) = NaN;
+                    % Sap Velocity Tree 1
+                    output([9775],35) = NaN;
+                    % Sensor Velocity Spikes
+                    output([4976 5051 9775 10282],[36:43 48:50]) = NaN;
+                    % Sensor Flow Spikes
+                    output([4976 5051 9775 10282],[52:60 65:67]) = NaN;
                     
             end
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -651,7 +690,7 @@ for year_ctr = year_start:1:year_end
                     output(1819:3437,4:7) = NaN;
                 case '2010'
                     
-                
+                    
                     % Added Oct 09, 2010 by JJB:%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                     %%% We need to insert an algorithm for removing large
                     %%% diurnal(ish) variations in bucket level during the start of
@@ -689,7 +728,9 @@ for year_ctr = year_start:1:year_end
                 case '2016'
                     % Faulty Sensor -> Tried to remove data but code did
                     % not work
-%                     output([174:1567],15) = NaN;               
+                    %                     output([174:1567],15) = NaN;
+                    output(14281,[11 12 13 15]) = NaN; % Bad battery voltage
+
             end
             %%% Call mcm_PPTfixer to Calculate event-based precipitation at
             %%% TP_PPT:
@@ -742,6 +783,19 @@ for year_ctr = year_start:1:year_end
                     clear output_test;
                     %%%%%%%%%%%%%%%%%%%%% END SHIFTING %%%%%%%%%%%%%%%%%%
                     
+                    % Swap mislabeled HMPs - For 2002, the ground and top
+                    % HMPs need to be swapped:
+                    Ta_abv_orig = output(:,1); RH_abv_orig = output(:,4);
+                    Ta_gnd_orig = output(:,3); RH_gnd_orig = output(:,6);
+                    output(:,1)=Ta_gnd_orig;
+                    output(:,3)=Ta_abv_orig;
+                    output(:,4)=RH_gnd_orig;
+                    output(:,6)=RH_abv_orig;
+                    clear *abv_org *gnd_orig;
+                    
+                    % Fix a data offset issue, by moving data back by 1
+                    % halfhour KEEP THIS AT THE END
+                    output = [output(2:9638,:);NaN.*ones(1,size(output,2));output(9639:17520,:)];
                 case '2003'
                     for i = 1:1:length(vars30)
                         try
@@ -765,6 +819,9 @@ for year_ctr = year_start:1:year_end
                     output(:,output_cols(strcmp(output_names,'SoilTemp_B_5cm')==1)) = Ts2B_orig(1:end,1);
                     output(:,output_cols(strcmp(output_names,'SoilTemp_B_2cm')==1)) = Ts5B_orig(1:end,1);
                     
+                    % Remove bad PAR_down data
+                    output(11405:11406,9)=NaN;
+                    
                     % Fix bad LWdown data
                     output([9204:9218 9295:9304 9971:9978 10005:10025 10069:10072 10158:10171 10207 10693:10701 10735:10748 10776:10785 10826:10843 10873:10892 10921:10947 10973:10991 11017 11026 11036 11037 11064:11072 11115:11124 11164:11182 11259 11277 11319:11324 11368:11373 11406:11410 11449:11469 11497:11517 12332:12334 13577:13579],18) = NaN;
                     
@@ -773,30 +830,77 @@ for year_ctr = year_start:1:year_end
                     output(:,output_cols(strcmp(output_names,'CS_Rain')==1)) = ppt;
                     clear ppt;
                     
-                                 case '2004'
+                    % Swap mislabeled HMPs - For 2003, the ground and top
+                    % HMPs need to be swapped:
+                    Ta_abv_orig = output(:,1); RH_abv_orig = output(:,4);
+                    Ta_gnd_orig = output(:,3); RH_gnd_orig = output(:,6);
+                    output(:,1)=Ta_gnd_orig;
+                    output(:,3)=Ta_abv_orig;
+                    output(:,4)=RH_gnd_orig;
+                    output(:,6)=RH_abv_orig;
+                    clear *abv_org *gnd_orig;
+                    % Fix a data offset issue, by moving data back by 1
+                    % halfhour KEEP THIS AT THE END
+                    output = [output(1:17468,:);output(17470:end,:);NaN.*ones(1,size(output,2))];
+                    
+                case '2004'
                     % Add PPT data from the /Final_Cleaned/TP39_PPT_2003-2007 directory
                     load([output_path(1:end-1) '_PPT_2003-2007/TP39_PPT_met_cleaned_' yr_str '.mat']);
                     output(:,output_cols(strcmp(output_names,'CS_Rain')==1)) = ppt;
                     clear ppt;
-                      case '2005'
-                     % Add PPT data from the /Final_Cleaned/TP39_PPT_2003-2007 directory
+                    % Swap mislabeled HMPs - For 2004, the ground and top
+                    % HMPs need to be swapped:
+                    Ta_abv_orig = output(:,1); RH_abv_orig = output(:,4);
+                    Ta_gnd_orig = output(:,3); RH_gnd_orig = output(:,6);
+                    output(:,1)=Ta_gnd_orig;
+                    output(:,3)=Ta_abv_orig;
+                    output(:,4)=RH_gnd_orig;
+                    output(:,6)=RH_abv_orig;
+                    clear *abv_org *gnd_orig;
+                case '2005'
+                    % Add PPT data from the /Final_Cleaned/TP39_PPT_2003-2007 directory
                     load([output_path(1:end-1) '_PPT_2003-2007/TP39_PPT_met_cleaned_' yr_str '.mat']);
                     output(:,output_cols(strcmp(output_names,'CS_Rain')==1)) = ppt;
-                    clear ppt; 
+                    clear ppt;
+                    % Fix a data offset issue, by moving data back by 1
+                    % halfhour KEEP THIS AT THE END
+                    output = [output(2:17520,:);NaN.*ones(1,size(output,2))];
+                    
+                    % Swap mislabeled HMPs - For 2005, ground and top
+                    % HMPs need to be swapped for the first 7 hhrs only:
+                    Ta_abv_orig = output(:,1); RH_abv_orig = output(:,4);
+                    Ta_gnd_orig = output(:,3); RH_gnd_orig = output(:,6);
+                    output(1:8,1)=Ta_gnd_orig(1:8,1);
+                    output(1:8,3)=Ta_abv_orig(1:8,1);
+                    output(1:8,4)=RH_gnd_orig(1:8,1);
+                    output(1:8,6)=RH_abv_orig(1:8,1);
+                    clear *abv_org *gnd_orig;
+                    
                 case '2006'
                     % Remove obvious bad data in PAR down abv cnpy
+                    bad_data = [4341 4438 4725 4773 4821 5301 5684 5732 6500 ...
+                        7075 7123 7171 7459 7507 7555 7603 7651 7699 7747 7843 ...
+                        7939 7987 8035 8083 8179 8227 8371 8419 8659];%8852?
+                    
+                    output(bad_data,output_cols(strcmp(output_names,'DownPAR_AbvCnpy')==1))=NaN;
+                    output(bad_data+1,output_cols(strcmp(output_names,'DownPAR_AbvCnpy')==1))=NaN;
+                    
                     output(12290:12310,output_cols(strcmp(output_names,'DownPAR_AbvCnpy')==1))=0;
+                    
                     % Remove obvious bad data in PAR down blw cnpy
                     output(12250:12600,35) = NaN;
                     %                     output(:,75:80)= NaN; output(:,82:85)= NaN; output(:,89:90)= NaN;
                     %                     output(12284:17520,69:91) = NaN;
                     %                     %%%% Move PAR bottom down to zero:
                     %                     output(output(:,33) < 10,33) = 0;
-                     % Add PPT data from the /Final_Cleaned/TP39_PPT_2003-2007 directory
+                    % Add PPT data from the /Final_Cleaned/TP39_PPT_2003-2007 directory
                     load([output_path(1:end-1) '_PPT_2003-2007/TP39_PPT_met_cleaned_' yr_str '.mat']);
                     output(:,output_cols(strcmp(output_names,'CS_Rain')==1)) = ppt;
-                    clear ppt;                   
+                    clear ppt;
                     
+                    %                     Fix a data offset issue, by moving data back by 1
+                    %                     halfhour KEEP THIS AT THE END
+                    output = [output(1:6490,:);output(6492:11050,:);NaN.*ones(1,size(output,2));output(11051:end,:)];
                 case '2007'
                     
                     %                 %% Corrects for inverted Net Radiation for a period of time
@@ -831,6 +935,22 @@ for year_ctr = year_start:1:year_end
                     output(bad_soil_data, bad_soil_cols) = NaN;
                     % SM 100 B probe -- before it was installed properly.
                     output(1:8200,output_cols(strcmp(output_names,'SM_B_100cm')==1)) = NaN;
+                    % Swap mislabeled HMPs - For 2007--2015:
+                    % labeled as    | should be
+                    %   abv         | gnd
+                    %   gnd         | cpy
+                    %   cpy         | abv
+                    Ta_abv_orig = output(:,1); RH_abv_orig = output(:,4);
+                    Ta_cpy_orig = output(:,2); RH_cpy_orig = output(:,5);
+                    Ta_gnd_orig = output(:,3); RH_gnd_orig = output(:,6);
+                    output(:,1)=Ta_cpy_orig(:,1);
+                    output(:,2)=Ta_gnd_orig(:,1);
+                    output(:,3)=Ta_abv_orig(:,1);
+                    output(:,4)=RH_cpy_orig(:,1);
+                    output(:,5)=RH_gnd_orig(:,1);
+                    output(:,6)=RH_abv_orig(:,1);
+                    clear *abv_org *gnd_orig *cpy_orig;
+                    
                     %%%%%%%%%%%%%%%%%%%%% START SHIFTING %%%%%%%%%%%%%%%%%%
                     % Shift data so that it's all in UTC: %%%%%%%%%%%%%%%%%%%%
                     % need to load last 8 datapoints from 2006
@@ -857,7 +977,7 @@ for year_ctr = year_start:1:year_end
                     % Add PPT data from the /Final_Cleaned/TP39_PPT_2003-2007 directory
                     load([output_path(1:end-1) '_PPT_2003-2007/TP39_PPT_met_cleaned_' yr_str '.mat']);
                     output(:,output_cols(strcmp(output_names,'CS_Rain')==1)) = ppt;
-                    clear ppt;                    
+                    clear ppt;
                     
                 case '2008'
                     % Fix CO2_cpy offset during late 2008 (if hasn't already been done)
@@ -889,6 +1009,21 @@ for year_ctr = year_start:1:year_end
                     output = output_test;
                     clear output_test;
                     
+                    % Swap mislabeled HMPs - For 2007--2015:
+                    % labeled as    | should be
+                    %   abv         | gnd
+                    %   gnd         | cpy
+                    %   cpy         | abv
+                    Ta_abv_orig = output(:,1); RH_abv_orig = output(:,4);
+                    Ta_cpy_orig = output(:,2); RH_cpy_orig = output(:,5);
+                    Ta_gnd_orig = output(:,3); RH_gnd_orig = output(:,6);
+                    output(:,1)=Ta_cpy_orig(:,1);
+                    output(:,2)=Ta_gnd_orig(:,1);
+                    output(:,3)=Ta_abv_orig(:,1);
+                    output(:,4)=RH_cpy_orig(:,1);
+                    output(:,5)=RH_gnd_orig(:,1);
+                    output(:,6)=RH_abv_orig(:,1);
+                    clear *abv_org *gnd_orig *cpy_orig;
                 case '2009'
                     
                     % Bad CO2_cnpy data:
@@ -928,6 +1063,22 @@ for year_ctr = year_start:1:year_end
                     output(10810-1+find_big,4) = 100;
                     clear find_big;
                     
+                    % Swap mislabeled HMPs - For 2007--2015:
+                    % labeled as    | should be
+                    %   abv         | gnd
+                    %   gnd         | cpy
+                    %   cpy         | abv
+                    Ta_abv_orig = output(:,1); RH_abv_orig = output(:,4);
+                    Ta_cpy_orig = output(:,2); RH_cpy_orig = output(:,5);
+                    Ta_gnd_orig = output(:,3); RH_gnd_orig = output(:,6);
+                    output(:,1)=Ta_cpy_orig(:,1);
+                    output(:,2)=Ta_gnd_orig(:,1);
+                    output(:,3)=Ta_abv_orig(:,1);
+                    output(:,4)=RH_cpy_orig(:,1);
+                    output(:,5)=RH_gnd_orig(:,1);
+                    output(:,6)=RH_abv_orig(:,1);
+                    clear *abv_org *gnd_orig *cpy_orig;
+                    
                 case '2010'
                     %%% Bad CO2 cpy data:
                     output([1625 4598 5611 6004 6005 6014 8027 15375 16607], 71) = NaN;
@@ -936,6 +1087,22 @@ for year_ctr = year_start:1:year_end
                     output(16840,97) = NaN;
                     % Bad Snow Depth Data:
                     output([3412 3415 9675 9798],31) = NaN;
+                    
+                    % Swap mislabeled HMPs - For 2007--2015:
+                    % labeled as    | should be
+                    %   abv         | gnd
+                    %   gnd         | cpy
+                    %   cpy         | abv
+                    Ta_abv_orig = output(:,1); RH_abv_orig = output(:,4);
+                    Ta_cpy_orig = output(:,2); RH_cpy_orig = output(:,5);
+                    Ta_gnd_orig = output(:,3); RH_gnd_orig = output(:,6);
+                    output(:,1)=Ta_cpy_orig(:,1);
+                    output(:,2)=Ta_gnd_orig(:,1);
+                    output(:,3)=Ta_abv_orig(:,1);
+                    output(:,4)=RH_cpy_orig(:,1);
+                    output(:,5)=RH_gnd_orig(:,1);
+                    output(:,6)=RH_abv_orig(:,1);
+                    clear *abv_org *gnd_orig *cpy_orig;
                     
                 case '2011'
                     % Missing data in all fields
@@ -1012,6 +1179,21 @@ for year_ctr = year_start:1:year_end
                     NRL = TP39_NRL.master.data(:,4);
                     output(isnan(output(:,24)),24) = NRL(isnan(output(:,24)),1);
                     
+                    % Swap mislabeled HMPs - For 2007--2015:
+                    % labeled as    | should be
+                    %   abv         | gnd
+                    %   gnd         | cpy
+                    %   cpy         | abv
+                    Ta_abv_orig = output(:,1); RH_abv_orig = output(:,4);
+                    Ta_cpy_orig = output(:,2); RH_cpy_orig = output(:,5);
+                    Ta_gnd_orig = output(:,3); RH_gnd_orig = output(:,6);
+                    output(:,1)=Ta_cpy_orig(:,1);
+                    output(:,2)=Ta_gnd_orig(:,1);
+                    output(:,3)=Ta_abv_orig(:,1);
+                    output(:,4)=RH_cpy_orig(:,1);
+                    output(:,5)=RH_gnd_orig(:,1);
+                    output(:,6)=RH_abv_orig(:,1);
+                    clear *abv_org *gnd_orig *cpy_orig;
                 case '2012'
                     % Bad SMB100 data
                     output([1:221 7806:7809  10415:12894 17317], 100) = NaN;
@@ -1037,28 +1219,43 @@ for year_ctr = year_start:1:year_end
                     output(9275:end,12) = NaN;
                     % Bad group temp data
                     output([4785 8907 ],29) = NaN;
-               
+                    
+                    % Swap mislabeled HMPs - For 2007--2015:
+                    % labeled as    | should be
+                    %   abv         | gnd
+                    %   gnd         | cpy
+                    %   cpy         | abv
+                    Ta_abv_orig = output(:,1); RH_abv_orig = output(:,4);
+                    Ta_cpy_orig = output(:,2); RH_cpy_orig = output(:,5);
+                    Ta_gnd_orig = output(:,3); RH_gnd_orig = output(:,6);
+                    output(:,1)=Ta_cpy_orig(:,1);
+                    output(:,2)=Ta_gnd_orig(:,1);
+                    output(:,3)=Ta_abv_orig(:,1);
+                    output(:,4)=RH_cpy_orig(:,1);
+                    output(:,5)=RH_gnd_orig(:,1);
+                    output(:,6)=RH_abv_orig(:,1);
+                    clear *abv_org *gnd_orig *cpy_orig;
                 case '2013'
-                   %%% Important Note: all of these data point values refer
-                   %%% to those plotted during the first check of the data.
-                   %%% The data is time shifted after tehse corrections are
-                   %%% made, so data point numbers in the 'final check' may
-                   %%% be different.
-                   
+                    %%% Important Note: all of these data point values refer
+                    %%% to those plotted during the first check of the data.
+                    %%% The data is time shifted after tehse corrections are
+                    %%% made, so data point numbers in the 'final check' may
+                    %%% be different.
+                    
                     % Bad RMY Rain data
                     output(:,11) = NaN;
-                    % Bad 2m NR-Lite 
+                    % Bad 2m NR-Lite
                     output(:,12) = NaN;
                     % Bad ground temp
                     output([7122 8572 9610 9615 10523 13612 13428],29) = NaN;
-                    output([1320 1431:1435 1723:1724 4075 5801:5802 7760 8482 8567 9602],71) = NaN;     
+                    output([1320 1431:1435 1723:1724 4075 5801:5802 7760 8482 8567 9602],71) = NaN;
                     % Bad snow sensor data
                     output(7759,27) = NaN;
                     % Bad snow temp data
                     output([7122 9610 9615 13428],30) = NaN;
                     % Bad tree temperature and snow temperature data (no sensors)
                     output(:,33:64) = NaN;
-                   
+                    
                     % Bad Soil Heat Flux HFP1 data point
                     output(1557:1560,65) = NaN;
                     % Bad Soil Heat Flux HFP2 data (flatlines/spike)
@@ -1066,19 +1263,42 @@ for year_ctr = year_start:1:year_end
                     % Bad SHFC1 data
                     output([1351:1356 14365:1437 14359:14362],69) = NaN;
                     % bad CO2 canopy data
-                    output([1:5802 7760 8482 8567],71) = NaN;                    
+                    output([1:5802 7760 8482 8567],71) = NaN;
                     % Bad CO2 below canopy data (no sensor)
-                    output(:,72) = NaN; 
-                   
+                    output(:,72) = NaN;
+                    
                     % Bad SM B 50cm data
                     output([1320:1322 1723 13611],99) = NaN;
                     % Bad SM B 100 data
                     output(13611,100) = NaN;
-                  
-                   %%% Fix time shifts introduced into flux data by computer
-                %%% timing issues (KEEP THESE LINES AT THE END OF FIXES FOR 2013)
+                    
+                    %%% Fix time shifts introduced into flux data by computer
+                    %%% timing issues (KEEP THESE LINES AT THE END OF FIXES FOR 2013)
                     output = [output(1:4274,:);output(4277:9106,:);NaN.*ones(2,size(output,2));output(9107:12924,:);output(12927:13863,:);...
                         NaN.*ones(2,size(output,2)); output(13864:17520,:)];
+                    %
+                    % Round 2 of fixes - found issues in the internal data logger clock
+                    output = [output(1:4740,:);NaN.*ones(1,size(output,2)); output(4741:5051,:); output(5053:11533,:); output(11535:12119,:);NaN.*ones(1,size(output,2));...
+                        output(12120:17520,:)];
+                    %                     output = [output(1:4274,:);output(4277:4741,:);NaN.*ones(1,size(output,2));output(4742:5051,:); output(5053:9106,:);NaN.*ones(2,size(output,2));...
+                    %                         output(9107:11532,:); output(11534:12118);  output(9107:12924,:);output(12927:13863,:);...
+                    %                         NaN.*ones(2,size(output,2)); output(13864:17520,:)];
+                    
+                    % Swap mislabeled HMPs - For 2007--2015:
+                    % labeled as    | should be
+                    %   abv         | gnd
+                    %   gnd         | cpy
+                    %   cpy         | abv
+                    Ta_abv_orig = output(:,1); RH_abv_orig = output(:,4);
+                    Ta_cpy_orig = output(:,2); RH_cpy_orig = output(:,5);
+                    Ta_gnd_orig = output(:,3); RH_gnd_orig = output(:,6);
+                    output(:,1)=Ta_cpy_orig(:,1);
+                    output(:,2)=Ta_gnd_orig(:,1);
+                    output(:,3)=Ta_abv_orig(:,1);
+                    output(:,4)=RH_cpy_orig(:,1);
+                    output(:,5)=RH_gnd_orig(:,1);
+                    output(:,6)=RH_abv_orig(:,1);
+                    clear *abv_org *gnd_orig *cpy_orig;
                 case '2014'
                     % Wind sensor not working
                     output(14525:16159,7:8) = NaN;
@@ -1086,7 +1306,7 @@ for year_ctr = year_start:1:year_end
                     output(7132:8782,10) = NaN;
                     % Bad RMY Rain data
                     output(:,11) = NaN;
-                    % Missing 2m NR-Lite 
+                    % Missing 2m NR-Lite
                     output(:,12) = NaN;
                     % Bad snow depth data
                     output([4109 4905 5635 6185 8782 9116 10892 11719 13387 13894 14571 15485:15487 15494 15504 15505 15507 15529 15537 15737 15781 ],[27:28 31]) = NaN;
@@ -1099,19 +1319,19 @@ for year_ctr = year_start:1:year_end
                     
                     % Bad tree temperature and snow temperature data (no sensors)
                     output(:,33:64) = NaN;
-                   
+                    
                     % Spike in SHF HFP1
                     output([1542 14311 14331],65) = NaN;
                     % Spikes in SHF MV1 and MV2
-                    output([1535:1536 1542],67:68) = NaN; 
+                    output([1535:1536 1542],67:68) = NaN;
                     % Bad SHFC1 data - Not sure if we need to do this one
                     % (Cal)
                     %output([348 1669],69) = NaN;
                     
                     % bad CO2 canopy data
-                    output([323 7091 10122 13874 15778],71) = NaN;  
+                    output([323 7091 10122 13874 15778],71) = NaN;
                     % Bad CO2 below canopy data (no sensor)
-                    output(:,72) = NaN; 
+                    output(:,72) = NaN;
                     
                     % Bad pressure points
                     output(9697:9699,76) = NaN;
@@ -1122,20 +1342,36 @@ for year_ctr = year_start:1:year_end
                     % Soil temperature spikes
                     output(11415,79) = NaN;
                     %%% Fix time shifts introduced into flux data by computer
-                %%% timing issues (KEEP THESE LINES AT THE END OF FIXES FOR 2014)
+                    %%% timing issues (KEEP THESE LINES AT THE END OF FIXES FOR 2014)
                     output = [output(1:4276,:);output(4279:14307,:);NaN.*ones(2,size(output,2));output(14308:17520,:)];
+                    
+                    % Swap mislabeled HMPs - For 2007--2015:
+                    % labeled as    | should be
+                    %   abv         | gnd
+                    %   gnd         | cpy
+                    %   cpy         | abv
+                    Ta_abv_orig = output(:,1); RH_abv_orig = output(:,4);
+                    Ta_cpy_orig = output(:,2); RH_cpy_orig = output(:,5);
+                    Ta_gnd_orig = output(:,3); RH_gnd_orig = output(:,6);
+                    output(:,1)=Ta_cpy_orig(:,1);
+                    output(:,2)=Ta_gnd_orig(:,1);
+                    output(:,3)=Ta_abv_orig(:,1);
+                    output(:,4)=RH_cpy_orig(:,1);
+                    output(:,5)=RH_gnd_orig(:,1);
+                    output(:,6)=RH_abv_orig(:,1);
+                    clear *abv_org *gnd_orig *cpy_orig;
                     
                 case '2015'
                     % Bad Ta points
                     output([6906 8615:8623 11508:11509 12365],1) = NaN;
                     output([8691:8787],2) = NaN;
                     output([8617:8737],3) = NaN;
-                                                       
+                    
                     % Bad snow depth data
                     output([396 404 417 419 422 470 472 474 4670 4790 8320 8534 9016 10652 11746 11934 12922 12927 12923 12932 12983 14487 14503],27:28) = NaN;
-                    output([7251 8615 8616 8623 10652 11508:12365 12926 14487],28) = NaN; 
+                    output([7251 8615 8616 8623 10652 11508:12365 12926 14487],28) = NaN;
                     output([396 404 417 419 422 470 472 474 4670 8615:8623 11508:12365 12922 12927 12923 12932 12983 14503 15159],31) = NaN;
-               
+                    
                     % Bad ground and snow temp
                     output([7251 8320 8534 8615:8623 9016 10652 11507:11509 12365 11934 12922 12927 12923 12932 12983 14487],29:30) = NaN;
                     
@@ -1152,13 +1388,13 @@ for year_ctr = year_start:1:year_end
                     % Bad soil heat flux cal
                     output([14487:14490],69:70) = NaN;
                     
-                        % Bad CO2 cnpy 
+                    % Bad CO2 cnpy
                     output([4687 5309 5310 7251 7808 8623 9014:9016 12922 12923 12927 12932 12983 14487
-                        ],71) = NaN; 
+                        ],71) = NaN;
                     % Bad Pressure data
                     output([2265:2816 2821 2917 3251 3252 3389 4356 4793 4974 4991 6129:6192 6390:6413 6688:7809 9732:10432 10913:10943 11012 11493:1150 15660:15824],76) = NaN;
                     % N2 tank pressure
-                    output([3044],77) = NaN;               
+                    output([3044],77) = NaN;
                     
                     % Soil temp B 2 cm
                     output([15159],90) = NaN;
@@ -1172,15 +1408,15 @@ for year_ctr = year_start:1:year_end
                     
                     % Bad SM B 100cm
                     output([7249 7250 9013:9015],100) = NaN;
-
+                    
                     
                     %%% Fix time shifts introduced into flux data by computer
-                %%% timing issues (KEEP THESE LINES AT THE END OF FIXES FOR 2015)
+                    %%% timing issues (KEEP THESE LINES AT THE END OF FIXES FOR 2015)
                     output = [output(1:4178,:);output(4181:11124,:);NaN.*ones(2,size(output,2));output(11125:17520,:)];
-                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                     % Wind speed (col 7) is bad from ~5650 onwards -- the bearing had broken
                     % Need to fix it by replacement with CSAT data:
-                    ws = output(:,7); 
+                    ws = output(:,7);
                     ws(5651:16393) = NaN; % bearing started to wear out after this point. Replaced on Dec 8(~16393)
                     CPEC = load([loadstart 'Matlab/Data/Flux/CPEC/TP39/Final_Cleaned/TP39_CPEC_cleaned_2015.mat']);
                     u = CPEC.master.data(:,19);v = CPEC.master.data(:,20);
@@ -1191,25 +1427,72 @@ for year_ctr = year_start:1:year_end
                     ws(ws<0) = 0;
                     output(:,7) = ws;
                     clear u v ws p WS*;
-                    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5    
+                    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                    % Swap mislabeled HMPs - For 2007--2015:
+                    % labeled as    | should be
+                    %   abv         | gnd
+                    %   gnd         | cpy
+                    %   cpy         | abv
+                    Ta_abv_orig = output(:,1); RH_abv_orig = output(:,4);
+                    Ta_cpy_orig = output(:,2); RH_cpy_orig = output(:,5);
+                    Ta_gnd_orig = output(:,3); RH_gnd_orig = output(:,6);
+                    output(:,1)=Ta_cpy_orig(:,1);
+                    output(:,2)=Ta_gnd_orig(:,1);
+                    output(:,3)=Ta_abv_orig(:,1);
+                    output(:,4)=RH_cpy_orig(:,1);
+                    output(:,5)=RH_gnd_orig(:,1);
+                    output(:,6)=RH_abv_orig(:,1);
+                    clear *abv_org *gnd_orig *cpy_orig;
+                    
                 case '2016'
-                    % Air Temp above canopy
-                    output([177],2) = NaN;                    
+                    % Remove bad RH_cpy 
+                    output(6095:8089,5) = NaN;
+                    % Air Temp below canopy
+                    output([177 3922 6091 6273 6376],1:6) = NaN;
                     % Wind Speed & Dir of Zero Removed
-                    output([2933:3110],7:8) = NaN;                    
+                    output([1898:1900 2933:3109 3841 6081:6088 9910 13427 13738 17330:17337],7:8) = NaN;
                     % Panel Temp dip
                     output([2767:2777],13) = NaN;
-                    output([2767:2777],78) = NaN;                    
+                    output([2767:2777],78) = NaN;
                     % Upward Shortwave Rad
-                    output([2925:2941],15) = NaN;                    
+                    output([2925:2941],15) = NaN;
+                    % Upward Longwave Rad
+                    output([5994 5995],17) = NaN;
                     % Bad snow depth data
-                    output([99 107 126 131 253 393 415 553 2777],27:28) = NaN;
-                    output([106],28) = NaN; 
-                    output([99 106 107 126 131 253 393 415 553 2620],31) = NaN;               
+                    output([99 107 126 131 253 393 415 553 1453 2777 3687 3922 4206 4211 4256 5793 6090 6273],27:28) = NaN;
+                    output([106],28) = NaN;
+                    output([99 106 107 126 131 253 393 415 553 2620 3919 3922 4206 4211 4256 6090 6273 14528],31) = NaN;
+                    % Ground and Snow Temp
+                    output([4206 4211 6273 10046 10991],29:30) = NaN;
+                    % Soil Heat Flux H1
+                    output(17323:17334,[65 67]) = NaN;
+                    % Soil Heat Flux Cal
+                    output([2118:2418 6374:6378],69) = NaN;
                     % CO2 canopy dips
-                    output([1960 2620],71) = NaN;                    
-                    % SM B 100 cm 
-                    output([2374 2380],100) = NaN;
+                    output([1960 2620 4210 6765 13228 13459],71) = NaN;
+                    % Down PAR
+                    output([5466 5651 5658 5794 5947 5985 6080],75) = NaN;
+                    % Pressure
+                    output([852:1572 2768:3132 3461:3530 3918 5983 12222],76) = NaN;
+                    % SM B 50 cm
+                    output([10984:10985 13228],99) = NaN;
+                    % SM B 100 cm
+                    output([2374 2380 17333:17335],100) = NaN;
+                    % Swap mislabeled HMPs - For 2007--2016:
+                    % labeled as    | should be
+                    %   abv         | gnd
+                    %   gnd         | cpy
+                    %   cpy         | abv
+                    Ta_abv_orig = output(:,1); RH_abv_orig = output(:,4);
+                    Ta_cpy_orig = output(:,2); RH_cpy_orig = output(:,5);
+                    Ta_gnd_orig = output(:,3); RH_gnd_orig = output(:,6);
+                    output(:,1)=Ta_cpy_orig(:,1);
+                    output(:,2)=Ta_gnd_orig(:,1);
+                    output(:,3)=Ta_abv_orig(:,1);
+                    output(:,4)=RH_cpy_orig(:,1);
+                    output(:,5)=RH_gnd_orig(:,1);
+                    output(:,6)=RH_abv_orig(:,1);
+                    clear *abv_org *gnd_orig *cpy_orig;
                     
             end
             %%% Corrections applied to all years of data:
@@ -1229,14 +1512,26 @@ for year_ctr = year_start:1:year_end
             %             [sunup_down] = annual_suntimes(site, year, 0);
             %         end
             ind_sundown = find(sunup_down< 1);
+            
+            switch yr_str
+                case {'2002';'2003';'2004'};
+            DownParBot = 15;
+            UpParBot = 15;
+            DownParBlwBot = 80;
+                otherwise
+               DownParBot = 15;
+               UpParBot = 15;
+            DownParBlwBot = 15;
+            end
+            
             figure(55);clf;
             plot(output(:,PAR_cols(1)))
             hold on;
             plot(ind_sundown,output(ind_sundown,PAR_cols(1)),'.','Color',[1 0 0])
             title('Check to make sure timing is right')
-            output(output(:,PAR_cols(1)) < 10 & sunup_down < 1,PAR_cols(1)) = 0;
-            output(output(:,PAR_cols(2)) < 5 & sunup_down < 1,PAR_cols(2)) = 0;
-            output(output(:,PAR_cols(3)) < 10 & sunup_down < 1,PAR_cols(3)) = 0;
+            output(output(:,PAR_cols(1)) < DownParBot & sunup_down < 1,PAR_cols(1)) = 0;
+            output(output(:,PAR_cols(2)) < DownParBot & sunup_down < 1,PAR_cols(2)) = 0;
+            output(output(:,PAR_cols(3)) < DownParBlwBot & sunup_down < 1,PAR_cols(3)) = 0;
             output(output(:,PAR_cols(1)) < 0 , PAR_cols(1)) = 0;
             output(output(:,PAR_cols(2)) < 0 , PAR_cols(2)) = 0;
             output(output(:,PAR_cols(3)) < 0 , PAR_cols(3)) = 0;
@@ -1574,7 +1869,7 @@ for year_ctr = year_start:1:year_end
                     % Bad ST B2cm data
                     output([5790 6806 8031 8101 8485],23) = NaN;
                     % Bad SM B80-100cm data
-                    output([6806 8031 8485],24) = NaN; 
+                    output([6806 8031 8485],24) = NaN;
                     % Bad SM A50cm data
                     output([5790 6806 8031 8101 8485],25) = NaN;
                     % Bad SM A20cm data
@@ -1590,13 +1885,13 @@ for year_ctr = year_start:1:year_end
                     % Bad SM B10cm data
                     output(8031,31) = NaN;
                     % Bad SM B5cm data
-                    output(8031,32) = NaN;  
+                    output(8031,32) = NaN;
                     % Bad tree temp sensors
                     output(:,33:43) = NaN;
                     % Bad CO2 canopy data
                     output([1:8444 8565 13610],47) = NaN;
                     % Bad SM DR100cm data
-                    output([5790 6806 8031 8101 8485],48) = NaN; 
+                    output([5790 6806 8031 8101 8485],48) = NaN;
                     % Bad SM DR50cm data
                     output([5790 6806 8031 8101 8485],49) = NaN;
                     % Bad SM DR20cm data
@@ -1627,10 +1922,10 @@ for year_ctr = year_start:1:year_end
                 case '2015'
                     % Bad Ta data
                     output(9149,1) = NaN;
-                    % Bad Rn sensor 
+                    % Bad Rn sensor
                     output([12975:16212],8) = NaN;
                     % Spike in Ts A 100cm
-                    output([7211 7237 8671 10649 10653],12) = NaN; 
+                    output([7211 7237 8671 10649 10653],12) = NaN;
                     % Remove spike in Ts A 20cm
                     output(3920,14) = NaN;
                     % Spike in Ts B 100 cm
@@ -1645,22 +1940,35 @@ for year_ctr = year_start:1:year_end
                     % Try to rescale CO2 IRGA - simplest approach might be
                     % to multiply by 2:
                     output([8629:9149],47) = output([8629:9149],47).*2;
-%                     tmp1 = output([8629:9149],47); tmp2 = output([9155:17520],47);
-%                     std1 = nanstd(tmp1);std2 = nanstd(tmp2);
-%     mean1 = nanmean(tmp1);mean2 = nanmean(tmp2);
+                    %                     tmp1 = output([8629:9149],47); tmp2 = output([9155:17520],47);
+                    %                     std1 = nanstd(tmp1);std2 = nanstd(tmp2);
+                    %     mean1 = nanmean(tmp1);mean2 = nanmean(tmp2);
                     
                 case '2016'
+                    % Air Temp
+                    output([4979],1) = NaN;
+                    % Wind Speed
+                    output([9764:9777],4) = NaN;
+                    % Soil Heat Flux
+                    output([2450:2627],10:11) = NaN;
                     % Soil temp A 100 cm
-                    output([1392 2222 2250 2624:2625],12) = NaN;
+                    output([1392 2222 2250 2624:2625 5036 ...
+                        8554 9764:9766 10199 10272 10273 12190],12) = NaN;
+                    % Recent Soil dips
+                    output([7103 7244 7245 14412:14414],12:24) = NaN;
                     % Soil temp B 50 cm
-                    output([1390 1591 3198:3202],19) = NaN;
+                    output([1390 1591 3198:3202 9763],19) = NaN;
                     % Soil temp B 20 cm
                     output([737 1392 3196:3198],20) = NaN;
+                    % Recent Soil dips
+                    output([7103 7244 7245],29) = NaN;
+                    % Recent Soil dips
+                    output([7103 7244 7245],32) = NaN;
                     % CO2 Canopy
-                    output([2620 2651 2777],47) = NaN;
+                    output([2620 2651 2777 4210 4211 17337],47) = NaN;
+                    % Recent Soil dips
+                    output([7103 7244 7245],48:49) = NaN;
                     
-                   
-
             end
             %% Corrections applied to all years of data:
             % 1: Set any negative PAR and nighttime PAR to zero:
@@ -2168,7 +2476,7 @@ for year_ctr = year_start:1:year_end
                     % Bad Down PAR above canopy (missing)
                     output([1:1083 1284:1719],5) = NaN;
                     % Correction factor to correct for wrong multiplier used from February to June in Down PAR sensor.
-                    % (Correct multipler/wrong multipler) = (282.05/170.36) = 1.65561 
+                    % (Correct multipler/wrong multipler) = (282.05/170.36) = 1.65561
                     output([2675:8064],5) = output([2675:8064],5)*1.65561;
                     % Bad Up Par abv cnpy
                     output([9609:9633 10058:10062 10204:10205 10502:10542 11423:12069],6) = NaN;
@@ -2178,7 +2486,7 @@ for year_ctr = year_start:1:year_end
                     output([6130:12091],10) = NaN;
                     
                     output([1384:1719 ],35) = NaN;
-                                     
+                    
                     
                 case '2014'
                     % downPar and upPar abv canopy... not sure what to do
@@ -2194,9 +2502,9 @@ for year_ctr = year_start:1:year_end
                     %%% Fix an magnitude issue with PAR down between points
                     %%% 10068 and 11552. Inspection showed that PAR should
                     %%% be increased by a factor of 1.1765.
-                    %%% 
+                    %%%
                     output(10068:11552,5) = NaN;
-                   
+                    
                     
                     % Jan. 13 2015 - Removing PAR data after sensor down
                     % mid-summer (whole year or until re-started in winter?
@@ -2243,11 +2551,11 @@ for year_ctr = year_start:1:year_end
                     output(:,32:34) = NaN;
                     
                     % Spikes in Pressure data
-                    output([ 5700:5706 6053:6057 6360:6365 6745:6750 10068 10161 10201:10296 10406:10412 11552],35) = NaN; 
+                    output([ 5700:5706 6053:6057 6360:6365 6745:6750 10068 10161 10201:10296 10406:10412 11552],35) = NaN;
                     
                     
                 case '2015'
-                    % Spike in Net Rad Above Canopy 
+                    % Spike in Net Rad Above Canopy
                     output([2977 4067 7587 15586],7) = NaN;
                     % Bad Soil Heat Flux points
                     output([14260:14263],8) = NaN;
@@ -2257,43 +2565,515 @@ for year_ctr = year_start:1:year_end
                     % Bad soil temp data points
                     output([260 1251 2059],[11 12 13 15 16 17 18 19 21:22 27:31]) = NaN; %
                     % Spikes Ts A 100 cm
-                    output([2965 3116 3818 4417:4448 4745:4778 5046 5195 5360 5750 5872 6235 6289:6302 7216:7218 7362 7590:7602 7623:7626 7642:7643 7907 7923:7931 ... 
+                    output([2965 3116 3818 4417:4448 4745:4778 5046 5195 5360 5750 5872 6235 6289:6302 7216:7218 7362 7590:7602 7623:7626 7642:7643 7907 7923:7931 ...
                         8549:8555 8563:8578 8588:8599 8949:8956 8995:9001 9103:9106 9128 9336:9340 9491:9495 10283:10299 10320:10328 10383 ...
                         10651:10652 11147 11225 11252:11261 11369 11678:11694 12019 12165:12174 12190:12195 12545:12548 12567:12571 12595:12596 ...
                         12940:12965 13249:13253 13499:13519 13753:13755 14062:14065 14146 14242:14264 14416:14418 14470 ...
                         14602:14605 14855:14856 15051:15052 15148:15151 15585:15589 15883:15885 15894:15895 16091:16096],11) = NaN;
-                  
-                                      
+                    
+                    
                     output([3652 4067 4545 7136 8108 8739 9707 10596 12238 13346 13590 14652 14770 15308 15339:15342 15423:15424 15814:15819 16448:16453 16485:16492],12) = NaN;
                     output([3314 3869 4006 4033 4274 5072 5221 8672 8937 9319 9656 9682 10212 11173 11509 11546 12357 12454 12498 13279 13397 14387 ],13) = NaN;
                     output([2939 3600 3792 3989 4232 4247 4638 4664 4749 13684 13736 14508 14575 15376 16365 16531 16557],14) = NaN;
-                    output([1251 2059  ],[14 23:31]) = NaN;      
+                    output([1251 2059  ],[14 23:31]) = NaN;
                     
-%                     output([
+                    %                     output([
                     
                 case '2016'
+                    % Spike in Down PAR above canopy
+                    output([2770 6582 12226],5) = NaN;
+                    % Spike in Net Radiation Above Canopy
+                    output([2242 3932 4371 4860 6852 12226 17449 17450],7) = NaN;
+                    % Spike in Soil Heat Flux 1
+                    output([8550 8552 9763 10200 10201 14727],8) = NaN;
+                    % Remove all of SHF 2 (sensor is broken):
+                    output(:,9) = NaN;
                     % Spike in Soil Temperature Pit A 100cm
-                    output([1592 1593 2623 2624],11) = NaN;
-                    % Spike in Soil Temperature Pit A 50cm 
-                    output([1261 2483],12) = NaN;
+                    output([1592 1593 2623 2624 4061:4063 4107 10501 11424 11425 11685 17034 17035 17072 17303:17305],11) = NaN;
+                    % Spike in Soil Temperature Pit A 50cm
+                    output([1261 1644 1766 2483 4105 4561 4710 5809 6300],12) = NaN;
                     % Spike in Soil Temperature Pit A 20cm
-                    output([1332 2018],13) = NaN;
+                    output([1332 2018 3403 5021 5863 6226],13) = NaN;
                     % Spike in Soil Temperature Pit A 10cm
-                    output([2248 3183],14) = NaN;
+                    output([1670 2248 3183 14052 14053],14) = NaN;
                     % Spikes in Soil Temperature Pit A 5cm
-                    output([1065 1165 1235 1280 1403 2078 2319 2561],15) = NaN;
+                    output([1065 1165 1235 1280 1403 1714 1740 1992 2078 2319 2561 3280 3818 4832 14052 14053],15) = NaN;
                     % Spike in Soil Temperature Pit A 2cm
-                    output([1209 2155],16) = NaN;
+                    output([1209 2155 3956 4588 4632 4857 14052],16) = NaN;
                     % Spike in Soil Temperature Pit B 100cm
-                    output([1332 2631 2924],17) = NaN;
+                    output([1332 2631 2924 4105 4131 4995 5190 14052 14053],17) = NaN;
+                    % Spike in Soil Temperature Pit B 50cm
+                    output([3376 5232 5646 5950 6274 14052 14053],18) = NaN;
                     % Spike in Soil Temperature Pit B 20cm
-                    output([3058],19) = NaN;
+                    output([1228 1280 1489 1992 2334 2844 3058 4517 4663 5782 5783 8261:8263 9780 17203],19) = NaN;
                     % Spike in Soil Temperature Pit B 5cm
-                    output([1116 1332 3142],21) = NaN;
+                    output([1116 1332 2631 3142 4562 13287 13288],21) = NaN;
                     % Spike in Soil Temperature Pit B 2cm
-                    output([1455 2052],22) = NaN;
+                    output([1455 2052 5404 5837 14052],22) = NaN;
                     % Spike in Soil Moisture Pit A 50cm
-                    output([2475],23) = NaN;
+                    output([2475 4762],23) = NaN;
+            end
+            %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            %%%%% Corrections applied to all years of data:
+            % 1: Set any negative PAR and nighttime PAR to zero:
+            PAR_cols = [];
+            try
+                PAR_cols = [PAR_cols; output_cols(strcmp(output_names,'DownPAR_AbvCnpy')==1)];
+                PAR_cols = [PAR_cols; output_cols(strcmp(output_names,'UpPAR_AbvCnpy')==1)];
+                PAR_cols = [PAR_cols; output_cols(strcmp(output_names,'DownPAR_BlwCnpy')==1)];
+            catch
+            end
+            
+            %%% Set the bottoms of PAR (a
+            %         if strcmp(site,'TP74')==1 && year == 2003
+            %             DownParBot = 19;
+            %             UpParBot = 21.5;
+            %             DownParBlwBot = 15;
+            %         else
+            switch yr_str
+                case {'2008';'2009'};
+            DownParBot = 100;
+            UpParBot = 50;
+            DownParBlwBot = 50;
+                otherwise
+               DownParBot = 15;
+               UpParBot = 15;
+            DownParBlwBot = 15;
+            end
+            
+            %         end
+            
+            %Plot uncorrected:
+            figure(97);clf;
+            subplot(211)
+            plot(output(:,PAR_cols)); legend(output_names_str(PAR_cols,:))
+            title('Uncorrected PAR');
+            %         if year <= 2008
+            [sunup_down] = annual_suntimes(site, year_ctr, 0);
+            %         else
+            %             [sunup_down] = annual_suntimes(site, year, 0);
+            %         end
+            ind_sundown = find(sunup_down< 1);
+            figure(55);clf;
+            plot(output(:,PAR_cols(1)))
+            hold on;
+            plot(ind_sundown,output(ind_sundown,PAR_cols(1)),'.','Color',[1 0 0])
+            title('Check to make sure timing is right')
+            try
+                output(output(:,PAR_cols(1)) < DownParBot & sunup_down < 1,PAR_cols(1)) = 0;
+                output(output(:,PAR_cols(2)) < UpParBot & sunup_down < 1,PAR_cols(2)) = 0;
+                output(output(:,PAR_cols(3)) < DownParBlwBot & sunup_down < 1,PAR_cols(3)) = 0;
+            catch
+            end
+            try
+                output(output(:,PAR_cols(1)) < 0 , PAR_cols(1)) = 0;
+                output(output(:,PAR_cols(2)) < 0 , PAR_cols(2)) = 0;
+                output(output(:,PAR_cols(3)) < 0 , PAR_cols(3)) = 0;
+            catch
+            end
+            % Plot corrected data:
+            figure(97);
+            subplot(212);
+            plot(output(:,PAR_cols)); legend(output_names_str(PAR_cols,:))
+            title('Corrected PAR');
+            
+            % 2: Set any RH > 100 to NaN -- This is questionable whether to make
+            % these values NaN or 100.  I am making the decision that in some
+            % cases
+            RH_cols = [];
+            try
+                RH_cols = [RH_cols; output_cols(strcmp(output_names,'RelHum_AbvCnpy')==1)];
+                RH_cols = [RH_cols; output_cols(strcmp(output_names,'RelHum_Cnpy')==1)];
+                RH_cols = [RH_cols; output_cols(strcmp(output_names,'RelHum_BlwCnpy')==1)];
+            catch
+            end
+            % Adjust columns to match output:
+            %     RH_cols = RH_cols - 6;
+            figure(98);clf;
+            subplot(211)
+            plot(output(:,RH_cols)); legend(output_names_str(RH_cols,:))
+            title('Uncorrected RH')
+            RH_resp = input('Enter value to set RH > 100 to? (100 or NaN): ');
+            for j = 1:1:length(RH_cols)
+                output(output(:,RH_cols(j)) > 100,RH_cols(j)) = RH_resp;
+            end
+            subplot(212);
+            plot(output(:,RH_cols)); legend(output_names_str(RH_cols,:))
+            title('Corrected RH');
+            
+            
+        case 'TPD'
+            %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            %%%%%%%%%%%%%%%%%%%%%%%% TPD  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            %%% Convert wind speed to m/s for years 2012-2014
+            if year < 2015
+                output(:,22) = output(:,22)./3.6;
+            end
+            %%% Convert Pressure to kPa
+            output(:,5) = output(:,5)./10;
+            %%% Convert SHF to W/m2 ** NOTE: Change calibration values to
+            %%% REAL values ***
+            output(:,18) = output(:,18).*42;
+            output(:,19) = output(:,19).*42;
+            output(:,20) = output(:,20).*42;
+            output(:,21) = output(:,21).*42;
+            
+            
+            switch yr_str
+                case '2012'
+                    %%% Swap reversed SW and LW data (up & down are
+                    %%% reversed)
+                    tmp = output(:,10);
+                    output(:,10)=output(:,11);
+                    output(:,11)=tmp;
+                    
+                    tmp = output(:,12);
+                    output(:,12)=output(:,13);
+                    output(:,13)=tmp;
+                    
+                    %%% Bad Temperature data:
+                    output([784 795 1071],3)= NaN;
+                    output([9037],3)= NaN;
+                    output([9496:9498],3)= NaN;
+                    output([9547:9548],3)= NaN;
+                    output([9563:9620],3)= NaN;
+                    output([9855 9857],3)= NaN;
+                    output([9859],3)= NaN;
+                    output([10376:10478],3)= NaN;
+                    output([11360:11368],3)= NaN;
+                    output([11380],3)= NaN;
+                    output([11415:11540],3)= NaN;
+                    output([11552:11583],3)= NaN;
+                    output([11711:12106],3)= NaN;
+                    output([12270],3)= NaN;
+                    output([12291:12455],3)= NaN;
+                    output([12773:12815],3)= NaN;
+                    output([12733:12734],3)= NaN;
+                    output([12831:12832],3)= NaN;
+                    output([13278:13567],3)= NaN;
+                    output([14886],3)= NaN;
+                    output([16756],3)= NaN;
+                    output([9036 9037 9518 9532 9856 9858 9893],3)=NaN;
+                    
+                    
+                    %%% Bad RH data:
+                    output([225 591 784 795 1071 3028 12297],4)= NaN;
+                    output([12310:12314],4)= NaN;
+                    output([12776],4)= NaN;
+                    output([12787:12788],4)= NaN;
+                    output([12790:12814],4)= NaN;
+                    output([13279:13567],4)= NaN;
+                    output([12298],4)= NaN;
+                    output([12315],4)= NaN;
+                    output([12341],4)= NaN;
+                    output([12777],4)= NaN;
+                    output([12815],4)= NaN;
+                    output([12452],4)= NaN;
+                    %%% Bad Pressure data:
+                    output([180:212 225:239],5)= NaN;
+                    output([591 789 795 1071],5)= NaN;
+                    %%% Bad Snow Depth data:
+                    output([1071 5210:14349],6)= NaN;
+                    
+                    %%% Bad PAR data:
+                    output([209 231 5838 12268],8)= NaN;
+                    
+                    %%% Bad WindSpeed data:
+                    output([2865 4326],16)=NaN;
+                    
+                    %             %%% Bad SWP data:
+                    %             output([241:510],26)= NaN;
+                    %             output([241:510],27)= NaN;
+                    %             output([241:510],28)= NaN;
+                    %             output([241:510],29)= NaN;
+                    %             output([241:510],30)= NaN;
+                    %             %%% Bad Ohms data:
+                    %             output([241:510],38)= NaN;
+                    %             output([241:510],39)= NaN;
+                    %             output([241:510],40)= NaN;
+                    %             output([241:510],41)= NaN;
+                    %             output([241:510],42)= NaN;
+                    %%% Bad tipping bucket RG data:
+                    output([1:4000],85)= NaN;
+                    
+                    %%% Remove bad CO2_cpy data:
+                    output([5842:5844],86) = NaN;
+                    output([6589 7434 7770 8106 8442 9131 9786 10122 10458 10794 11130 11466 11819 12155 12491 12827 13163 13547 13567],86) = NaN;
+                    %%% Bad SWP Pit A
+                    output([5838],25)= NaN;
+                    output([5838],26)= NaN;
+                    output([5838],27)= NaN;
+                    output([5838],28)= NaN;
+                    output([5838],29)= NaN;
+                    output([5838],30)= NaN;
+                    
+                    %%% Bad SWP Pit B
+                    output([5838],31)= NaN;
+                    output([5838],32)= NaN;
+                    output([5838],33)= NaN;
+                    output([5838],34)= NaN;
+                    output([5838],35)= NaN;
+                    output([5838],36)= NaN;
+                    %%% Bad KOhms Pit A
+                    output([5838],37)= NaN;
+                    output([5838],38)= NaN;
+                    output([5838],39)= NaN;
+                    output([5838],40)= NaN;
+                    output([5838],41)= NaN;
+                    output([5838],42)= NaN;
+                    
+                    %%% Bad kOhms Pit B
+                    output([5838],43)= NaN;
+                    output([5838],44)= NaN;
+                    output([5838],45)= NaN;
+                    output([5838],46)= NaN;
+                    output([5838],47)= NaN;
+                    output([5838],48)= NaN;
+                    
+                    
+                    
+                    %%% Fix incorrect soil sensor tensiometer wiring at start of
+                    %%% year:
+                    %%%% Checking plot used to fix the sensors -- not needed %%%%%%%%%%%%%
+                    % %             clrs = jjb_get_plot_colors;
+                    % %             figure(99);clf;
+                    % %             ctr = 1;
+                    % %             for i = 25:1:36
+                    % %             plot(output(:,i),'Color',clrs(ctr,:),'LineWidth',2);hold on;
+                    % %             ctr = ctr + 1;
+                    % %             end
+                    % %             legend(num2str((25:1:36)'))
+                    %             clrs = jjb_get_plot_colors;
+                    %             figure(99);clf;
+                    %             ctr = 1;
+                    %             for i = 37:1:48
+                    %             plot(output(:,i),'Color',clrs(ctr,:),'LineWidth',2);hold on;
+                    %             ctr = ctr + 1;
+                    %             end
+                    %             legend(num2str((37:1:48)'))
+                    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                    %%% Switch sensors for SWP:
+                    switch_time = [241:510]';
+                    tmp29 = output(switch_time,29);
+                    tmp27 = output(switch_time,27);
+                    output(switch_time,27) = output(switch_time,26); output(switch_time,26) = NaN;
+                    output(switch_time,29) = tmp27;
+                    output(switch_time,35) = output(switch_time,30); output(switch_time,30) = NaN;
+                    output(switch_time,33) = tmp29;
+                    output(switch_time,31) = output(switch_time,28); output(switch_time,28) = NaN;
+                    %%% Switch sensors for Ohms:
+                    tmp41 = output(switch_time,41);
+                    tmp39 = output(switch_time,39);
+                    output(switch_time,39) = output(switch_time,38); output(switch_time,38) = NaN;
+                    output(switch_time,41) = tmp39;
+                    output(switch_time,47) = output(switch_time,42); output(switch_time,42) = NaN;
+                    output(switch_time,45) = tmp41;
+                    output(switch_time,43) = output(switch_time,40); output(switch_time,40) = NaN;
+                    clear tmp29 tmp27 tmp39 tmp41 switch_time
+                    
+                    %%% Fix shifts in met data logger throughout the first part of
+                    %%% 2012:
+                    % shift forward 13 points
+                    output(193:225,:) = output(180:212,:); output(180:192,:) = NaN;
+                    % shift backward 1 point
+                    output(591:781,:) = output(592:782,:); output(782,:) = NaN;
+                    % shift backward 2 points
+                    output(783:791,:) = output(785:793,:); output(792:793,:) = NaN;
+                    % shift backward 3 points
+                    output(793:1066,:) = output(796:1069,:); output(1067:1069,:) = NaN;
+                    % shift backward 4 points
+                    output(1068:1577,:) = output(1072:1581,:); output(1578:1581,:) = NaN;
+                    % shift backward 1 point
+                    output(3028:5835,:) = output(3029:5836,:); output(5836,:) = NaN;
+                case '2013'
+                    %%% Swap reversed SW and LW data (up & down are
+                    %%% reversed)
+                    tmp = output(:,10);
+                    output(:,10)=output(:,11);
+                    output(:,11)=tmp;
+                    
+                    tmp = output(:,12);
+                    output(:,12)=output(:,13);
+                    output(:,13)=tmp;
+                    % Remove bad snow depth point
+                    output(16851,6) = NaN;
+                    % Bad SWP Pit A
+                    output(1026:1384,25:26) = NaN;
+                    % Bad SWP Pit B
+                    %output(817:3329,31:32) = NaN;
+                    % output([3534 3659:4083 16364:16444 16483:16496],31) = NaN;
+                    %output(16556:16842,32) = NaN;
+                    % output(1026:1496,33) = NaN;
+                    % Bad K0hms pit A
+                    %output(1026:1386,37:38) = NaN;
+                    % Bad K0hms pit B
+                    %output([817:4084 16361:16501],43) = NaN;
+                    %output([817:3153 16554:16842],44) = NaN;
+                    %output(1026:1496,45) = NaN;
+                    
+                    
+                case '2014'
+                    %%% Swap reversed SW and LW data (up & down are
+                    %%% reversed)
+                    tmp = output(:,10);
+                    output(:,10)=output(:,11);
+                    output(:,11)=tmp;
+                    
+                    tmp = output(:,12);
+                    output(:,12)=output(:,13);
+                    output(:,13)=tmp;
+                    
+                    % Spike in LW Rad Abv Cnpy
+                    output(13485,12:13) = NaN;
+                    
+                    % SWP spikes until spring in some sensors
+                    output(1:4354,[31:33 37 38 43 44 45]) = NaN;
+                    % Other SWP points
+                    output(14114,42) = NaN;
+                    output([17485:17520 15125],43) = NaN;
+                    
+                    
+                    % Remove bad snow depth point
+                    output(3390,6) = NaN;
+                    % Remove SHF HFT1 point
+                    output(13485,18) = NaN;
+                    % Remove SHF HFT2 points
+                    output([1534 7354 8344 8637 8998 9060 9293:9295 10741],19) = NaN;
+                    
+                    % Remove bad SHF HFT3 point
+                    output([13485 13707 ],20) = NaN;
+                    % Wind Spd & Dir not working
+                    output(11399:end,22:24) = NaN;
+                    % Remove bad CO2 cnpy points
+                    output([3390 13484:14828],86) = NaN;
+                    
+                    % Unsure about early year kOhms
+                    
+                    % Unsure why LW Rn is cutoff, it is not in the TH in
+                    % the same format..
+                    
+                    %%%%%%%%%%%
+                    % Fill in gaps in Wind speed and wind direction with final cleaned CPEC data:
+                    %%% wind speed
+                    ws = output(:,22);
+                    CPEC = load([loadstart 'Matlab/Data/Flux/CPEC/TPD/Final_Cleaned/TPD_CPEC_cleaned_2014.mat']);
+                    u = CPEC.master.data(:,19);v = CPEC.master.data(:,20);
+                    WS_CPEC = sqrt(u.^2 + v.^2);
+                    p = polyfit(ws(~isnan(ws.*WS_CPEC)),WS_CPEC(~isnan(ws.*WS_CPEC)),1);
+                    WS_CPEC_corr = (WS_CPEC-p(2))./p(1);
+                    ws(isnan(ws),1) = WS_CPEC_corr(isnan(ws),1);
+                    ws(ws<0) = 0;
+                    output(:,22) = ws;
+                    %%% wind direction
+                    wdir = output(:,23);
+                    WDIR_CPEC = rad2deg(atan2(u,v))+180;
+                    wdir(isnan(wdir),1) = WDIR_CPEC(isnan(wdir),1);
+                    output(:,23) = wdir;
+                    clear u v WDIR* wdir ws p WS*;
+                    
+                case '2015'
+                    
+                    % Bad snow depth
+                    output([2897 4452 4453 4455 4482 4538 4542 4545 4547 4662 7323],6) = NaN;
+                    
+                    % Long wave up, above canopy
+                    output([14473 14265],12) = NaN;
+                    output([9000:end],[12 13]) = NaN; % JJB removed data where drift occurred
+                    
+                    % Soil Heat Flux HFT 2cm, 3cm, 4cm
+                    output(7235:7238,[19 20 21]) = NaN;
+                    
+                    % Bad wind speed and direction data:
+                    output(1:400,[22 23]) = NaN;
+                    
+                    % Bad CO2_cnpy data:
+                    output(9300:16744,86) = NaN;
+                    
+                    
+                    %%% Swap reversed SW and LW data (up & down are reversed)
+                    tmp = output(:,10);
+                    output(:,10)=output(:,11);
+                    output(:,11)=tmp;
+                    tmp = output(:,12);
+                    output(:,12)=output(:,13);
+                    output(:,13)=tmp;
+                    
+                    
+                case '2016'
+                    % Spikes in Air Temp Abv Cnpy
+                    output([16888],3) = NaN;
+                    
+                    % Spikes in Snow Depth
+                    output([1329 1337 2190 16878],6) = NaN;
+                    
+                    % Spikes in Down PAR below Cnpy
+                    output([4932],9) = NaN;
+                    
+                    % Spikes in Down Shortwave Radiation
+                    output([2149 8723],11) = NaN;
+                    
+                    % Spikes in UpLongwave Radiation Abv Cnpy
+                    output([17341],12) = NaN;
+                    
+                    % Spikes in Net Longwave above canopy
+                    output([2885 17341],15) = NaN;
+                    
+                    %Spikes in Soil Heat Flux 2
+                    output([3631 5583 5584 8553 13217],19) = NaN;
+                    
+                    % Spikes in Soil Heat Flux 3
+                    output([13217],20) = NaN;
+                    
+                    %Spikes in SWP A 10cm
+                    output([5584],27) = NaN;
+                    
+                    % Spikes in SWP A 50cm
+                    output([1474 6155 7416],29) = NaN;
+                    
+                    %Spikes in SWP Pit A 100cm
+                    output([1596 3789 5584 9765],30) = NaN;
+                    
+                    %Spikes in SWP Pit B 50cm
+                    output([9039 9765],35) = NaN;
+                    
+                    % Spikes in KOhms A 10cm
+                    output([5584],39) = NaN;
+                    
+                    % Spikes in KOhms A 50cm
+                    output([1474 1923 1930 6155 7416],41) = NaN;
+                    
+                    %Spikes in KOhms A 100cm
+                    output([1596 2812 3789 4034 4211 5544 5584 9765],42) = NaN;
+                    
+                    %Spikes in KOhms Pit B 50cm
+                    output([9039 9765],47) = NaN;
+                    
+                    % Spikes in CO2 canopy
+                    output([1965 5197 6451 6474 9777 9945 9998 10045 11970 12165 12166 13431 14821],86) = NaN;
+                    
+                    %%%% uncomment this if nothing has been changed as of 2016
+                                        %%% Swap reversed SW and LW data (up & down are
+                                        %%% reversed)
+                                        tmp = output(:,10);
+                                        output(:,10)=output(:,11);
+                                        output(:,11)=tmp;
+                    
+                                        tmp = output(:,12);
+                                        output(:,12)=output(:,13);
+                                        output(:,13)=tmp;
+            case '2017'
+             %%%% recomment this CNR wiring has been changed in 2016
+                                        %%% Swap reversed SW and LW data (up & down are
+                                        %%% reversed)
+                                        tmp = output(:,10);
+                                        output(:,10)=output(:,11);
+                                        output(:,11)=tmp;
+                    
+                                        tmp = output(:,12);
+                                        output(:,12)=output(:,13);
+                                        output(:,13)=tmp;
             end
             %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2377,423 +3157,9 @@ for year_ctr = year_start:1:year_end
             title('Corrected RH');
             
             
-        case 'TPD'
-            %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            %%%%%%%%%%%%%%%%%%%%%%%% TPD  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            %%% Convert wind speed to m/s for years 2012-2014
-            if year < 2015
-            output(:,22) = output(:,22)./3.6;
-            end
-            %%% Convert Pressure to kPa
-            output(:,5) = output(:,5)./10;
-            %%% Convert SHF to W/m2 ** NOTE: Change calibration values to
-            %%% REAL values ***
-            output(:,18) = output(:,18).*42;
-            output(:,19) = output(:,19).*42;
-            output(:,20) = output(:,20).*42;
-            output(:,21) = output(:,21).*42;
-            
-            
-            switch yr_str
-                case '2012'
-                    %%% Swap reversed SW and LW data (up & down are
-                    %%% reversed)
-                    tmp = output(:,10);
-                    output(:,10)=output(:,11);
-                    output(:,11)=tmp;
-                    
-                    tmp = output(:,12);
-                    output(:,12)=output(:,13);
-                    output(:,13)=tmp;
-                    
-                    %%% Bad Temperature data:
-                    output([784 795 1071],3)= NaN;
-                    output([9037],3)= NaN;
-                    output([9496:9498],3)= NaN;
-                    output([9547:9548],3)= NaN;
-                    output([9563:9620],3)= NaN;
-                    output([9855 9857],3)= NaN;
-                    output([9859],3)= NaN;
-                    output([10376:10478],3)= NaN;
-                    output([11360:11368],3)= NaN;
-                    output([11380],3)= NaN;
-                    output([11415:11540],3)= NaN;
-                    output([11552:11583],3)= NaN;
-                    output([11711:12106],3)= NaN;
-                    output([12270],3)= NaN;
-                    output([12291:12455],3)= NaN;
-                    output([12773:12815],3)= NaN;
-                    output([12733:12734],3)= NaN;
-                    output([12831:12832],3)= NaN;
-                    output([13278:13567],3)= NaN;
-                    output([14886],3)= NaN;
-                    output([16756],3)= NaN;
-                    output([9036 9037 9518 9532 9856 9858 9893],3)=NaN;
-                    
-             
-                    %%% Bad RH data:
-                   output([225 591 784 795 1071 3028 12297],4)= NaN;
-                   output([12310:12314],4)= NaN;
-                   output([12776],4)= NaN;
-                   output([12787:12788],4)= NaN;
-                   output([12790:12814],4)= NaN;
-                   output([13279:13567],4)= NaN;
-                   output([12298],4)= NaN;
-                   output([12315],4)= NaN;
-                   output([12341],4)= NaN;
-                   output([12777],4)= NaN;
-                   output([12815],4)= NaN;
-                   output([12452],4)= NaN;
-                    %%% Bad Pressure data:
-                    output([180:212 225:239],5)= NaN;
-                    output([591 789 795 1071],5)= NaN;
-                    %%% Bad Snow Depth data:
-                    output([1071 5210:14349],6)= NaN;
-                    
-                    %%% Bad PAR data:
-                    output([209 231 5838 12268],8)= NaN;
-                    
-                    %%% Bad WindSpeed data:
-                    output([2865 4326],16)=NaN;
-                    
-                    %             %%% Bad SWP data:
-                    %             output([241:510],26)= NaN;
-                    %             output([241:510],27)= NaN;
-                    %             output([241:510],28)= NaN;
-                    %             output([241:510],29)= NaN;
-                    %             output([241:510],30)= NaN;
-                    %             %%% Bad Ohms data:
-                    %             output([241:510],38)= NaN;
-                    %             output([241:510],39)= NaN;
-                    %             output([241:510],40)= NaN;
-                    %             output([241:510],41)= NaN;
-                    %             output([241:510],42)= NaN;
-                    %%% Bad tipping bucket RG data:
-                    output([1:4000],85)= NaN;
-                    
-                    %%% Remove bad CO2_cpy data:
-                    output([5842:5844],86) = NaN;
-                    output([6589 7434 7770 8106 8442 9131 9786 10122 10458 10794 11130 11466 11819 12155 12491 12827 13163 13547 13567],86) = NaN;
-                    %%% Bad SWP Pit A
-                    output([5838],25)= NaN;
-                    output([5838],26)= NaN;
-                    output([5838],27)= NaN;
-                    output([5838],28)= NaN;
-                    output([5838],29)= NaN;
-                    output([5838],30)= NaN;
-                    
-                    %%% Bad SWP Pit B
-                    output([5838],31)= NaN;
-                    output([5838],32)= NaN;
-                    output([5838],33)= NaN;
-                    output([5838],34)= NaN;
-                    output([5838],35)= NaN;
-                    output([5838],36)= NaN;
-                    %%% Bad KOhms Pit A
-                    output([5838],37)= NaN;
-                    output([5838],38)= NaN;
-                    output([5838],39)= NaN;
-                    output([5838],40)= NaN;
-                    output([5838],41)= NaN;
-                    output([5838],42)= NaN;
-                   
-                    %%% Bad kOhms Pit B
-                    output([5838],43)= NaN;
-                    output([5838],44)= NaN;
-                    output([5838],45)= NaN;
-                    output([5838],46)= NaN;
-                    output([5838],47)= NaN;
-                    output([5838],48)= NaN;
-                 
-      
-              
-                    %%% Fix incorrect soil sensor tensiometer wiring at start of
-                    %%% year:
-                    %%%% Checking plot used to fix the sensors -- not needed %%%%%%%%%%%%%
-                    % %             clrs = jjb_get_plot_colors;
-                    % %             figure(99);clf;
-                    % %             ctr = 1;
-                    % %             for i = 25:1:36
-                    % %             plot(output(:,i),'Color',clrs(ctr,:),'LineWidth',2);hold on;
-                    % %             ctr = ctr + 1;
-                    % %             end
-                    % %             legend(num2str((25:1:36)'))
-                    %             clrs = jjb_get_plot_colors;
-                    %             figure(99);clf;
-                    %             ctr = 1;
-                    %             for i = 37:1:48
-                    %             plot(output(:,i),'Color',clrs(ctr,:),'LineWidth',2);hold on;
-                    %             ctr = ctr + 1;
-                    %             end
-                    %             legend(num2str((37:1:48)'))
-                    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-                    %%% Switch sensors for SWP:
-                    switch_time = [241:510]';
-                    tmp29 = output(switch_time,29);
-                    tmp27 = output(switch_time,27);
-                    output(switch_time,27) = output(switch_time,26); output(switch_time,26) = NaN;
-                    output(switch_time,29) = tmp27;
-                    output(switch_time,35) = output(switch_time,30); output(switch_time,30) = NaN;
-                    output(switch_time,33) = tmp29;
-                    output(switch_time,31) = output(switch_time,28); output(switch_time,28) = NaN;
-                    %%% Switch sensors for Ohms:
-                    tmp41 = output(switch_time,41);
-                    tmp39 = output(switch_time,39);
-                    output(switch_time,39) = output(switch_time,38); output(switch_time,38) = NaN;
-                    output(switch_time,41) = tmp39;
-                    output(switch_time,47) = output(switch_time,42); output(switch_time,42) = NaN;
-                    output(switch_time,45) = tmp41;
-                    output(switch_time,43) = output(switch_time,40); output(switch_time,40) = NaN;
-                    clear tmp29 tmp27 tmp39 tmp41 switch_time
-                    
-                    %%% Fix shifts in met data logger throughout the first part of
-                    %%% 2012:
-                    % shift forward 13 points
-                    output(193:225,:) = output(180:212,:); output(180:192,:) = NaN;
-                    % shift backward 1 point
-                    output(591:781,:) = output(592:782,:); output(782,:) = NaN;
-                    % shift backward 2 points
-                    output(783:791,:) = output(785:793,:); output(792:793,:) = NaN;
-                    % shift backward 3 points
-                    output(793:1066,:) = output(796:1069,:); output(1067:1069,:) = NaN;
-                    % shift backward 4 points
-                    output(1068:1577,:) = output(1072:1581,:); output(1578:1581,:) = NaN;
-                    % shift backward 1 point
-                    output(3028:5835,:) = output(3029:5836,:); output(5836,:) = NaN;
-                case '2013'
-                   %%% Swap reversed SW and LW data (up & down are
-                    %%% reversed)
-                    tmp = output(:,10);
-                    output(:,10)=output(:,11);
-                    output(:,11)=tmp;
-                    
-                    tmp = output(:,12);
-                    output(:,12)=output(:,13);
-                    output(:,13)=tmp;
-                    % Remove bad snow depth point
-                    output(16851,6) = NaN;
-                    % Bad SWP Pit A
-                     output(1026:1384,25:26) = NaN;
-                    % Bad SWP Pit B
-                    %output(817:3329,31:32) = NaN;
-                    % output([3534 3659:4083 16364:16444 16483:16496],31) = NaN;
-                    %output(16556:16842,32) = NaN;
-                    % output(1026:1496,33) = NaN;
-                    % Bad K0hms pit A
-                    %output(1026:1386,37:38) = NaN;
-                    % Bad K0hms pit B
-                    %output([817:4084 16361:16501],43) = NaN;  
-                    %output([817:3153 16554:16842],44) = NaN; 
-                    %output(1026:1496,45) = NaN;
-                                                      
-                    
-                case '2014'
-                    %%% Swap reversed SW and LW data (up & down are
-                    %%% reversed)
-                    tmp = output(:,10);
-                    output(:,10)=output(:,11);
-                    output(:,11)=tmp;
-                    
-                    tmp = output(:,12);
-                    output(:,12)=output(:,13);
-                    output(:,13)=tmp;
-                    
-                    % Spike in LW Rad Abv Cnpy
-                    output(13485,12:13) = NaN;
-                    
-                    % SWP spikes until spring in some sensors
-                    output(1:4354,[31:33 37 38 43 44 45]) = NaN;
-                    % Other SWP points
-                    output(14114,42) = NaN;
-                    output([17485:17520 15125],43) = NaN;
-                    
-                    
-                    % Remove bad snow depth point
-                    output(3390,6) = NaN;
-                    % Remove SHF HFT1 point
-                    output(13485,18) = NaN;
-                    % Remove SHF HFT2 points
-                    output([1534 7354 8344 8637 8998 9060 9293:9295 10741],19) = NaN;
-                    
-                    % Remove bad SHF HFT3 point
-                    output([13485 13707 ],20) = NaN;
-                    % Wind Spd & Dir not working
-                    output(11399:end,22:24) = NaN;
-                    % Remove bad CO2 cnpy points
-                    output([3390 13484:14828],86) = NaN;
-                    
-                    % Unsure about early year kOhms
-                    
-                    % Unsure why LW Rn is cutoff, it is not in the TH in
-                    % the same format..
-                    
-                    %%%%%%%%%%% 
-                    % Fill in gaps in Wind speed and wind direction with final cleaned CPEC data:
-                    %%% wind speed
-                    ws = output(:,22); 
-                    CPEC = load([loadstart 'Matlab/Data/Flux/CPEC/TPD/Final_Cleaned/TPD_CPEC_cleaned_2014.mat']);
-                    u = CPEC.master.data(:,19);v = CPEC.master.data(:,20);
-                    WS_CPEC = sqrt(u.^2 + v.^2);
-                    p = polyfit(ws(~isnan(ws.*WS_CPEC)),WS_CPEC(~isnan(ws.*WS_CPEC)),1);
-                    WS_CPEC_corr = (WS_CPEC-p(2))./p(1);
-                    ws(isnan(ws),1) = WS_CPEC_corr(isnan(ws),1);
-                    ws(ws<0) = 0;
-                    output(:,22) = ws;
-                    %%% wind direction
-                    wdir = output(:,23);
-                    WDIR_CPEC = rad2deg(atan2(u,v))+180;
-                    wdir(isnan(wdir),1) = WDIR_CPEC(isnan(wdir),1);
-                    output(:,23) = wdir;
-                    clear u v WDIR* wdir ws p WS*;
-
-                case '2015'
-
-                    % Bad snow depth 
-                    output([2897 4452 4453 4455 4482 4538 4542 4545 4547 4662 7323],6) = NaN;   
-                    
-                    % Long wave up, above canopy
-                    output([14473 14265],12) = NaN; 
-                    output([9000:end],[12 13]) = NaN; % JJB removed data where drift occurred
-                    
-                    % Soil Heat Flux HFT 2cm, 3cm, 4cm
-                    output(7235:7238,[19 20 21]) = NaN;
-
-                    % Bad wind speed and direction data:
-                    output(1:400,[22 23]) = NaN;
-                    
-                    % Bad CO2_cnpy data:
-                    output(9300:16744,86) = NaN;
-                                 
-                    
-                    %%% Swap reversed SW and LW data (up & down are reversed)
-                    tmp = output(:,10);
-                    output(:,10)=output(:,11);
-                    output(:,11)=tmp;
-                    tmp = output(:,12);
-                    output(:,12)=output(:,13);
-                    output(:,13)=tmp;
-
-
-                case '2016'
-                    
-                    % Spikes in Snow Depth
-                    output([1329 1337],6) = NaN;
-                    
-                    % Spikes in SWP A 50cm
-                    output([1474],29) = NaN;
-                    
-                    %Spikes in SWP Pit A 100cm
-                    output([1596],30) = NaN;
-
-                    % Spikes in KOhms A 50cm
-                    output([1474 1923 1930],41) = NaN; 
-                    
-                    %Spikes in KOhms A 100cm
-                    output([1596 2812],42) = NaN;
-                    
-                    % Spikes in EC B 100cm
-                    output([998],83) = NaN; 
-                    
-                    % Spikes in CO2 canopy
-                    output([1965],86) = NaN;
-                    
-                    %%%%% uncomment this if nothing has been changed as of 2016
-%                     %%% Swap reversed SW and LW data (up & down are
-%                     %%% reversed)
-%                     tmp = output(:,10);
-%                     output(:,10)=output(:,11);
-%                     output(:,11)=tmp;
-%                     
-%                     tmp = output(:,12);
-%                     output(:,12)=output(:,13);
-%                     output(:,13)=tmp;
-            end
-%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            %%%%% Corrections applied to all years of data:
-            % 1: Set any negative PAR and nighttime PAR to zero:
-            PAR_cols = [];
-            try
-                PAR_cols = [PAR_cols; output_cols(strcmp(output_names,'DownPAR_AbvCnpy')==1)];
-                PAR_cols = [PAR_cols; output_cols(strcmp(output_names,'UpPAR_AbvCnpy')==1)];
-                PAR_cols = [PAR_cols; output_cols(strcmp(output_names,'DownPAR_BlwCnpy')==1)];
-            catch
-            end
-            
-            %%% Set the bottoms of PAR (a
-            %         if strcmp(site,'TP74')==1 && year == 2003
-            %             DownParBot = 19;
-            %             UpParBot = 21.5;
-            %             DownParBlwBot = 15;
-            %         else
-            DownParBot = 10;
-            UpParBot = 15;
-            DownParBlwBot = 15;
-            %         end
-            
-            %Plot uncorrected:
-            figure(97);clf;
-            subplot(211)
-            plot(output(:,PAR_cols)); legend(output_names_str(PAR_cols,:))
-            title('Uncorrected PAR');
-            %         if year <= 2008
-            [sunup_down] = annual_suntimes(site, year_ctr, 0);
-            %         else
-            %             [sunup_down] = annual_suntimes(site, year, 0);
-            %         end
-            ind_sundown = find(sunup_down< 1);
-            figure(55);clf;
-            plot(output(:,PAR_cols(1)))
-            hold on;
-            plot(ind_sundown,output(ind_sundown,PAR_cols(1)),'.','Color',[1 0 0])
-            title('Check to make sure timing is right')
-            try
-                output(output(:,PAR_cols(1)) < DownParBot & sunup_down < 1,PAR_cols(1)) = 0;
-                output(output(:,PAR_cols(2)) < UpParBot & sunup_down < 1,PAR_cols(2)) = 0;
-                output(output(:,PAR_cols(3)) < DownParBlwBot & sunup_down < 1,PAR_cols(3)) = 0;
-            catch
-            end
-            try
-                output(output(:,PAR_cols(1)) < 0 , PAR_cols(1)) = 0;
-                output(output(:,PAR_cols(2)) < 0 , PAR_cols(2)) = 0;
-                output(output(:,PAR_cols(3)) < 0 , PAR_cols(3)) = 0;
-            catch
-            end
-            % Plot corrected data:
-            figure(97);
-            subplot(212);
-            plot(output(:,PAR_cols)); legend(output_names_str(PAR_cols,:))
-            title('Corrected PAR');
-            
-            % 2: Set any RH > 100 to NaN -- This is questionable whether to make
-            % these values NaN or 100.  I am making the decision that in some
-            % cases
-            RH_cols = [];
-            try
-                RH_cols = [RH_cols; output_cols(strcmp(output_names,'RelHum_AbvCnpy')==1)];
-                RH_cols = [RH_cols; output_cols(strcmp(output_names,'RelHum_Cnpy')==1)];
-                RH_cols = [RH_cols; output_cols(strcmp(output_names,'RelHum_BlwCnpy')==1)];
-            catch
-            end
-            % Adjust columns to match output:
-            %     RH_cols = RH_cols - 6;
-            figure(98);clf;
-            subplot(211)
-            plot(output(:,RH_cols)); legend(output_names_str(RH_cols,:))
-            title('Uncorrected RH')
-            RH_resp = input('Enter value to set RH > 100 to? (100 or NaN): ');
-            for j = 1:1:length(RH_cols)
-                output(output(:,RH_cols(j)) > 100,RH_cols(j)) = RH_resp;
-            end
-            subplot(212);
-            plot(output(:,RH_cols)); legend(output_names_str(RH_cols,:))
-            title('Corrected RH');
-    
-      
-    %% %%%%%%%%%%%%%%%%% TPD_PPT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-       case 'TPD_PPT'   
+            %% %%%%%%%%%%%%%%%%% TPD_PPT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        case 'TPD_PPT'
             switch yr_str
                 case '2012'
                 case '2013'
@@ -2811,26 +3177,26 @@ for year_ctr = year_start:1:year_end
     end
     
     
-        
-        %% @@@@@@@@@@@@@@@@@@ CHECK TIMECODE @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-            if proc_flag == 1
+    
+    %% @@@@@@@@@@@@@@@@@@ CHECK TIMECODE @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    if proc_flag == 1
         PAR_tmp = output(:,output_cols(strcmp(output_names,'DownPAR_AbvCnpy')==1));
         mcm_check_met_shifts(PAR_tmp,year_ctr, site)
         
         disp('Check to see if data is shifted relative to UTC.  If so, shift data.');
-            end
+    end
     %%%%%%%%%% This part cascades all of the windows (if there is more
     %%%%%%%%%% than one figure
-  % Check how many figures are open)
+    % Check how many figures are open)
     hvis = get(0,'HandleVisibility');
-  set(0,'HandleVisibility','on');
-  nfigs = get(0,'Children');
-  set(0,'HandleVisibility',hvis)                                                                                                                                      
-  % Do cascade if >1 are open.
- if length(nfigs)>1
-cascade;    
- else
- end
+    set(0,'HandleVisibility','on');
+    nfigs = get(0,'Children');
+    set(0,'HandleVisibility',hvis)                                                                                                                                      
+    % Do cascade if >1 are open.
+    if length(nfigs)>1
+        cascade;
+    else
+    end
     %%%%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     %% Plot corrected/non-corrected data to make sure it looks right:
     figure(10);
@@ -2845,13 +3211,13 @@ cascade;
         
         legend('Original','Fixed (output)');
         %% Gives the user a chance to move through variables:
-    commandwindow;
-    response = input('Press enter to move forward, enter "1" to move backward, 9 to skip all: ', 's');
+        commandwindow;
+        response = input('Press enter to move forward, enter "1" to move backward, 9 to skip all: ', 's');
         
         if isempty(response)==1
             j = j+1;
-        elseif strcmp(response,'9')==1;   
-        j = length(vars30)+1;    
+        elseif strcmp(response,'9')==1;
+            j = length(vars30)+1;
         elseif strcmp(response,'1')==1 && j > 1;
             j = j-1;
         else
@@ -2925,8 +3291,6 @@ cascade;
 end
 mcm_start_mgmt;
 end
-
-
 
 %subfunction
 % Returns the appropriate column for a specified variable name

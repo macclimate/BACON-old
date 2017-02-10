@@ -346,7 +346,9 @@ switch site
                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         case '2016' %% ALL VALUES HAVE BEEN STRAIGHT-UP COPIED FROM 2015!
                 % CO2 Storage
-                z = 28; ztop = 14; zcpy = 14; col_flag = 2;
+                z = 28; 
+                z(1:5933,1)=28; z(5934:17568,1)=34; 
+                ztop = z-14; zcpy = 14.*ones(17568,1); col_flag = 2;
                 % Respiration
                 gsstart = 84; gsend = 331; NEE_cap = 7; ustar_crit = 0.325;
                 % Photosynthesis
@@ -362,7 +364,8 @@ switch site
                 %%% This stand was selectively thinning in Winter 2012. The
                 %%% average tree height thus decreased slightly due to
                 %%% more, larger trees being removed.
-                z_meas = 28; z_tree = 24.5; % COPIED FROM 2015 - REPLACE!
+                z_meas(1:5933,1) = 28; z_meas(5934:17568,1)=34; 
+                z_tree = 24.5; % COPIED FROM 2015 - REPLACE!
                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
         end
