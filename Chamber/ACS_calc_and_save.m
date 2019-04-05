@@ -82,7 +82,8 @@ disp(sprintf('%d files moved from %s folder into %s\yymmdd folders.',numFiles,co
 
     % Added by JB and RT (22-Jan-2014): modifying the chamber volume usign
     % the file: /1/fielddata/Matlab/ubc_PC_setup/Site_Specific/TP39_chamber/ACS_Volume.csv
-    ch_vol = csvread('/1/fielddata/Matlab/ubc_PC_setup/Site_Specific/TP39_chamber/ACS_Volume.csv');
+    ls = addpath_loadstart;
+    ch_vol = csvread([ls 'Matlab/ubc_PC_setup/Site_Specific/TP39_chamber/ACS_Volume.csv']);
     ch_vol_dn = datenum(ch_vol(:,1:3));
 
 
@@ -229,10 +230,10 @@ end
 
                         %Compute regression for each slope
                        try
-                        [p,r2,sigma,s,fval,regHHour] = POLYFIT1([1:length(indSlope)]',co2(indSlope),1);
+                        [p,r2,sigma,s,fval,regHHour] = polyfit1([1:length(indSlope)]',co2(indSlope),1);
                         
                        catch
-                           warning('Error running POLYFIT1 for co2 - data for slopes seem to be empty')
+                           warning('Error running polyfit1 for co2 - data for slopes seem to be empty')
                            p = [0 0];
                            r2 = NaN;
                        end
@@ -240,9 +241,9 @@ end
                         % and calculate a slope for h20
                        try
                        [p_h2o,r2_h2o,sigma_h2o,s_h2o,fval_h2o,regHHour_h2o] = ...
-                           POLYFIT1([1:length(indSlope)]',h2o(indSlope),1);
+                           polyfit1([1:length(indSlope)]',h2o(indSlope),1);
                        catch
-                           warning('Error running POLYFIT1 for h2o - data for slopes seem to be empty')
+                           warning('Error running polyfit1 for h2o - data for slopes seem to be empty')
                            p_h2o = [0 0];
                            r2_h2o = NaN;
                        end

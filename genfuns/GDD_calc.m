@@ -1,4 +1,4 @@
-function [GDD_daily GDD_hh] = GDD_calc(Ta_in, T_base, pts_per_day,yrs)
+function [GDD_daily, GDD_hh] = GDD_calc(Ta_in, T_base, pts_per_day,yrs)
 
 if nargin == 3 
     yrs = [];

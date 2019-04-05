@@ -108,7 +108,7 @@ end
 labels = {'AirTemp_AbvCnpy'; 'RelHum_AbvCnpy'; 'DownPAR_AbvCnpy'; 'WindSpd'; ...
     'Pressure'; 'SoilTemp_2cm'; 'SoilTemp_5cm'; 'SoilTemp_10cm'; 'SoilTemp_20cm';...
     'SoilTemp_50cm'; 'SoilTemp_100cm'; 'SM_A_30_avg'; 'SM_B_30_avg'; 'SM_A_30_filled';...
-    'SM_B_30_filled'; 'NetRad_AbvCnpy'; 'DownShortWaveRad_Abv_Cnpy'};
+    'SM_B_30_filled'; 'NetRad_AbvCnpy'; 'DownShortWaveRad_Abv_Cnpy'; 'VPD'};
 varnames(1,1) = cellstr('Ta'); varnames(2,1) = cellstr('RH'); varnames(3,1) = cellstr('PAR');
 varnames(4,1) = cellstr('WS'); varnames(5,1) = cellstr('APR'); varnames(6,1) = cellstr('Ts2');
 varnames(7,1) = cellstr('Ts5'); varnames(8,1) = cellstr('Ts10'); varnames(9,1) = cellstr('Ts20'); 
@@ -116,6 +116,7 @@ varnames(10,1) = cellstr('Ts50'); varnames(11,1) = cellstr('Ts100');
 varnames(12,1) = cellstr('SM_30a'); varnames(13,1) = cellstr('SM_30b');
 varnames(14,1) = cellstr('SM_30a_filled'); varnames(15,1) = cellstr('SM_30b_filled');
 varnames(16,1) = cellstr('Rn'); varnames(17,1) = cellstr('SW_down');
+varnames(18,1) = cellstr('VPD');
 % labels(1,1) = cellstr('AirTemp_AbvCnpy'); labels(1,2) = cellstr('RelHum_AbvCnpy'); 
 % labels(1,3) = cellstr('DownPAR_AbvCnpy'); labels(1,4) = cellstr('WindSpd'); 
 % labels(1,5) = cellstr('Pressure'); labels(1,6) = cellstr('SoilTemp_2cm'); 
@@ -358,12 +359,15 @@ eval([site '_filled(:,' num2str(fill_cols(fill_loop,1)) ') = data_filled(:,' num
 
 end
 
-%% Clean up RH values (if they are > 100);
+%% Final adjustments and calculations
+% 1. Clean up RH values (0 if <0, 100 if > 100)
+% 2. Clean up PAR (0 if <25)
+% 3. Calculate VPD from Ta (col 1) and RH (col 2) [Added 20180314]
     for i = 1:1:num_sites
 site = site_labels{i,1};
-eval([site '_filled(' site '_filled(:,2)>100,2) = 100; ' site '_filled(' site '_filled(:,2)<0,2) = 0;']);
-eval([site '_filled(' site '_filled(:,3)<25,3) = 0;']);
-
+eval([site '_filled(' site '_filled(:,2)>100,2) = 100; ' site '_filled(' site '_filled(:,2)<0,2) = 0;']); %% Clean up RH values (0 if <0, 100 if > 100)
+eval([site '_filled(' site '_filled(:,3)<25,3) = 0;']); % Make all PAR <25 = 0;
+eval([site '_filled(:,18) = VPD_calc(' site '_filled(:,2),' site '_filled(:,1),2);']); % Calculate VPD in hPa.
     end
 
 % 
@@ -371,10 +375,6 @@ eval([site '_filled(' site '_filled(:,3)<25,3) = 0;']);
 % TP74_filled(TP74_filled(:,2)>100,2) = 100; TP74_filled(TP74_filled(:,2)<0,2) = 0;
 % TP89_filled(TP89_filled(:,2)>100,2) = 100; TP89_filled(TP89_filled(:,2)<0,2) = 0;
 % TP02_filled(TP02_filled(:,2)>100,2) = 100; TP02_filled(TP02_filled(:,2)<0,2) = 0;
-
-
-
-
 
 %% We can try to fill Ts within sites by a regression with air temperature:
  % loops through Ts5 and Ts2
@@ -395,6 +395,7 @@ eval([site '_filled(' site '_filled(:,3)<25,3) = 0;']);
     
  end
 
+    
  %% Added Jan 25, 2011 
  %%% Fill in Net Radiation (using a neural network and filled met
  %%% variables - Ta, RH, PAR, WS), and SW down (Using linear relationship with PAR data):
@@ -412,7 +413,7 @@ for i = 1:1:num_sites
     data(i).Rn(isnan(data(i).Rn),1) = Rn_pred(isnan(data(i).Rn),1);
     clear ind_sim_all sim_inputs net_to_use Y Pf Af E perf Rn_pred inputs;
     
-    if strcmp(site,'TP39')==1
+    if strcmp(site,'TP39')==1 || strcmp(site,'TPD')==1
         PAR = eval([site '_filled(:,3);']);
         ind_good_PAR = find(~isnan(PAR.*data(i).SW));
         p = polyfit(PAR(ind_good_PAR), data(i).SW(ind_good_PAR),1);
@@ -433,7 +434,7 @@ end
 % eval([site '_filled =[' site '_filled data(i).Rn data(i).SW];']);    
 % end 
  
- 
+
  %% Plot data for each site and Determine if there's any data still missing:
 % varnames(1,1) = cellstr('Ta'); varnames(2,1) = cellstr('RH'); varnames(3,1) = cellstr('PAR');
 % varnames(4,1) = cellstr('WS'); varnames(5,1) = cellstr('APR'); varnames(6,1) = cellstr('Ts2');
@@ -471,17 +472,47 @@ for i = 1:1:num_sites
 end
 
 %% Save the Final Data:
-
+time_int = 30;
+%%%% Create list of column names for meteo output:
+col_names = {'YYYY';'MM';'DD';'JD';'hh';'mm';'ss'};
+col_names = [col_names;labels]';
+%%%% Create time vectors for meteo output:
+YYYY = year_ctr.*ones(yr_length(year_ctr,time_int),1);
+[MM, DD] = make_Mon_Day(year_ctr,time_int,2);
+[hh, mm] = make_HH_MM(year_ctr,time_int,2);
+JD = repmat(1:1:yr_length(year_ctr,1440),1440/time_int,1); JD = JD(:);
+JD(1440/time_int:1440/time_int:length(JD)) = JD(1440/time_int:1440/time_int:length(JD))+1;
+ss = zeros(size(YYYY));
 for i = 1:1:num_sites
     site = site_labels{i,1};
-    
+    jjb_check_dirs([ls 'SiteData/' site '/MET-DATA/meteo/'],1);
 master.data = eval([site '_filled']);
 master.labels = labels;  
+%%%% Write the filled data to met_filled_master
     jjb_check_dirs([save_path '/' site '/'],0);
     save([save_path '/' site '/' site '_met_filled_' yr_str '.mat'], 'master');
-    clear master;
+%%% Added 20180323 - Export daily meteo files to \SiteData\TPxx\MET-DATA\meteo                               \    
+% Needs to be tab delimited, using format meteoDDMMYY.dat
+% First, write the column headers:
+fid_hdr = fopen([ls 'SiteData/' site '/MET-DATA/meteo/column_headers.dat'],'w');
+fprintf(fid_hdr,'%s',sprintf('%s\t',col_names{:}));
+fclose(fid_hdr);
+
+    to_write = [YYYY MM DD JD hh mm ss master.data];
+    for j = 1:48:yr_length(year_ctr,time_int)
+        ind_start = j;
+        ind_end = ind_start + 47;
+        fid = fopen([ls 'SiteData/' site '/MET-DATA/meteo/meteo' num2str(DD(ind_start),'%02i') num2str(MM(ind_start),'%02i') num2str(YYYY(ind_start)-2000,'%02i') '.dat'],'w');
+        fprintf(fid,'%s\n',sprintf('%s\t',col_names{:}));
+        fclose(fid);
+
+        tmp_write = to_write(ind_start:ind_end,:);
+        dlmwrite([ls 'SiteData/' site '/MET-DATA/meteo/meteo' num2str(DD(ind_start),'%02i') num2str(MM(ind_start),'%02i') num2str(YYYY(ind_start)-2000,'%02i') '.dat'],tmp_write,'delimiter','\t','-append');
+    end
+    clear master to_write;
 end
 
+%%
 if quickflag == 1
 else
     junk = input('Press Enter to Continue to Next Year');

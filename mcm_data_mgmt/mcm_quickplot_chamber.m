@@ -1,7 +1,7 @@
 function [] = mcm_quickplot_chamber(year, site)
 
 loadstart = addpath_loadstart;
-    maxNch = 6 % change this to allow more chambers..
+    maxNch = 8 % change this to allow more chambers..
 if ischar(year)
 else
     year = num2str(year);

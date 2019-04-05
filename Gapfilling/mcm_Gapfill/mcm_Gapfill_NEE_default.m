@@ -312,7 +312,7 @@ end
 format bank 
 format compact;
 		%%% Display sums on the screen:
-		disp(['============= Sums for ' taglist{k,1} ' ================']);
+		disp(['============= ' site ' - sums for ' taglist{k,1} ' ================']);
         disp(sum_labels');
         disp(master(k).sums);
 

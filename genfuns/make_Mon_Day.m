@@ -1,7 +1,15 @@
-function [Mon Day] = make_Mon_Day(year, time_int)
+function [Mon, Day] = make_Mon_Day(year, time_int, format_flag)
 % usage: [Mon Day] = make_Mon_Day(year, time_int)
+% format_flag = 1: last output for a given day has DD,MM of same day (i.e.
+% 2400)
+% format_flag = 2: last output for a given day has DD,MM of next day (i.e.
+% 0000)
 
-[Year, JD, HHMM, dt] = jjb_makedate(year, time_int);
+
+if nargin < 3
+    format_flag = 1;
+end
+[Year, JD, HHMM, dt] = jjb_makedate(year, time_int, format_flag);
 
 dt = (round(dt.*1000))./1000;
 
@@ -21,7 +29,12 @@ dt = (round(dt.*1000))./1000;
  else
       Day = [Day(1); Day(1:length(Day)-1)];
    Mon = [Mon(1); Mon(1:length(Mon)-1)];
-   
+ end
+ 
+ % Convert to format 2, if required
+ if format_flag ==2
+     Mon = [Mon(2:end);1];
+     Day = [Day(2:end);1];
  end
  
 % if dt(2) == dt(1)

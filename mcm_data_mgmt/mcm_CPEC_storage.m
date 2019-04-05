@@ -1,4 +1,4 @@
-function [] = mcm_CPEC_storage(year, site, T_flag, quickflag)
+ function [] = mcm_CPEC_storage(year, site, T_flag, quickflag)
 %%% mcm_CPEC_storage.m
 %%%
 %%% This function calculates both heat and CO2 storage in the canopy below
@@ -91,6 +91,7 @@ for year_ctr = year_start:1:year_end
     % end
     
     Ta = load_from_master(filled.master,'AirTemp_AbvCnpy');
+%     RH = load_from_master(filled.master,'RelHum_AbvCnpy'); % Added 20180314 by JJB to enable VPD calculation.
     
     APR = load_from_master(filled.master,'Pressure');
     [CO2_top CO2_top_col] = load_from_master(flux.master,'CO2_irga');
@@ -102,10 +103,11 @@ for year_ctr = year_start:1:year_end
     [CPEC_APR CPEC_APR_col] = load_from_master(flux.master,'BarometricP');
     
     %%% Added 20160130 by JJB - auto-determine Ta in C or K:
-    if nanmean(Ta) > 100 && nanmean(CPEC_Ta) > 100
-        T_flag = 2; % Kelvin
-        disp('It appears that T is in Kelvin');
-    elseif nanmean(Ta) < 100 && nanmean(CPEC_Ta) < 100
+    if nanmean(Ta) > 100 && (nanmean(CPEC_Ta) > 100 || sum(~isnan(CPEC_Ta))==0)
+        T_flag = 1; % Kelvin - Changed from 2 to 1 by JJB -- now performing conversion below
+        disp('It appears that T is in Kelvin. Converting to C');
+        Ta = Ta - 273.15;
+    elseif nanmean(Ta) < 100 && (nanmean(CPEC_Ta) < 100 || sum(~isnan(CPEC_Ta))==0)
         T_flag = 1; % Celsius
         disp('It appears that T is in Celsius');
     else
@@ -277,6 +279,9 @@ for year_ctr = year_start:1:year_end
     
     %% Spike detection to clean up NEE data:
     [NEE_cleaned] = mcm_CPEC_outlier_removal(site, NEE_uncleaned, 30, 'Fc');
+    
+    %% Calculate VPD (added 20180314 by JJB):
+%     VPD = VPD_calc(RH,Ta,2); % VPD in hPa
     
     %% Save data
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -160,7 +160,7 @@ loadstart = addpath_loadstart;
     end    
 %   plot(cum_eventc3_2,'c');
     title('processed cumulative output')
-    legend(h2,'cumulative PPT','gaps', 'Tx Rain Guage', 'Tx-gaps',2);
+    legend(h2,'cumulative PPT','gaps', 'Tx Rain Guage', 'Tx-gaps','Location','NorthWest');
     
     jjb_check_dirs([loadstart 'Matlab/Data/Met/Cleaned3/TP_PPT/'],0);
     jjb_check_dirs([loadstart 'Matlab/Data/Met/Final_Cleaned/TP_PPT/'],0);

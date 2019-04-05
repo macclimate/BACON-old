@@ -17,16 +17,22 @@ function [] = mcm_data_compiler(year, site, data_type,quickflag)
 % and all variables (for CCP output)
 % 3. Cleaned and Filled fluxes
 %
+%%% Inputs:
+% year - can be single year, list of years (e.g. 2005:2008), or blank (prompts for years)
+% site - site label ('TP39', TPD, etc.)
+% data_type - options are: 
+%%% - 'all' (compiles met and flux), or
+%%% - 'sapflow' (compiles sapflow data
+% quickflag:
+%%% quickflag = 1 -- first compile operation (met + flux)
+%%% quickflag = -1 -- first compile, no prompts
+%%% quickflag = 2 -- full compile (met + flux + gapfilled)
+%%% quickflag = -2 -- full compile, no prompts
+%%% quickflag = -9 -- full compile, no prompts, FROM SCRATCH (master files recreated)
 %%%
 % First Created December 2009 by JJB
 %
 %
-%%% What quickflag does:
-% quickflag = 1 -- first compile operation (met + flux)
-% quickflag = -1 -- first compile, no prompts
-% quickflag = 2 -- full compile (met + flux + gapfilled)
-% quickflag = -2 -- full compile, no prompts
-% quickflag = -9 -- full compile, no prompts, FROM SCRATCH (master files recreated)
 
 %%% Revision History
 %%% July, 2010 - Added 'quickflag' option, that lets us skip the filled flux
@@ -102,7 +108,12 @@ opec_final_calc_path = [ls 'Matlab/Data/Flux/OPEC/' site '/Final_Calculated/'];
 footprint_path = [ls 'Matlab/Data/Flux/Footprint/'];
 %%%% Output Paths:
 master_out_path =           [ls 'Matlab/Data/Master_Files/'];
+
+if strcmp(ls,'\\130.113.210.243\fielddata\')==1
+    gdrive_path = '\\130.113.210.243\arainlab\Google Drive/TPFS Data/Master_Files/';
+else
 gdrive_path = '/home/arainlab/Google Drive/TPFS Data/Master_Files/';
+end
 
 %%%% Master Header Path:
 master_header_path = [ls 'Matlab/Config/Master_Files/']; % Added 01-May-2012
@@ -161,7 +172,7 @@ header = jjb_hdr_read([master_header_path site '_master_list.csv'],',');
 [r_header c_header] = size(header);
 % Add more rows of NaNs if header has more variables than master is aware
 % of:
-yr_end = 2017;
+yr_end = 2020;
 yr_start = 2002;  
 
 switch site
@@ -177,6 +188,12 @@ switch site
     case 'TP89'
         time_int = 30;
         yr_end = 2008; 
+    case 'TP39_sapflow'
+        time_int = 30;
+        yr_start = 2009;
+    case 'TP74_sapflow'
+        time_int = 30;
+        yr_start = 2011;
     otherwise
         time_int = 30;
 %         yr_start = 2002;

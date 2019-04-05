@@ -1,7 +1,7 @@
 function [] = mcm_start_mgmt
 
 %%  Create and then hide the GUI as it is being constructed.
-
+ls = addpath_loadstart;
 window_titles = {'Welcome to the Jungle!!'; ...
                  'BACON: The Smell of Progress!'; ...
                  'Mmmmmmmm BACON'; ...
@@ -18,11 +18,11 @@ fmain = figure('Position',[20,70,1000,666],...
 %%% Create the background %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 hbg = axes('Units','Pixels','Position',[0,0,1000,666],'Visible','off');
 axes(hbg);
-imshow('/1/fielddata/Matlab/Figs/GUI/Bacon_GUI_background_v2.png');
+imshow([ls 'Matlab/Figs/GUI/Bacon_GUI_background_v2.png']);
 
 
 %%% %%%%%%%% Turn on Diary %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-log_filename = ['/1/fielddata/Documentation/Logs/tmp_BACONlog.txt'];  
+log_filename = [ls 'Documentation/Logs/tmp_BACONlog.txt'];  
 assignin('base','log_filename',log_filename);
 if exist(log_filename,'file')==2
 unix(['rm ' log_filename]);

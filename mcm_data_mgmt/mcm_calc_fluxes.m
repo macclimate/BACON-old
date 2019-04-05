@@ -34,13 +34,13 @@ end
 %% Navigate to the proper directory:
 ls = addpath_loadstart;
 
-if ispc == 1;
+% if ispc == 1;
     % Enter lines in here to tell the program what to do if it's running on
     % a windows-based system...
-else
+% else
     start_path = [ls 'Matlab/'];
     data_path = [ls 'SiteData/' site '/MET-DATA/'];
-end
+% end
 
 % Check to see if /hhour folder exists.  If not, make it:
 jjb_check_dirs([data_path 'hhour/'],auto_flag);
@@ -60,16 +60,17 @@ else
    end_date = dates{2,1};        
     end
 end
+biomet_path = [start_path 'BIOMET.NET/MATLAB/'];
 %%% Try to add the PC_Specific/ directory to the path:
-addpath ([start_path 'biomet.net/Matlab/SoilChambers/']);
-addpath ([start_path 'biomet.net/Matlab/BOREAS/']);
-addpath ([start_path 'biomet.net/Matlab/BIOMET/']);
-addpath ([start_path 'biomet.net/Matlab/NEW_MET/']);
-addpath ([start_path 'biomet.net/Matlab/MET/']);
-addpath ([start_path 'biomet.net/Matlab/New_eddy/']);
-addpath ([start_path 'biomet.net/Matlab/SystemComparison/']);
-try addpath([start_path 'ubc_PC_setup/Site_Specific/' site '/']); catch; end
-try addpath([start_path 'ubc_PC_setup/PC_Specific/' site '/']);catch; end
+addpath([biomet_path 'SoilChambers/']);
+addpath([biomet_path 'BOREAS/']);
+addpath([biomet_path 'BIOMET/']);
+addpath([biomet_path 'NEW_MET/']);
+addpath([biomet_path 'MET/']);
+addpath([biomet_path 'New_eddy/']);
+addpath([biomet_path 'SystemComparison/']);
+try addpath([start_path 'ubc_PC_setup/Site_Specific/' site '/']); catch; disp('Can''t add ubc_PC_setup/Site_Specific/ directory to path');end
+try addpath([start_path 'ubc_PC_setup/PC_Specific/' site '/']);catch; disp('Can''t add ubc_PC_setup/PC_Specific/ directory to path'); end
 
 %%% Change the current path to the data directory:
 eval(['cd ' start_path 'ubc_PC_setup/Site_Specific/' site '/']) 
@@ -88,12 +89,12 @@ switch data_type
 end
 
 %%% Remove Biomet paths:
-rmpath ([start_path 'biomet.net/Matlab/SoilChambers/']);
-rmpath ([start_path 'biomet.net/Matlab/BOREAS/']);
-rmpath ([start_path 'biomet.net/Matlab/BIOMET/']);
-rmpath ([start_path 'biomet.net/Matlab/NEW_MET/']);
-rmpath ([start_path 'biomet.net/Matlab/MET/']);
-rmpath ([start_path 'biomet.net/Matlab/New_eddy/']);
-rmpath ([start_path 'biomet.net/Matlab/SystemComparison/']);
+rmpath ([biomet_path 'SoilChambers/']);
+rmpath ([biomet_path 'BOREAS/']);
+rmpath ([biomet_path 'BIOMET/']);
+rmpath ([biomet_path 'NEW_MET/']);
+rmpath ([biomet_path 'MET/']);
+rmpath ([biomet_path 'New_eddy/']);
+rmpath ([biomet_path 'SystemComparison/']);
 try rmpath([start_path 'ubc_PC_setup/Site_Specific/' site '/']);catch; end
 try rmpath([start_path 'ubc_PC_setup/PC_Specific/' site '/']);catch; end

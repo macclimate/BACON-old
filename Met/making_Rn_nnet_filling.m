@@ -1,8 +1,8 @@
-%{
+
 clear all;
 load('/1/fielddata/Matlab/Data/Master_Files/TP39/TP39_gapfill_data_in.mat')
 
-data = trim_data_files(data,2003,2014,1);
+data = trim_data_files(data,2003,2017,1);
 
 inputs = [data.Ta data.WS data.RH data.PAR];
 target = data.Rn;
@@ -45,12 +45,11 @@ target = data.Rn;
 %         Y2 = Y2';
 %         disp('completed successfully.');
                 save('/1/fielddata/Matlab/Data/Met/Final_Filled/Rn_nnet/TP39_nnet.mat','nnet_TP39');
-%}
 %% TP74        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         clear data;
         load('/1/fielddata/Matlab/Data/Master_Files/TP74/TP74_gapfill_data_in.mat')
 
-data = trim_data_files(data,2003,2014,1);
+data = trim_data_files(data,2003,2017,1);
 
 inputs = [data.Ta data.WS data.RH data.PAR];
 target = data.Rn;
@@ -84,7 +83,7 @@ target = data.Rn;
         clear data;
         load('/1/fielddata/Matlab/Data/Master_Files/TP02/TP02_gapfill_data_in.mat')
 
-data = trim_data_files(data,2003,2014,1);
+data = trim_data_files(data,2003,2017,1);
 
 inputs = [data.Ta data.WS data.RH data.PAR];
 target = data.Rn;
@@ -102,7 +101,7 @@ target = data.Rn;
         clear data;
        try  
           load('/1/fielddata/Matlab/Data/Master_Files/TPD/TPD_gapfill_data_in.mat')
-data = trim_data_files(data,2012,2014,1);
+data = trim_data_files(data,2012,2017,1);
        catch
         load('/1/fielddata/Matlab/Data/Met/Final_Cleaned/TPD/TPD_met_cleaned_2012.mat')
 master.labels = cellstr(master.labels);

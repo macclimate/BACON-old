@@ -23,7 +23,7 @@ load_path = [ls 'Matlab/Data/Master_Files/' site '/'];
 save_path = [ls 'Matlab/Data/Flux/Gapfilling/' site '/'];
 footprint_path = [ls 'Matlab/Data/Flux/Footprint/'];
 fig_path = [ls 'Matlab/Figs/Gapfilling/'];
-log_path = [ls 'Matlab/Documentation/Logs/mcm_Gapfill_main/' site '/'];
+log_path = [ls 'Documentation/Logs/mcm_Gapfill_main/' site '/'];
 jjb_check_dirs(log_path);
 %%% Load gapfilling file and make appropriate adjustments:
 load([load_path site '_gapfill_data_in.mat']);

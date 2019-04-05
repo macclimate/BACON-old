@@ -206,7 +206,9 @@ for year_ctr = year_start:1:year_end
             end
         end
         %%%% Display an update on progress every 100 days:
-        if rem(j,100) == 0;   disp(['Working on Day: ' num2str(j)]);   end
+        if rem(j,100) == 0;   
+            disp(['Working on Day: ' num2str(j)]);   
+        end
     end
     %% Give option to fill in NaN data in recalc data with data calculated in
     %%% the field -- This is useful if /data files are missing for some reason,

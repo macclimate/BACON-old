@@ -184,7 +184,7 @@ disp(['A total of ' num2str(length(fill_other)-length(fill_left_GEO)) ' filled f
     plot(dt(fill_left_GEO),zeros(length(fill_left_GEO),1),'rx');
     [h2] = plot(dt, TX_PPT,'g');
     plot(dt(fill_left_TX),zeros(length(fill_left_TX),1),'rx');
-    legend([h1 h2],'GEO_PPT', 'TX_PPT',2);
+    legend([h1 h2],'GEO_PPT', 'TX_PPT','Location','NorthWest');
     
     cum_GEO_PPT = nancumsum(GEO_PPT);
     cum_TX_PPT = nancumsum(TX_PPT);
@@ -194,7 +194,7 @@ disp(['A total of ' num2str(length(fill_other)-length(fill_left_GEO)) ' filled f
     plot(dt(fill_left_GEO),cum_GEO_PPT(fill_left_GEO),'rx');
     [h2] = plot(dt,cum_TX_PPT,'g');
     plot(dt(fill_left_TX),cum_TX_PPT(fill_left_TX),'rx');
-    legend([h1 h2],'GEO_PPT', 'TX_PPT',2);
+    legend([h1 h2],'GEO_PPT', 'TX_PPT','Location','NorthWest');
     
     % 2. Other Sites:
     fill_left_TP39 = find(isnan(TP39_PPT));
@@ -209,7 +209,7 @@ disp(['A total of ' num2str(length(fill_other)-length(fill_left_GEO)) ' filled f
     plot(dt(fill_left_TP02),zeros(length(fill_left_TP02),1),'rx');
     [h3] = plot(dt, TPD_PPT,'k');
     plot(dt(fill_left_TPD),zeros(length(fill_left_TPD),1),'rx');
-    legend([h1 h2 h3],'TP39', 'TP02','TPD',2);
+    legend([h1 h2 h3],'TP39', 'TP02','TPD','Location','NorthWest');
     
     cum_TP39_PPT = nancumsum(TP39_PPT);
     cum_TP02_PPT = nancumsum(TP02_PPT);
@@ -223,7 +223,7 @@ disp(['A total of ' num2str(length(fill_other)-length(fill_left_GEO)) ' filled f
     [h3] = plot(dt,cum_TPD_PPT,'k');
     plot(dt(fill_left_TPD),cum_TPD_PPT(fill_left_TPD),'rx');
     
-     legend([h1 h2 h3],'TP39', 'TP02','TPD',2);
+     legend([h1 h2 h3],'TP39', 'TP02','TPD','Location','NorthWest');
 
    
     %% Save the final data:

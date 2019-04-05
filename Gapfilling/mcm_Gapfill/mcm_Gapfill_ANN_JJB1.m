@@ -131,7 +131,7 @@ if debug_flag ~= 2
     %%% Run for Ts-only
     nnet_RE_all2_Tsonly = ANN_Gapfill(inputs_RE_all2_Tsonly, target_RE, data.Year,1,40, 'nnet_RE_all2-Tsonly');
 % Changed this on 20160206 (JJB) -> added  | RE_filled_all2<0 
-    RE_filled_all2(isnan(RE_filled_all2 | RE_filled_all2<0),1) = nnet_RE_all2_Tsonly(1).NEE_sim(isnan(RE_filled_all2) | RE_filled_all2<0,1);
+    RE_filled_all2(isnan(RE_filled_all2) | RE_filled_all2<0,1) = nnet_RE_all2_Tsonly(1).NEE_sim(isnan(RE_filled_all2) | RE_filled_all2<0,1);
     RE_pred_all2(isnan(RE_pred_all2)) = nnet_RE_all2_Tsonly(1).NEE_sim(isnan(RE_pred_all2),1);
         
 end

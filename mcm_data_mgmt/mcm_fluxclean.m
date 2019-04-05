@@ -419,4 +419,7 @@ for year_ctr = year_start:1:year_end
     junk = input('Press Enter to Continue to Next Year');
         end
 end
+
+if auto_flag~=1 && ispc==0
 mcm_start_mgmt;
+end

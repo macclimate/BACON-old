@@ -1,4 +1,9 @@
-function [] = mcm_sapflow_calc(year, site)
+function [] = mcm_sapflow_calc(year, site,auto_flag)
+% if autoflag = 1, automatically use existing neural networks.
+if nargin ==2
+    auto_flag = 0;
+end
+
 ls = addpath_loadstart;
 load_path = [ls 'Matlab/Data/Met/Final_Cleaned/' site '_sapflow/'];
 met_path = [ls 'Matlab/Data/Met/Final_Filled/' site '/'];
@@ -116,7 +121,7 @@ for year_ctr = year_start:1:year_end
                             case {11 12}
                                 volt_adj1 = nanmean(dt_max_hh2(6050:6530,i))./nanmean(dt_max_hh2(5548:6028,i));
                                 dt_max_hh2(1:6045,i) = dt_max_hh2(1:6045,i).*volt_adj1; dT_CW_corr(1:6045,i) = dT_CW_corr(1:6045,i).*volt_adj1;
-                            case num2cell(14:19);
+                            case num2cell(14:19)
                                 volt_adj1 = nanmean(dt_max_hh2(7810:8290,i))./nanmean(dt_max_hh2(8313:8793,i));
                                 dt_max_hh2(8313:9435,i) = dt_max_hh2(8313:9435,i).*volt_adj1; dT_CW_corr(8313:9435,i) = dT_CW_corr(8313:9435,i).*volt_adj1;
                                 volt_adj2 = nanmean(dt_max_hh2(6100:6580,i))./nanmean(dt_max_hh2(5595:6075,i));
@@ -214,11 +219,16 @@ for year_ctr = year_start:1:year_end
         %%% both methods declare it to be a spike.  This gets rid of a lot of
         %%% problems associated with any one method marking spikes where they
         %%% should not be spikes.
+        try
         [ind_Pap2,~] = Papale_spike_removal2(Js(:,i),15, sunup_down);
         [ind_MW,~] = movwin_spike_removal(Js(:,i),3);
         ind_spikes = ind_Pap2~=1 & ind_MW ~= 1;
         Js_cleaned(:,i) = Js(:,i);
         Js_cleaned(ind_spikes,i) = NaN;
+        catch
+        disp(['Error ocurred calculating spike removal (~line 220) for sensor: ' num2str(i)]);
+        Js_cleaned(:,i) = NaN;    
+        end
     end
     %%% We can plot some stuff here if we want to....
     % figure(21);clf
@@ -275,7 +285,11 @@ for year_ctr = year_start:1:year_end
     % Check to see if nnets already exist for this year:
     if exist([save_path 'nnet/nnet_' yr_str '_Js1.mat'],'file')==2
         disp('Neural Networks Found.');
+        if auto_flag == 0
         resp1 = input('Hit <ENTER> to load and use these, or enter <1> to recalculate: > ');
+        else
+            resp1 = '';
+        end
         if isempty(resp1)==1
             resp1 = 0;
         end
@@ -288,7 +302,7 @@ for year_ctr = year_start:1:year_end
         try
             % Index of usable training points for NN:
             ind_use = find(~isnan(Ts.*PAR.*SM.*VPD.*Js_cleaned(:,i)));
-            if resp1 == 1;
+            if resp1 == 1
                 
                 % Set the inputs (independent) and target (dependent)
                 nn_inputs = [PAR(ind_use) Ts(ind_use) SM(ind_use) VPD(ind_use)];
@@ -314,11 +328,11 @@ for year_ctr = year_start:1:year_end
             % Plot cleaned and filled on top of each other:
             figure(round(floor((i/6) - (0.95/6)) + 10))
             sp_num = rem(i,6);
-            if sp_num == 0;
+            if sp_num == 0
                 sp_num = 6;
-            elseif sp_num == 1;
+            elseif sp_num == 1
                 clf;
-            end;
+            end
             subplot(3,2,round(sp_num))
             plot(Js_filled(:,i),'r'); hold on;
             plot(Js_cleaned(:,i),'b');
@@ -327,7 +341,7 @@ for year_ctr = year_start:1:year_end
 %                         test(1:2,i) = [(round(floor((i/6) - (1/6)) + 10)) round(sp_num)]
 
             
-            if resp1 == 1;
+            if resp1 == 1
                 % Save the nnet:
                 save([save_path 'nnet/nnet_' yr_str '_Js' num2str(i) '.mat' ],'net');
             end
@@ -347,8 +361,15 @@ for year_ctr = year_start:1:year_end
     %% Sap Flow Discharge Calculation (F) - Units = mm/hhour 
     % Changed sw_m2 to AsAw following Granier et al 1987 (i.e. As / Aw)
     F = NaN.*ones(yr_length(year_ctr,30),num_sensors);
+    F_mmol = NaN.*ones(yr_length(year_ctr,30),num_sensors);
+    MM_H2O = 18.01528e-3; %MM of water (g/mmol)
+    rho_w = 1e6;        %density of water (g/m3)
+    % 1 m3 of water = rho_w / MM_H2O
     for i = 1:1:num_sensors
         F(:,i) = params.AsAw(i,1).*(Js_filled(:,i)).*1800; % Changed Js_cleaned to Js_filled - 14-Feb-2012
+        % Added 20180315 by JJB - Using Js_cleaned and As/Aw, which
+        % converts this to a flux [it's actually sw_m2*Js*(rho_w./MM_H2O)/wa_m2 (where wa is wood area)
+        F_mmol(:,i) = params.AsAw(i,1).*(Js_cleaned(:,i)).*(rho_w./MM_H2O); % Added 20180315-Using Js_cleaned and sw_m2 to calculate discharge and convert to a flux 
     end
     %%% Can plot F here if we want to.....
     
@@ -368,6 +389,7 @@ for year_ctr = year_start:1:year_end
     tmp_label3 = cell(num_sensors,1);
     tmp_label4 = cell(num_sensors,1);
     tmp_label5 = cell(num_sensors,1);
+    tmp_label6 = cell(num_sensors,1); % Added by JJB, 20180315
     
     for i = 1:1:num_sensors
         ni = num2str(i);
@@ -376,14 +398,15 @@ for year_ctr = year_start:1:year_end
         tmp_label3{i,1} = ['Js_clean' ni];
         tmp_label4{i,1} = ['Js_filled' ni];
         tmp_label5{i,1} = ['F_final' ni];
+        tmp_label6{i,1} = ['F_mmol_final' ni]; % Added by JJB, 20180315
     end
     
     %% Make the final cleaned output (master) file, and save it:
     clear master;
-    master.data = [dT_CW_corr dt_norm Js_cleaned Js_filled F];
-    master.labels = [tmp_label1; tmp_label2; tmp_label3; tmp_label4; tmp_label5];
+    master.data = [dT_CW_corr dt_norm Js_cleaned Js_filled F F_mmol];
+    master.labels = [tmp_label1; tmp_label2; tmp_label3; tmp_label4; tmp_label5 ; tmp_label6];
     save([save_path site '_sapflow_calculated_' yr_str '.mat'],'master');
-    clear master dt_CW_corr dt_norm Js_cleaned Js_filled F Js dt_max* ;
+    clear master dt_CW_corr dt_norm Js_cleaned Js_filled F Js dt_max* F_mmol;
     disp(['Master file updated and saved to: ' save_path site '_sapflow_calculated_' yr_str '.mat']);
     
 %     %%% Export results to master files as well:
@@ -391,7 +414,7 @@ for year_ctr = year_start:1:year_end
 %     mcm_data_compiler(year, site,'sapflow');
 %     
     
-    if year_start~=year_end
+    if year_start~=year_end && auto_flag==0
         junk = input('Press Enter to Continue to Next Year');
     end
 end
